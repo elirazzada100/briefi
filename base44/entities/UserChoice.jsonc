@@ -1,0 +1,48 @@
+{
+  "name": "UserChoice",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "\u05de\u05d6\u05d4\u05d4 \u05de\u05e9\u05ea\u05de\u05e9"
+    },
+    "project_id": {
+      "type": "string",
+      "description": "\u05de\u05d6\u05d4\u05d4 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8"
+    },
+    "video_brief_id": {
+      "type": "string",
+      "description": "\u05de\u05d6\u05d4\u05d4 \u05d1\u05e8\u05d9\u05e3"
+    },
+    "choice_type": {
+      "type": "string",
+      "enum": [
+        "category",
+        "hook",
+        "body",
+        "cta",
+        "rewrite"
+      ],
+      "description": "\u05e1\u05d5\u05d2 \u05d4\u05d1\u05d7\u05d9\u05e8\u05d4"
+    },
+    "selected_value": {
+      "type": "object",
+      "description": "\u05d4\u05e2\u05e8\u05da \u05e9\u05e0\u05d1\u05d7\u05e8"
+    },
+    "rejected_values": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "\u05e2\u05e8\u05db\u05d9\u05dd \u05e9\u05e0\u05d3\u05d7\u05d5"
+    },
+    "selected_category": {
+      "type": "string",
+      "description": "\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4 \u05e9\u05e0\u05d1\u05d7\u05e8\u05d4"
+    }
+  },
+  "required": [
+    "project_id",
+    "choice_type"
+  ]
+}

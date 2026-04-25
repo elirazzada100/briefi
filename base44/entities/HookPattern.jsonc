@@ -1,0 +1,49 @@
+{
+  "name": "HookPattern",
+  "type": "object",
+  "properties": {
+    "pattern_name": {
+      "type": "string",
+      "description": "\u05e9\u05dd \u05d4\u05ea\u05d1\u05e0\u05d9\u05ea"
+    },
+    "template": {
+      "type": "string",
+      "description": "\u05ea\u05d1\u05e0\u05d9\u05ea \u05d4\u05d4\u05d5\u05e7"
+    },
+    "category_fit": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea \u05de\u05ea\u05d0\u05d9\u05de\u05d5\u05ea"
+    },
+    "industry_fit": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05de\u05ea\u05d0\u05d9\u05de\u05d5\u05ea"
+    },
+    "structure_explanation": {
+      "type": "string",
+      "description": "\u05d4\u05e1\u05d1\u05e8 \u05d4\u05de\u05d1\u05e0\u05d4"
+    },
+    "example_hebrew": {
+      "type": "string",
+      "description": "\u05d3\u05d5\u05d2\u05de\u05d4 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea"
+    },
+    "risk_notes": {
+      "type": "string",
+      "description": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05e1\u05d9\u05db\u05d5\u05df"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "\u05e4\u05e2\u05d9\u05dc"
+    }
+  },
+  "required": [
+    "pattern_name",
+    "template"
+  ]
+}
