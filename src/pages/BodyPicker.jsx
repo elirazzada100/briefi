@@ -47,7 +47,7 @@ export default function BodyPicker() {
     });
 
     setGenerating(false);
-    navigate(`/cta-picker/${projectId}`, {
+    navigate(`/project/${projectId}/cta`, {
       state: { ctas: response.data?.ctas || [], category, selectedHook, selectedBody: body }
     });
   };

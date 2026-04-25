@@ -74,7 +74,7 @@ export default function CTAPicker() {
     });
 
     setGenerating(false);
-    navigate(`/final-brief/${projectId}/${savedBrief.id}`);
+    navigate(`/project/${projectId}/final-brief`, { state: { briefId: savedBrief.id } });
   };
 
   if (generating) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState message="מרכיבים את הבריף הסופי..." /></div>;

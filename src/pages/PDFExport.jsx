@@ -327,7 +327,7 @@ export default function PDFExport() {
     <div className="min-h-screen bg-briefi-bg" dir="rtl">
       <div className="bg-white border-b border-border px-5 pt-safe pt-4 pb-3">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <button onClick={() => navigate(`/brief-pack/${projectId}`)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
+          <button onClick={() => navigate(`/project/${projectId}/brief-pack`)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
             <ArrowRight className="w-5 h-5 text-briefi-secondary" />
           </button>
           <div>
@@ -401,7 +401,7 @@ export default function PDFExport() {
         </button>
 
         <button
-          onClick={() => navigate(`/brief-pack/${projectId}`)}
+          onClick={() => navigate(`/project/${projectId}/brief-pack`)}
           className="w-full h-12 rounded-2xl font-medium text-sm text-briefi-secondary bg-white border border-border text-center transition-all active:scale-95"
         >
           חזרה לבריפים

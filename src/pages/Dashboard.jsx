@@ -100,7 +100,7 @@ export default function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Link to={`/project/${project.id}/briefs`}>
+                <Link to={`/project/${project.id}/brief-pack`}>
                   <div className="bg-card rounded-2xl border border-border/60 p-4 hover:shadow-md transition-all">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">

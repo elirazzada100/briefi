@@ -80,6 +80,13 @@ export default function CreativeDNA() {
     navigate(`/project/${projectId}/category`);
   };
 
+  if (!projectId) return (
+    <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+      <p className="text-destructive font-bold text-lg">שגיאה: מזהה פרויקט חסר</p>
+      <button onClick={() => navigate("/")} className="text-primary underline text-sm">חזרה לדף הבית</button>
+    </div>
+  );
+
   if (!project) return <LoadingState message="טוען פרויקט..." />;
   if (generating) return <LoadingState message="Briefi מנתח את העסק..." />;
   if (error) return <ErrorState onRetry={generateDNA} />;

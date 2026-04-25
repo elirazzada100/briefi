@@ -45,14 +45,14 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/new-project" element={<NewProject />} />
-      <Route path="/creative-dna/:projectId" element={<CreativeDNA />} />
-      <Route path="/category/:projectId" element={<CategoryPicker />} />
-      <Route path="/hook-picker/:projectId" element={<HookPicker />} />
-      <Route path="/body-picker/:projectId" element={<BodyPicker />} />
-      <Route path="/cta-picker/:projectId" element={<CTAPicker />} />
-      <Route path="/final-brief/:projectId/:briefId" element={<FinalBrief />} />
-      <Route path="/brief-pack/:projectId" element={<BriefPack />} />
-      <Route path="/pdf-export/:projectId" element={<PDFExport />} />
+      <Route path="/project/:projectId/creative-dna" element={<CreativeDNA />} />
+      <Route path="/project/:projectId/category" element={<CategoryPicker />} />
+      <Route path="/project/:projectId/hooks" element={<HookPicker />} />
+      <Route path="/project/:projectId/body" element={<BodyPicker />} />
+      <Route path="/project/:projectId/cta" element={<CTAPicker />} />
+      <Route path="/project/:projectId/final-brief" element={<FinalBrief />} />
+      <Route path="/project/:projectId/brief-pack" element={<BriefPack />} />
+      <Route path="/project/:projectId/export" element={<PDFExport />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

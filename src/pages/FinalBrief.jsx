@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Pencil, Check, X, FileText, Plus } from "lucide-react";
 import LoadingState from "@/components/briefi/LoadingState";
@@ -57,7 +57,9 @@ function EditableField({ label, value, onSave }) {
 }
 
 export default function FinalBrief() {
-  const { projectId, briefId } = useParams();
+  const { projectId } = useParams();
+  const { state } = useLocation();
+  const briefId = state?.briefId;
   const navigate = useNavigate();
   const [brief, setBrief] = useState(null);
   const [project, setProject] = useState(null);
@@ -98,7 +100,7 @@ export default function FinalBrief() {
     <div className="min-h-screen bg-briefi-bg" dir="rtl">
       <div className="bg-white border-b border-border px-5 pt-safe pt-4 pb-3">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <button onClick={() => navigate(`/brief-pack/${projectId}`)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
+          <button onClick={() => navigate(`/project/${projectId}/brief-pack`)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
             <ArrowRight className="w-5 h-5 text-briefi-secondary" />
           </button>
           <div className="flex-1">
@@ -169,7 +171,7 @@ export default function FinalBrief() {
           </button>
 
           <button
-            onClick={() => navigate(`/category/${projectId}`)}
+            onClick={() => navigate(`/project/${projectId}/category`)}
             className="w-full h-14 rounded-2xl font-bold text-base text-primary bg-primary/8 border-2 border-primary/20 flex items-center justify-center gap-2 transition-all active:scale-95 hover:bg-primary/10"
           >
             <Plus className="w-5 h-5" />
@@ -177,7 +179,7 @@ export default function FinalBrief() {
           </button>
 
           <button
-            onClick={() => navigate(`/brief-pack/${projectId}`)}
+            onClick={() => navigate(`/project/${projectId}/brief-pack`)}
             className="w-full h-12 rounded-2xl font-medium text-sm text-briefi-secondary bg-white border border-border flex items-center justify-center gap-2 transition-all active:scale-95"
           >
             <FileText className="w-4 h-4" />

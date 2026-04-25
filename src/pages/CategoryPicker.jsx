@@ -52,7 +52,7 @@ export default function CategoryPicker() {
 
     const hooks = response.data?.hooks || [];
     setLoading(false);
-    navigate(`/hook-picker/${projectId}`, { state: { hooks, category: selected } });
+    navigate(`/project/${projectId}/hooks`, { state: { hooks, category: selected } });
   };
 
   if (!project || loading) return <div className="min-h-screen bg-background flex items-center justify-center"><LoadingState message={loading ? "מייצרים 4 הוקים..." : "טוען..."} /></div>;

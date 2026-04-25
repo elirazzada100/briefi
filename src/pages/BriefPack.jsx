@@ -102,7 +102,7 @@ export default function BriefPack() {
         {/* Action Buttons */}
         <div className="flex gap-3">
           <button
-            onClick={() => navigate(`/category/${projectId}`)}
+            onClick={() => navigate(`/project/${projectId}/category`)}
             className="flex-1 h-14 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all active:scale-95"
             style={{ background: "linear-gradient(135deg, #1E8BFF 0%, #8B3DFF 100%)" }}
           >
@@ -110,7 +110,7 @@ export default function BriefPack() {
             בריף נוסף
           </button>
           <button
-            onClick={() => navigate(`/pdf-export/${projectId}`)}
+            onClick={() => navigate(`/project/${projectId}/export`)}
             className="flex-1 h-14 rounded-2xl font-bold text-sm text-primary border-2 border-primary/30 bg-primary/5 flex items-center justify-center gap-2 transition-all active:scale-95 hover:bg-primary/10"
           >
             <Download className="w-4 h-4" />
@@ -127,7 +127,7 @@ export default function BriefPack() {
               <p className="text-briefi-secondary text-sm mt-1">בחרו קטגוריה ונבנה את הסרטון הראשון.</p>
             </div>
             <button
-              onClick={() => navigate(`/category/${projectId}`)}
+              onClick={() => navigate(`/project/${projectId}/category`)}
               className="px-6 py-3 text-white rounded-xl font-bold text-sm"
               style={{ background: "linear-gradient(135deg, #1E8BFF 0%, #8B3DFF 100%)" }}
             >
@@ -144,7 +144,7 @@ export default function BriefPack() {
               return (
                 <button
                   key={brief.id}
-                  onClick={() => navigate(`/final-brief/${projectId}/${brief.id}`)}
+                  onClick={() => navigate(`/project/${projectId}/final-brief`, { state: { briefId: brief.id } })}
                   className="w-full bg-white rounded-2xl border border-border p-4 text-right flex items-center justify-between hover:border-primary/30 hover:shadow-sm transition-all group"
                 >
                   <div className="flex items-center gap-3">

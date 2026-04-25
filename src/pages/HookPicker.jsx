@@ -60,7 +60,7 @@ export default function HookPicker() {
     });
 
     setGenerating(false);
-    navigate(`/body-picker/${projectId}`, {
+    navigate(`/project/${projectId}/body`, {
       state: { bodyOptions: response.data?.body_options || [], category, selectedHook: hook }
     });
   };
@@ -92,7 +92,7 @@ export default function HookPicker() {
     <div className="min-h-screen bg-briefi-bg" dir="rtl">
       <div className="bg-white border-b border-border px-5 pt-safe pt-4 pb-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <button onClick={() => navigate(`/category/${projectId}`)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
+          <button onClick={() => navigate(`/project/${projectId}/category`)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
             <ArrowRight className="w-5 h-5 text-briefi-secondary" />
           </button>
           <ProgressSteps currentStep={3} />
