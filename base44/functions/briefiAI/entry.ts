@@ -60,7 +60,7 @@ async function callOpenAI(openai, model, userPrompt, jsonSchema) {
   const response = await openai.chat.completions.create({
     model,
     temperature: 0.7,
-    max_tokens: 2500,
+    max_completion_tokens: 2500,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: userPrompt }
