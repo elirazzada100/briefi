@@ -7,32 +7,6 @@ import ErrorState from "@/components/briefi/ErrorState";
 
 const REWRITE_ACTIONS = ["פשוט יותר", "מצחיק יותר", "יותר לקוח-מאשר", "יותר טרנדי"];
 
-const CTA_PROMPT = `You are Briefi, an Israeli social media brief-building assistant.
-
-Generate 4 CTA options for the selected short-form video.
-
-Client: {{client_name}}
-Goal: {{main_goal}}
-Creative DNA: {{creative_dna}}
-Selected category: {{selected_category}}
-Selected hook: {{selected_hook}}
-Selected body: {{selected_body}}
-
-Return JSON only (no markdown, no code blocks):
-{
-  "ctas": [
-    {"cta_type": "ישיר", "cta_text": "", "why_it_fits": ""},
-    {"cta_type": "רך", "cta_text": "", "why_it_fits": ""},
-    {"cta_type": "שמירה / שיתוף", "cta_text": "", "why_it_fits": ""},
-    {"cta_type": "פנייה / הודעה", "cta_text": "", "why_it_fits": ""}
-  ]
-}
-
-Rules:
-- Hebrew only.
-- CTA must match the main goal.
-- Clear CTAs are allowed.
-- Avoid cringe.`;
 
 export default function BodyPicker() {
   const { projectId } = useParams();
@@ -51,39 +25,30 @@ export default function BodyPicker() {
     setError(false);
 
     const proj = await base44.entities.Project.filter({ id: projectId }).then(r => r[0]);
-    const dnaStr = JSON.stringify(proj?.creative_dna || {});
 
-    const prompt = CTA_PROMPT
-      .replace("{{client_name}}", proj?.client_name || "")
-      .replace("{{main_goal}}", proj?.main_goal || "")
-      .replace("{{creative_dna}}", dnaStr)
-      .replace("{{selected_category}}", category)
-      .replace("{{selected_hook}}", JSON.stringify(selectedHook))
-      .replace("{{selected_body}}", JSON.stringify(body));
+    // Track user choice
+    await base44.entities.UserChoice.create({
+      project_id: projectId,
+      choice_type: "body",
+      selected_value: body,
+      rejected_values: bodyOptions.filter(b => b !== body),
+      selected_category: category,
+    });
 
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          ctas: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                cta_type: { type: "string" },
-                cta_text: { type: "string" },
-                why_it_fits: { type: "string" }
-              }
-            }
-          }
-        }
-      }
+    const response = await base44.functions.invoke("briefiAI", {
+      action: "generateCTAOptions",
+      project_id: projectId,
+      client_name: proj?.client_name || "",
+      main_goal: proj?.main_goal || "",
+      creative_dna: proj?.creative_dna || {},
+      selected_category: category,
+      selected_hook: selectedHook,
+      selected_body: body,
     });
 
     setGenerating(false);
     navigate(`/cta-picker/${projectId}`, {
-      state: { ctas: result.ctas, category, selectedHook, selectedBody: body }
+      state: { ctas: response.data?.ctas || [], category, selectedHook, selectedBody: body }
     });
   };
 
@@ -92,32 +57,17 @@ export default function BodyPicker() {
     const proj = await base44.entities.Project.filter({ id: projectId }).then(r => r[0]);
     const body = bodyOptions[idx];
 
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Rewrite this video body structure based on the requested change.
-
-Original: ${JSON.stringify(body)}
-Requested change: ${action}
-Business context: ${proj?.raw_notes || ""}
-Category: ${category}
-
-Return JSON only:
-{
-  "rewritten_text": "",
-  "what_changed": ""
-}
-
-Rules: Hebrew only. Keep the strategic idea.`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          rewritten_text: { type: "string" },
-          what_changed: { type: "string" }
-        }
-      }
+    const response = await base44.functions.invoke("briefiAI", {
+      action: "rewriteOption",
+      project_id: projectId,
+      original_text: body.concept_summary,
+      rewrite_action: action,
+      business_context: proj?.raw_notes || "",
+      selected_category: category,
     });
 
     const updated = [...bodyOptions];
-    updated[idx] = { ...body, concept_summary: result.rewritten_text };
+    updated[idx] = { ...body, concept_summary: response.data?.rewritten_text || body.concept_summary };
     setBodyOptions(updated);
     setRewritingIdx(null);
   };

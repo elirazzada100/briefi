@@ -15,37 +15,6 @@ const riskColors = {
 
 const REWRITE_ACTIONS = ["יותר קצר", "יותר ישראלי", "פחות קרינג׳", "יותר מצחיק"];
 
-const BODY_PROMPT = `You are Briefi, an Israeli social media brief-building assistant.
-
-Generate 4 different short-form video body structures based on the selected hook.
-
-Client: {{client_name}}
-Goal: {{main_goal}}
-Creative DNA: {{creative_dna}}
-Selected category: {{selected_category}}
-Selected hook: {{selected_hook}}
-
-Return JSON only (no markdown, no code blocks):
-{
-  "body_options": [
-    {
-      "body_title": "",
-      "concept_summary": "",
-      "shot_flow": ["", "", ""],
-      "text_overlays": ["", "", ""],
-      "production_notes": "",
-      "why_this_structure_works": ""
-    }
-  ]
-}
-
-Rules:
-- Return exactly 4 body_options.
-- Hebrew only.
-- Keep each video realistic to shoot with a phone.
-- The body should match the selected hook.
-- Every option must use a different structure.
-- Give clear shot ideas.`;
 
 export default function HookPicker() {
   const { projectId } = useParams();
@@ -70,42 +39,29 @@ export default function HookPicker() {
     setError(false);
 
     const proj = projectData || await base44.entities.Project.filter({ id: projectId }).then(r => r[0]);
-    const dnaStr = JSON.stringify(proj?.creative_dna || {});
-    const hookStr = JSON.stringify(hook);
 
-    const prompt = BODY_PROMPT
-      .replace("{{client_name}}", proj?.client_name || "")
-      .replace("{{main_goal}}", proj?.main_goal || "")
-      .replace("{{creative_dna}}", dnaStr)
-      .replace("{{selected_category}}", category)
-      .replace("{{selected_hook}}", hookStr);
+    // Track user choice
+    await base44.entities.UserChoice.create({
+      project_id: projectId,
+      choice_type: "hook",
+      selected_value: hook,
+      rejected_values: hooks.filter(h => h !== hook),
+      selected_category: category,
+    });
 
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          body_options: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                body_title: { type: "string" },
-                concept_summary: { type: "string" },
-                shot_flow: { type: "array", items: { type: "string" } },
-                text_overlays: { type: "array", items: { type: "string" } },
-                production_notes: { type: "string" },
-                why_this_structure_works: { type: "string" }
-              }
-            }
-          }
-        }
-      }
+    const response = await base44.functions.invoke("briefiAI", {
+      action: "generateBodyOptions",
+      project_id: projectId,
+      client_name: proj?.client_name || "",
+      main_goal: proj?.main_goal || "",
+      creative_dna: proj?.creative_dna || {},
+      selected_category: category,
+      selected_hook: hook,
     });
 
     setGenerating(false);
     navigate(`/body-picker/${projectId}`, {
-      state: { bodyOptions: result.body_options, category, selectedHook: hook }
+      state: { bodyOptions: response.data?.body_options || [], category, selectedHook: hook }
     });
   };
 
@@ -114,32 +70,17 @@ export default function HookPicker() {
     const proj = projectData || await base44.entities.Project.filter({ id: projectId }).then(r => r[0]);
     const hook = hooks[idx];
 
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Rewrite this hook based on the requested change.
-
-Original hook: ${JSON.stringify(hook)}
-Requested change: ${action}
-Business context: ${proj?.raw_notes || ""}
-Category: ${category}
-
-Return JSON only:
-{
-  "rewritten_text": "",
-  "what_changed": ""
-}
-
-Rules: Hebrew only. Keep the strategic idea. Don't make it generic.`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          rewritten_text: { type: "string" },
-          what_changed: { type: "string" }
-        }
-      }
+    const response = await base44.functions.invoke("briefiAI", {
+      action: "rewriteOption",
+      project_id: projectId,
+      original_text: hook.hook_text,
+      rewrite_action: action,
+      business_context: proj?.raw_notes || "",
+      selected_category: category,
     });
 
     const newHooks = [...hooks];
-    newHooks[idx] = { ...hook, hook_text: result.rewritten_text };
+    newHooks[idx] = { ...hook, hook_text: response.data?.rewritten_text || hook.hook_text };
     setHooks(newHooks);
     setRewritingIdx(null);
   };

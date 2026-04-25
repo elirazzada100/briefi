@@ -12,42 +12,6 @@ const ctaTypeColors = {
   "פנייה / הודעה": { bg: "rgba(242,81,157,0.08)", border: "rgba(242,81,157,0.3)", text: "#F2519D" },
 };
 
-const FINAL_BRIEF_PROMPT = `You are Briefi, an Israeli social media brief-building assistant.
-
-Assemble a final client-ready video brief based on the user's selections.
-
-Client: {{client_name}}
-Goal: {{main_goal}}
-Creative DNA: {{creative_dna}}
-Selected category: {{selected_category}}
-Selected hook: {{selected_hook}}
-Selected body: {{selected_body}}
-Selected CTA: {{selected_cta}}
-
-Return JSON only (no markdown, no code blocks):
-{
-  "brief_title": "",
-  "goal": "",
-  "category": "",
-  "hook": "",
-  "main_idea": "",
-  "video_structure": [
-    {"step": 1, "description": ""},
-    {"step": 2, "description": ""},
-    {"step": 3, "description": ""}
-  ],
-  "text_overlays": ["", "", ""],
-  "cta": "",
-  "production_notes": "",
-  "client_risk_level": "",
-  "caption_suggestion": ""
-}
-
-Rules:
-- Hebrew only.
-- Make the brief clean and professional.
-- Ready to send to a client after light editing.
-- Keep it short and useful.`;
 
 export default function CTAPicker() {
   const { projectId } = useParams();
@@ -65,38 +29,31 @@ export default function CTAPicker() {
     setError(false);
 
     const proj = await base44.entities.Project.filter({ id: projectId }).then(r => r[0]);
-    const dnaStr = JSON.stringify(proj?.creative_dna || {});
 
-    const prompt = FINAL_BRIEF_PROMPT
-      .replace("{{client_name}}", proj?.client_name || "")
-      .replace("{{main_goal}}", proj?.main_goal || "")
-      .replace("{{creative_dna}}", dnaStr)
-      .replace("{{selected_category}}", category)
-      .replace("{{selected_hook}}", JSON.stringify(selectedHook))
-      .replace("{{selected_body}}", JSON.stringify(selectedBody))
-      .replace("{{selected_cta}}", JSON.stringify(cta));
-
-    const finalBrief = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          brief_title: { type: "string" },
-          goal: { type: "string" },
-          category: { type: "string" },
-          hook: { type: "string" },
-          main_idea: { type: "string" },
-          video_structure: { type: "array", items: { type: "object", properties: { step: { type: "number" }, description: { type: "string" } } } },
-          text_overlays: { type: "array", items: { type: "string" } },
-          cta: { type: "string" },
-          production_notes: { type: "string" },
-          client_risk_level: { type: "string" },
-          caption_suggestion: { type: "string" }
-        }
-      }
+    // Track user choice
+    await base44.entities.UserChoice.create({
+      project_id: projectId,
+      choice_type: "cta",
+      selected_value: cta,
+      rejected_values: ctas.filter(c => c !== cta),
+      selected_category: category,
     });
 
-    // Get existing briefs count for this project
+    // Assemble final brief via OpenAI backend
+    const response = await base44.functions.invoke("briefiAI", {
+      action: "assembleFinalBrief",
+      project_id: projectId,
+      client_name: proj?.client_name || "",
+      main_goal: proj?.main_goal || "",
+      creative_dna: proj?.creative_dna || {},
+      selected_category: category,
+      selected_hook: selectedHook,
+      selected_body: selectedBody,
+      selected_cta: cta,
+    });
+
+    const finalBrief = response.data?.final_brief;
+
     const existingBriefs = await base44.entities.VideoBrief.filter({ project_id: projectId });
     const videoNumber = (existingBriefs.length || 0) + 1;
 
@@ -111,7 +68,6 @@ export default function CTAPicker() {
       status: "ready"
     });
 
-    // Update project count
     await base44.entities.Project.update(projectId, {
       completed_briefs_count: videoNumber,
       status: videoNumber >= 8 ? "ready_to_export" : "in_progress"

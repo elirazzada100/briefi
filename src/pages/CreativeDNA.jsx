@@ -47,47 +47,17 @@ export default function CreativeDNA() {
     setGenerating(true);
     setError(false);
 
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Analyze the following Israeli business based on messy client meeting notes.
-
-Client name: ${project.client_name}
-Main goal: ${project.main_goal}
-Raw notes: ${project.raw_notes}
-
-Create a short Creative DNA summary that helps a social media manager understand what content to build.
-
-Return JSON only with this structure:
-{
-  "main_angle": "",
-  "audience_truth": "",
-  "what_is_interesting": "",
-  "what_to_avoid": "",
-  "recommended_content_directions": ["", "", "", ""]
-}
-
-Rules:
-- Hebrew only.
-- Clear and practical.
-- No generic marketing language.
-- Each field should be short (1-3 sentences).
-- Make it useful for building short-form video briefs.`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          main_angle: { type: "string" },
-          audience_truth: { type: "string" },
-          what_is_interesting: { type: "string" },
-          what_to_avoid: { type: "string" },
-          recommended_content_directions: { type: "array", items: { type: "string" } },
-        },
-      },
+    const response = await base44.functions.invoke("briefiAI", {
+      action: "generateCreativeDNA",
+      project_id: project.id,
+      client_name: project.client_name,
+      main_goal: project.main_goal,
+      raw_notes: project.raw_notes,
     });
 
+    const result = response.data?.creative_dna;
     setDna(result);
-    await base44.entities.Project.update(project.id, {
-      creative_dna: result,
-      status: "in_progress",
-    });
+    await base44.entities.Project.update(project.id, { status: "in_progress" });
     setGenerating(false);
   };
 

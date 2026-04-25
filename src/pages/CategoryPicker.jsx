@@ -33,23 +33,29 @@ export default function CategoryPicker() {
     },
   });
 
+  const [loading, setLoading] = useState(false);
+
   const handleContinue = async () => {
-    if (!selected) return;
+    if (!selected || !project) return;
+    setLoading(true);
 
-    const briefs = await base44.entities.VideoBrief.filter({ project_id: projectId });
-    const videoNumber = briefs.filter(b => b.status === "ready" || b.status === "edited" || b.status === "approved").length + 1;
-
-    const brief = await base44.entities.VideoBrief.create({
+    // Generate hooks via OpenAI backend
+    const response = await base44.functions.invoke("briefiAI", {
+      action: "generateHooks",
       project_id: projectId,
-      video_number: videoNumber,
-      category: selected,
-      status: "draft",
+      client_name: project.client_name,
+      main_goal: project.main_goal,
+      raw_notes: project.raw_notes,
+      creative_dna: project.creative_dna || {},
+      selected_category: selected,
     });
 
-    navigate(`/project/${projectId}/brief/${brief.id}/hooks`);
+    const hooks = response.data?.hooks || [];
+    setLoading(false);
+    navigate(`/hook-picker/${projectId}`, { state: { hooks, category: selected } });
   };
 
-  if (!project) return <LoadingState />;
+  if (!project || loading) return <div className="min-h-screen bg-background flex items-center justify-center"><LoadingState message={loading ? "מייצרים 4 הוקים..." : "טוען..."} /></div>;
 
   return (
     <motion.div
