@@ -6,44 +6,51 @@ const STRATEGY_MODEL = Deno.env.get("OPENAI_STRATEGY_MODEL") || "gpt-4o";
 
 const SYSTEM_PROMPT = `You are Briefi, an Israeli social media brief-building assistant.
 
-Your job is to help social media managers create client-ready short-form video briefs.
+Your job is to help social media managers create client-ready short-form video briefs for Israeli businesses.
 
 You do not write generic marketing content.
-You do not create the full brief immediately.
+You do not create a full brief immediately.
 You guide the user step by step.
 
 The flow is:
 1. Analyze the business
 2. Create Creative DNA
-3. Generate 4 hook options
-4. Generate 4 body structure options based on the selected hook
-5. Generate 4 CTA options based on the selected hook and selected body
-6. Assemble a clean final video brief
+3. Generate 4 video concepts
+4. Generate 4 hooks based on the selected concept
+5. Generate 4 script/body options based on the selected hook and concept
+6. Generate 4 CTA options
+7. Assemble a clean final video brief
+8. Check and improve quality if needed
 
 Write in Hebrew unless the user asks otherwise.
 
-Important voice rules:
-- Write in practical Israeli Hebrew.
-- Prioritize clarity over cleverness.
-- The output must be usable in a real client brief.
+Core rules:
+- Practical Israeli Hebrew.
+- Clear over clever.
+- Shootable over conceptual.
+- Specific over vague.
+- Client-approvable over edgy.
+- Spoken rhythm over corporate copy.
 - Do not sound like an American marketing guru translated into Hebrew.
+- Do not use fake Gen Z slang.
 - Do not overuse cynicism.
-- Do not make the product sound weaker just to appear authentic.
-- Avoid fake Gen Z slang.
-- Avoid overly soft emotional branding unless the user asks for it.
+- Do not make the business sound weaker just to appear authentic.
 - Strong CTAs are allowed.
-- Promotional language is allowed when the category is sales or brand image.
+- Promotional language is allowed when useful.
 - Humor should be simple, clear, and client-approvable.
-- Avoid vague phrases unless they are useful for the client.
 - Never give 4 versions of the same idea.
+
+Important:
+Every final brief must include actual script_text.
+script_text is what the person says, the voiceover says, or the text-led video communicates.
+A final brief without script_text is incomplete.
 
 When creating 4 options, vary them:
 1. Safe/client-friendly
 2. Social/native
-3. Funny/light or more human
+3. More human/funny
 4. Sharper/riskier
 
-Always keep the output structured and easy to display in UI.
 Return valid JSON only. No markdown, no code blocks, no explanations.`;
 
 function estimateCost(inputTokens, outputTokens, model) {
@@ -56,18 +63,17 @@ function estimateCost(inputTokens, outputTokens, model) {
   return (inputTokens / 1000) * p.input + (outputTokens / 1000) * p.output;
 }
 
-async function callOpenAI(openai, model, userPrompt, jsonSchema) {
+async function callOpenAI(openai, model, userPrompt) {
   const response = await openai.chat.completions.create({
     model,
     temperature: 0.7,
-    max_completion_tokens: 2500,
+    max_completion_tokens: 3000,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: userPrompt }
     ],
     response_format: { type: "json_object" }
   });
-
   const content = response.choices[0].message.content;
   const parsed = JSON.parse(content);
   const usage = response.usage || {};
@@ -89,7 +95,6 @@ async function saveGeneration(base44, userId, projectId, actionType, model, inpu
     success,
     error_message: errorMessage || null
   });
-  // Track API usage
   await base44.asServiceRole.entities.ApiUsage.create({
     user_id: userId,
     project_id: projectId,
@@ -103,9 +108,14 @@ async function saveGeneration(base44, userId, projectId, actionType, model, inpu
   return gen;
 }
 
-function buildIntelligenceContext(voiceRules, hookPatterns, goodExamples, badExamples, trendPatterns, category) {
+function buildIntelligenceContext({
+  voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns,
+  voiceSamples, briefExamples, goodExamples, badExamples,
+  category, selectedConcept, mainGoal
+}) {
   let ctx = "";
 
+  // Voice Rules — global + category-specific
   const globalRules = (voiceRules || []).filter(r => r.is_active && r.category === "global");
   const catRules = (voiceRules || []).filter(r => r.is_active && r.category === category);
   const allRules = [...globalRules, ...catRules];
@@ -118,30 +128,98 @@ function buildIntelligenceContext(voiceRules, hookPatterns, goodExamples, badExa
     });
   }
 
-  const matchingPatterns = (hookPatterns || []).filter(p => p.is_active && (!p.category_fit?.length || p.category_fit.includes(category)));
-  if (matchingPatterns.length) {
-    ctx += "\n\n--- HOOK PATTERNS TO DRAW FROM ---\n";
-    matchingPatterns.slice(0, 6).forEach(p => {
+  // Hook Patterns — matching category
+  const matchingHookPatterns = (hookPatterns || []).filter(p =>
+    p.is_active && (!p.category_fit?.length || p.category_fit.includes(category))
+  );
+  if (matchingHookPatterns.length) {
+    ctx += "\n\n--- HOOK PATTERNS ---\n";
+    matchingHookPatterns.slice(0, 6).forEach(p => {
+      ctx += `• ${p.pattern_name}: "${p.template}"\n  Example: "${p.example_hebrew}"\n`;
+      if (p.risk_notes) ctx += `  Note: ${p.risk_notes}\n`;
+    });
+  }
+
+  // Script Patterns — matching category
+  const matchingScriptPatterns = (scriptPatterns || []).filter(p =>
+    p.is_active && (!p.category_fit?.length || p.category_fit.includes(category))
+  );
+  if (matchingScriptPatterns.length) {
+    ctx += "\n\n--- SCRIPT PATTERNS TO USE ---\n";
+    matchingScriptPatterns.slice(0, 4).forEach(p => {
+      ctx += `• ${p.script_pattern_name}:\n  Structure: ${(p.structure || []).join(" → ")}\n  Example:\n${p.example_script}\n`;
+    });
+  }
+
+  // CTA Patterns — matching goal
+  const matchingCTAPatterns = (ctaPatterns || []).filter(p => p.is_active);
+  if (matchingCTAPatterns.length) {
+    ctx += "\n\n--- CTA PATTERNS ---\n";
+    matchingCTAPatterns.slice(0, 6).forEach(p => {
+      ctx += `• [${p.cta_type}] "${p.template}" — e.g. "${p.example_hebrew}"\n`;
+    });
+  }
+
+  // Caption Patterns
+  const matchingCaptionPatterns = (captionPatterns || []).filter(p =>
+    p.is_active && (!p.category_fit?.length || p.category_fit.includes(category))
+  );
+  if (matchingCaptionPatterns.length) {
+    ctx += "\n\n--- CAPTION PATTERNS ---\n";
+    matchingCaptionPatterns.slice(0, 4).forEach(p => {
       ctx += `• ${p.pattern_name}: "${p.template}"\n  Example: "${p.example_hebrew}"\n`;
     });
   }
 
-  const goods = (goodExamples || []).filter(e => e.is_active).slice(0, 5);
-  if (goods.length) {
-    ctx += "\n\n--- GOOD EXAMPLES TO IMITATE ---\n";
-    goods.forEach(e => ctx += `• "${e.example_text}" — ${e.why_it_works}\n`);
+  // Trend Patterns — always include if category is טרנדי or relevant
+  const matchingTrends = (trendPatterns || []).filter(t =>
+    t.is_active && (!t.category_fit?.length || t.category_fit.includes(category) || category === "טרנדי")
+  );
+  if (matchingTrends.length) {
+    ctx += "\n\n--- TREND FORMATS ---\n";
+    matchingTrends.slice(0, 4).forEach(t => {
+      ctx += `• ${t.trend_name}: "${t.example_hebrew}"\n  How to adapt: ${t.how_to_adapt}\n`;
+    });
   }
 
-  const bads = (badExamples || []).filter(e => e.is_active).slice(0, 5);
+  // Voice Samples
+  const relevantSamples = (voiceSamples || []).filter(s =>
+    s.is_active && (s.category === "global" || s.category === category)
+  );
+  if (relevantSamples.length) {
+    ctx += "\n\n--- VOICE SAMPLES ---\n";
+    relevantSamples.slice(0, 5).forEach(s => {
+      if (s.sample_type === "rewrite" && s.input_text && s.output_text) {
+        ctx += `• [REWRITE ${s.rating.toUpperCase()}] "${s.input_text}" → "${s.output_text}"\n  Why: ${s.why}\n`;
+      } else if (s.sample_type === "good" && s.output_text) {
+        ctx += `• [GOOD] "${s.output_text}" — ${s.why}\n`;
+      } else if (s.sample_type === "bad" && s.input_text) {
+        ctx += `• [AVOID] "${s.input_text}" — ${s.why}\n`;
+      }
+    });
+  }
+
+  // Brief Examples
+  const matchingBriefExamples = (briefExamples || []).filter(e =>
+    e.is_active && (e.category === category || !e.category)
+  );
+  if (matchingBriefExamples.length) {
+    ctx += "\n\n--- BRIEF EXAMPLES (IMITATE THESE) ---\n";
+    matchingBriefExamples.slice(0, 3).forEach(e => {
+      ctx += `• [${e.example_type.toUpperCase()}] ${e.why_it_works}\n${e.example_content}\n`;
+    });
+  }
+
+  // Legacy good/bad examples
+  const goods = (goodExamples || []).filter(e => e.is_active).slice(0, 3);
+  if (goods.length) {
+    ctx += "\n\n--- GOOD EXAMPLES ---\n";
+    goods.forEach(e => ctx += `• "${e.example_text}" — ${e.why_it_works}\n`);
+  }
+  const bads = (badExamples || []).filter(e => e.is_active).slice(0, 3);
   if (bads.length) {
     ctx += "\n\n--- BAD EXAMPLES TO AVOID ---\n";
     bads.forEach(e => ctx += `• "${e.bad_text}" — ${e.why_bad}\n`);
-  }
-
-  const trends = (trendPatterns || []).filter(t => t.is_active && (!t.category_fit?.length || t.category_fit.includes(category) || category === "טרנדי"));
-  if (trends.length) {
-    ctx += "\n\n--- TREND FORMATS ---\n";
-    trends.slice(0, 4).forEach(t => ctx += `• ${t.trend_name}: "${t.example_hebrew}"\n`);
   }
 
   return ctx;
@@ -156,18 +234,29 @@ Deno.serve(async (req) => {
   const body = await req.json();
   const { action, ...payload } = body;
 
-  // Load intelligence tables once
-  const [voiceRules, hookPatterns, goodExamples, badExamples, trendPatterns] = await Promise.all([
+  // Load all intelligence tables in parallel
+  const [voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns, voiceSamples, briefExamples, goodExamples, badExamples] = await Promise.all([
     base44.asServiceRole.entities.VoiceRule.list(),
     base44.asServiceRole.entities.HookPattern.list(),
+    base44.asServiceRole.entities.CaptionPattern.list(),
+    base44.asServiceRole.entities.CTAPattern.list(),
+    base44.asServiceRole.entities.ScriptPattern.list(),
+    base44.asServiceRole.entities.TrendPattern.list(),
+    base44.asServiceRole.entities.VoiceSample.list(),
+    base44.asServiceRole.entities.BriefExample.list(),
     base44.asServiceRole.entities.GoodExample.list(),
     base44.asServiceRole.entities.BadExample.list(),
-    base44.asServiceRole.entities.TrendPattern.list()
   ]);
 
-  const intelligenceCtx = buildIntelligenceContext(voiceRules, hookPatterns, goodExamples, badExamples, trendPatterns, payload.selected_category || "");
+  const intelligenceCtx = buildIntelligenceContext({
+    voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns,
+    voiceSamples, briefExamples, goodExamples, badExamples,
+    category: payload.selected_category || "",
+    selectedConcept: payload.selected_concept || null,
+    mainGoal: payload.main_goal || "",
+  });
 
-  // ── ACTION: generateCreativeDNA ────────────────────────────────────────────
+  // ── generateCreativeDNA ────────────────────────────────────────────────────
   if (action === "generateCreativeDNA") {
     const { project_id, client_name, main_goal, raw_notes } = payload;
     const prompt = `Analyze this Israeli business and generate Creative DNA for social media content.
@@ -192,7 +281,7 @@ Return JSON:
     return Response.json({ creative_dna: parsed });
   }
 
-  // ── ACTION: generateVideoConcepts ─────────────────────────────────────────
+  // ── generateVideoConcepts ──────────────────────────────────────────────────
   if (action === "generateVideoConcepts") {
     const { project_id, client_name, main_goal, raw_notes, creative_dna, selected_category } = payload;
     const prompt = `Generate exactly 4 video concepts for this Israeli business.
@@ -211,19 +300,27 @@ RULES:
 - Do not write the full script. Do not write the CTA.
 - Make each concept practical and shootable.
 - The viewer should clearly understand what happens in the video and why they would care.
-- Each concept should be understandable to a social media manager AND to a client.
-- Avoid vague or generic concepts.
-- Vary the 4 concepts: 1) Safe/client-friendly, 2) Social/native feel, 3) Funny/human, 4) Sharper or more emotional.
+- Each concept must be understandable to a social media manager AND to a client.
+- Avoid vague or generic concepts like "show the vibe" or "present professionally".
+- Vary the 4: 1) Safe/client-friendly, 2) Social/native, 3) Funny/human, 4) Sharper/emotional.
+- Use ScriptPatterns and TrendPatterns for structural inspiration.
+- Each concept must explain what is filmed and why someone would stop scrolling.
+
+GOOD concept:
+{"concept_title":"למה יש פה תור?","concept_summary":"סרטון שמתחיל מהתור מחוץ למקום ומוביל את הצופה להבין מה גורם לאנשים לעצור דווקא פה.","why_it_works":"התור מייצר סקרנות והוכחה חברתית.","visual_direction":"פתיחה מבחוץ, תור, אנשים מחכים, הכנה מהירה מאחורי הדלפק, ביס ראשון.","tone":"סקרני, אנרגטי","risk_level":"נמוך"}
+
+BAD concept (do NOT do this):
+{"concept_title":"סרטון תדמית לעסק","concept_summary":"סרטון שמראה את העסק בצורה טובה.","visual_direction":"צילומים יפים."}
 
 Return JSON:
 {
   "concepts": [
     {
       "concept_title": "short punchy title in Hebrew",
-      "concept_summary": "2-3 sentences describing the video idea and what the viewer will see and feel",
-      "why_it_works": "1 sentence explanation",
-      "visual_direction": "brief description of what to film",
-      "tone": "tone label, e.g. רך, מצחיק, ישיר, אמוציונלי",
+      "concept_summary": "2-3 sentences describing exactly what the viewer will see and feel",
+      "why_it_works": "1 sentence",
+      "visual_direction": "what exactly to film",
+      "tone": "tone label",
       "risk_level": "נמוך | בינוני | גבוה"
     }
   ]
@@ -234,10 +331,10 @@ Return JSON:
     return Response.json(parsed);
   }
 
-  // ── ACTION: generateHooks ──────────────────────────────────────────────────
+  // ── generateHooks ──────────────────────────────────────────────────────────
   if (action === "generateHooks") {
     const { project_id, client_name, main_goal, raw_notes, creative_dna, selected_category, selected_concept } = payload;
-    const prompt = `Generate exactly 4 hook options for this video.
+    const prompt = `Generate exactly 4 hook options for this specific video concept.
 
 Client: ${client_name}
 Goal: ${main_goal}
@@ -246,32 +343,40 @@ Selected concept: ${JSON.stringify(selected_concept)}
 Creative DNA: ${JSON.stringify(creative_dna)}
 ${intelligenceCtx}
 
-The hooks must be tailored to the selected concept above. A hook is the opening line — max 1-2 sentences that make someone stop scrolling.
+RULES:
+- Return exactly 4 hooks.
+- Hebrew only.
+- Hooks are ONLY for the selected concept above. Do NOT write generic hooks for the whole business.
+- A hook is the opening line — max 1-2 short sentences that make someone stop scrolling in the first 2 seconds.
+- Do NOT write explanatory hooks that summarize the whole video.
+- Use HookPatterns for structure but adapt to this specific concept.
+- Vary: 1) Safe/client-friendly, 2) Social/native, 3) Funny/human, 4) Sharper/riskier.
 
-Return JSON with exactly 4 hooks:
+BAD hook (too long, explains everything): "עונה על כל השאלות שלכם לגבי המקום: למה יש תור, מה כל כך מיוחד, ולמה אנשים חוזרים."
+GOOD hooks: "מה יש בפיתה הזאת שגורם לאנשים לעמוד בתור?" / "עוד דוכן פיתה? לא בדיוק." / "אם יש תור, כנראה שיש סיבה."
+
+Return JSON:
 {
   "hooks": [
     {
       "hook_title": "short title",
-      "hook_text": "the actual opening line of the video (1-2 sentences max)",
+      "hook_text": "the actual opening line — short, punchy, max 2 seconds spoken",
       "why_it_works": "brief explanation",
       "risk_level": "נמוך | בינוני | גבוה",
-      "best_for": "what kind of audience this works best for"
+      "best_for": "who this works best for"
     }
   ]
-}
-
-Vary the 4 hooks: 1) Safe/client-friendly, 2) Social/native, 3) Funny/human, 4) Sharper/riskier`;
+}`;
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, FAST_MODEL, prompt);
-    await saveGeneration(base44, user.id, project_id, "generateHooks", FAST_MODEL, { client_name, main_goal, selected_category, creative_dna }, parsed, inputTokens, outputTokens, true);
+    await saveGeneration(base44, user.id, project_id, "generateHooks", FAST_MODEL, { client_name, main_goal, selected_category, selected_concept, creative_dna }, parsed, inputTokens, outputTokens, true);
     return Response.json(parsed);
   }
 
-  // ── ACTION: generateBodyOptions ────────────────────────────────────────────
+  // ── generateBodyOptions ────────────────────────────────────────────────────
   if (action === "generateBodyOptions") {
     const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook, selected_concept } = payload;
-    const prompt = `Generate exactly 4 body structure options for this video.
+    const prompt = `Generate exactly 4 script and body structure options for this video.
 
 Client: ${client_name}
 Goal: ${main_goal}
@@ -281,58 +386,245 @@ Selected concept: ${JSON.stringify(selected_concept)}
 Selected hook: ${JSON.stringify(selected_hook)}
 ${intelligenceCtx}
 
-Return JSON with exactly 4 body options:
+RULES:
+- Return exactly 4 options, each based on the selected concept AND hook above.
+- Each option must be realistic to shoot with a phone.
+- Give concrete, specific shots — NOT "show the vibe".
+- Include script_direction: what exactly is said or shown as text.
+- script_format must be one of: voiceover, person_to_camera, dialogue, text_only.
+- Vary: 1) Simple/low-effort, 2) Visual/cinematic, 3) Person talking to camera, 4) Text-only.
+- shot_flow must list at least 3-4 specific shots.
+
+Return JSON:
 {
   "body_options": [
     {
-      "body_title": "short name for this structure",
-      "concept_summary": "1-2 sentence description of the video concept",
-      "shot_flow": ["shot 1 description", "shot 2 description", "shot 3 description"],
-      "text_overlays": ["overlay text 1", "overlay text 2"],
-      "production_notes": "brief practical filming note",
-      "why_this_structure_works": "why this works for this hook and category"
+      "body_title": "short name",
+      "script_format": "voiceover | person_to_camera | dialogue | text_only",
+      "concept_summary": "1-2 sentence description",
+      "script_direction": "what exactly is said or shown as text in this option",
+      "shot_flow": ["shot 1", "shot 2", "shot 3", "shot 4"],
+      "text_overlays": ["overlay 1", "overlay 2"],
+      "production_notes": "specific filming note",
+      "why_this_structure_works": "why this fits the hook and concept"
     }
   ]
-}
-
-Vary the 4 options: 1) Simple/low-effort, 2) Visual/cinematic, 3) Talking-head/direct, 4) Story-based`;
+}`;
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
-    await saveGeneration(base44, user.id, project_id, "generateBodyOptions", STRATEGY_MODEL, { client_name, selected_category, selected_hook, creative_dna }, parsed, inputTokens, outputTokens, true);
+    await saveGeneration(base44, user.id, project_id, "generateBodyOptions", STRATEGY_MODEL, { client_name, selected_category, selected_hook, selected_concept, creative_dna }, parsed, inputTokens, outputTokens, true);
     return Response.json(parsed);
   }
 
-  // ── ACTION: generateCTAOptions ─────────────────────────────────────────────
+  // ── generateCTAOptions ─────────────────────────────────────────────────────
   if (action === "generateCTAOptions") {
-    const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook, selected_body } = payload;
+    const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook, selected_body, selected_concept } = payload;
     const prompt = `Generate exactly 4 CTA options for this video.
 
 Client: ${client_name}
 Goal: ${main_goal}
 Category: ${selected_category}
+Selected concept: ${JSON.stringify(selected_concept)}
 Selected hook: ${JSON.stringify(selected_hook)}
 Selected body: ${JSON.stringify(selected_body)}
 ${intelligenceCtx}
 
-Return JSON with exactly 4 CTAs, one of each type:
+Use CTAPatterns. Match the main_goal. Return exactly these 4 types in order: ישיר, רך, שמירה / שיתוף, פנייה / הודעה.
+Strong clear CTAs are allowed. Do not apologize for selling.
+
+Return JSON:
 {
   "ctas": [
     {
       "cta_type": "ישיר | רך | שמירה / שיתוף | פנייה / הודעה",
-      "cta_text": "the actual CTA text as it would appear in the video",
-      "why_it_fits": "why this CTA fits this video"
+      "cta_text": "the actual CTA text in Hebrew",
+      "why_it_fits": "why this CTA fits"
     }
   ]
-}
-
-Use exactly these 4 types in order: ישיר, רך, שמירה / שיתוף, פנייה / הודעה`;
+}`;
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, FAST_MODEL, prompt);
     await saveGeneration(base44, user.id, project_id, "generateCTAOptions", FAST_MODEL, { client_name, main_goal, selected_category, selected_hook, selected_body }, parsed, inputTokens, outputTokens, true);
     return Response.json(parsed);
   }
 
-  // ── ACTION: generateClientBriefSummary ────────────────────────────────────
+  // ── assembleFinalBrief ─────────────────────────────────────────────────────
+  if (action === "assembleFinalBrief") {
+    const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook, selected_body, selected_cta, selected_concept } = payload;
+    const prompt = `Assemble a final client-ready, shootable video brief.
+
+Client: ${client_name}
+Goal: ${main_goal}
+Category: ${selected_category}
+Creative DNA: ${JSON.stringify(creative_dna)}
+Selected concept: ${JSON.stringify(selected_concept)}
+Selected hook: ${JSON.stringify(selected_hook)}
+Selected body: ${JSON.stringify(selected_body)}
+Selected CTA: ${JSON.stringify(selected_cta)}
+${intelligenceCtx}
+
+CRITICAL RULES:
+- Hebrew only.
+- video_concept must be based on selected_concept — make it clear and 1-2 sentences.
+- hook must be short — the exact opening line, max 1-2 seconds spoken. Do not rewrite it longer.
+- script_text is MANDATORY. Must be the actual full spoken text, voiceover, or text-led script. Natural spoken Hebrew. Not empty, not vague.
+- Use ScriptPatterns and VoiceSamples to shape script_text.
+- shot_structure must describe exactly what to film and what is said/shown at each step.
+- Avoid generic copy like "present the vibe" or "show the business professionally".
+- If the video works better without spoken audio, use script_format: "text_only" and strengthen text_overlays.
+- Use CaptionPatterns for caption_suggestion.
+- The brief must be shootable tomorrow with a phone.
+- Do not return a brief without script_text.
+
+Return JSON:
+{
+  "brief_title": "short descriptive title",
+  "video_concept": "1-2 sentence concept in Hebrew",
+  "hook": "the hook — short, exact as it opens the video",
+  "script_format": "voiceover | person_to_camera | dialogue | text_only",
+  "script_text": "the full spoken script or text-led script — complete, natural Hebrew, usable immediately",
+  "shot_structure": [
+    { "step": 1, "visual": "what is filmed", "spoken_or_overlay_text": "what is said or shown" },
+    { "step": 2, "visual": "what is filmed", "spoken_or_overlay_text": "what is said or shown" },
+    { "step": 3, "visual": "what is filmed", "spoken_or_overlay_text": "what is said or shown" },
+    { "step": 4, "visual": "what is filmed", "spoken_or_overlay_text": "what is said or shown" }
+  ],
+  "text_overlays": ["overlay 1", "overlay 2"],
+  "cta": "the CTA text",
+  "caption_suggestion": "social caption in Hebrew",
+  "production_notes": "specific practical filming notes — location, lighting, pace, tone",
+  "client_risk_level": "נמוך | בינוני | גבוה"
+}`;
+
+    const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
+    await saveGeneration(base44, user.id, project_id, "assembleFinalBrief", STRATEGY_MODEL, { client_name, selected_category, selected_hook, selected_body, selected_cta, selected_concept }, parsed, inputTokens, outputTokens, true);
+    return Response.json({ final_brief: parsed });
+  }
+
+  // ── checkBriefQuality ──────────────────────────────────────────────────────
+  if (action === "checkBriefQuality") {
+    const { project_id, video_brief_id, client_name, main_goal, selected_category, selected_concept, final_brief } = payload;
+    const prompt = `You are a strict Israeli social media brief quality checker.
+
+Check this video brief and score it honestly. Be strict. Do not praise weak briefs.
+
+Client: ${client_name}
+Goal: ${main_goal}
+Category: ${selected_category}
+Selected concept: ${JSON.stringify(selected_concept)}
+Final brief: ${JSON.stringify(final_brief)}
+${intelligenceCtx}
+
+SCORING RULES (1-10, be strict):
+- hook_score: Is the hook short enough for the first 2 seconds? Is it specific to the concept?
+- concept_score: Is the concept clear, not vague, and specific enough to shoot?
+- script_score: Does script_text sound like natural spoken Hebrew? Is it complete and usable?
+- clarity_score: Can a social media manager read this and know exactly what to film?
+- israeli_tone_score: Does it sound like real Israeli copy? Not American-translated?
+- client_safe_score: Can this be approved by a typical Israeli business owner?
+- shootability_score: Can this be filmed tomorrow with a phone?
+- overall_score: Weighted average. Penalize hard if script_text is missing or vague.
+- needs_rewrite: true if overall_score < 8.
+
+Return JSON:
+{
+  "overall_score": 0,
+  "hook_score": 0,
+  "concept_score": 0,
+  "script_score": 0,
+  "clarity_score": 0,
+  "israeli_tone_score": 0,
+  "client_safe_score": 0,
+  "shootability_score": 0,
+  "issues": ["issue 1", "issue 2"],
+  "fix_suggestions": ["fix 1", "fix 2"],
+  "needs_rewrite": true
+}`;
+
+    const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, FAST_MODEL, prompt);
+
+    // Save quality check
+    await base44.asServiceRole.entities.BriefQualityCheck.create({
+      project_id,
+      video_brief_id,
+      overall_score: parsed.overall_score,
+      hook_score: parsed.hook_score,
+      concept_score: parsed.concept_score,
+      script_score: parsed.script_score,
+      clarity_score: parsed.clarity_score,
+      israeli_tone_score: parsed.israeli_tone_score,
+      client_safe_score: parsed.client_safe_score,
+      shootability_score: parsed.shootability_score,
+      issues: parsed.issues || [],
+      fix_suggestions: parsed.fix_suggestions || [],
+      needs_rewrite: parsed.needs_rewrite || false,
+    });
+
+    await saveGeneration(base44, user.id, project_id, "checkBriefQuality", FAST_MODEL, { client_name, selected_category, selected_concept }, parsed, inputTokens, outputTokens, true);
+    return Response.json(parsed);
+  }
+
+  // ── improveFinalBrief ──────────────────────────────────────────────────────
+  if (action === "improveFinalBrief") {
+    const { project_id, video_brief_id, original_brief, quality_check, client_name, main_goal, selected_category, selected_concept, creative_dna, feedback_tags } = payload;
+    const prompt = `Improve this Israeli video brief based on the quality check results.
+
+Client: ${client_name}
+Goal: ${main_goal}
+Category: ${selected_category}
+Selected concept: ${JSON.stringify(selected_concept)}
+Creative DNA: ${JSON.stringify(creative_dna)}
+${intelligenceCtx}
+
+Original brief:
+${JSON.stringify(original_brief)}
+
+Quality check issues:
+${JSON.stringify(quality_check?.issues || [])}
+
+Fix suggestions:
+${JSON.stringify(quality_check?.fix_suggestions || [])}
+
+${feedback_tags?.length ? `User feedback: ${feedback_tags.join(", ")}` : ""}
+
+RULES:
+- Fix the issues found in the quality check.
+- Keep the core concept if it is good — do not change the whole video.
+- Make the hook shorter if needed.
+- Make the concept clearer if needed.
+- Make script_text more natural and spoken Hebrew.
+- Make shot_structure more practical and specific.
+- The brief must be shootable tomorrow.
+- script_text is MANDATORY and must be complete.
+- Hebrew only.
+- Use VoiceSamples and BriefExamples as reference.
+
+Return the same JSON schema as the final brief:
+{
+  "brief_title": "",
+  "video_concept": "",
+  "hook": "",
+  "script_format": "voiceover | person_to_camera | dialogue | text_only",
+  "script_text": "",
+  "shot_structure": [
+    { "step": 1, "visual": "", "spoken_or_overlay_text": "" },
+    { "step": 2, "visual": "", "spoken_or_overlay_text": "" },
+    { "step": 3, "visual": "", "spoken_or_overlay_text": "" },
+    { "step": 4, "visual": "", "spoken_or_overlay_text": "" }
+  ],
+  "text_overlays": [],
+  "cta": "",
+  "caption_suggestion": "",
+  "production_notes": "",
+  "client_risk_level": ""
+}`;
+
+    const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
+    await saveGeneration(base44, user.id, project_id, "improveFinalBrief", STRATEGY_MODEL, { client_name, selected_category, selected_concept, original_brief, quality_check }, parsed, inputTokens, outputTokens, true);
+    return Response.json({ final_brief: parsed });
+  }
+
+  // ── generateClientBriefSummary ─────────────────────────────────────────────
   if (action === "generateClientBriefSummary") {
     const { project_id, client_name, main_goal, creative_dna, video_briefs } = payload;
     const prompt = `Create short, client-friendly summaries for each of these video briefs.
@@ -346,7 +638,6 @@ RULES:
 - Hebrew only.
 - Each summary must be short and easy for a business owner to approve.
 - Do NOT include internal production details, long voiceover scripts, or technical jargon.
-- Do NOT use words like "UGC", "retention", "conversion" unless necessary.
 - Keep tone professional, simple, confident.
 - Each video should take 20-40 seconds to read.
 
@@ -356,7 +647,7 @@ Return JSON:
     {
       "brief_title": "video title",
       "category": "category",
-      "short_client_concept": "2-3 sentence concept description for a business owner",
+      "short_client_concept": "2-3 sentence concept for a business owner",
       "hook": "the hook as it will open the video",
       "short_visual_summary": "1-2 sentences describing what the viewer will see",
       "cta": "the call to action"
@@ -369,55 +660,7 @@ Return JSON:
     return Response.json(parsed);
   }
 
-  // ── ACTION: assembleFinalBrief ─────────────────────────────────────────────
-  if (action === "assembleFinalBrief") {
-    const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook, selected_body, selected_cta, selected_concept } = payload;
-    const prompt = `Assemble a final client-ready, shootable video brief based on these selections.
-
-Client: ${client_name}
-Goal: ${main_goal}
-Category: ${selected_category}
-Creative DNA: ${JSON.stringify(creative_dna)}
-Selected concept: ${JSON.stringify(selected_concept)}
-Selected hook: ${JSON.stringify(selected_hook)}
-Selected body: ${JSON.stringify(selected_body)}
-Selected CTA: ${JSON.stringify(selected_cta)}
-${intelligenceCtx}
-
-CRITICAL RULES:
-- Write entirely in Hebrew.
-- The hook must fit within the first 2 seconds of a Reel or TikTok — keep it short and punchy.
-- script_text is MANDATORY. It must be the actual spoken text for the video — voiceover, person talking to camera, short dialogue, or text-only if no one speaks. It must sound natural in spoken Hebrew. Do NOT leave it empty or vague.
-- shot_structure must describe exactly what to film and what is said/shown at each step.
-- Avoid generic marketing copy. Make every line practical and shootable.
-- Choose the script_format that fits the category and business context best.
-- If the video works better without voiceover, use script_format: "text_only" and strengthen text_overlays.
-
-Return JSON exactly:
-{
-  "brief_title": "short descriptive title in Hebrew",
-  "video_concept": "1-2 sentence description of the video concept in Hebrew",
-  "hook": "the hook text exactly as it opens the video — short, max 2 seconds spoken",
-  "script_format": "voiceover | person_to_camera | dialogue | text_only",
-  "script_text": "the full spoken script or narration text in natural Hebrew — this is what the person says or what appears as text. Must be complete and usable.",
-  "shot_structure": [
-    { "step": 1, "visual": "what is filmed/shown", "spoken_or_overlay_text": "what is said or shown as text" },
-    { "step": 2, "visual": "what is filmed/shown", "spoken_or_overlay_text": "what is said or shown as text" },
-    { "step": 3, "visual": "what is filmed/shown", "spoken_or_overlay_text": "what is said or shown as text" }
-  ],
-  "text_overlays": ["overlay 1", "overlay 2", "overlay 3"],
-  "cta": "the CTA text exactly as spoken or shown",
-  "caption_suggestion": "a suggested social media caption in Hebrew",
-  "production_notes": "practical filming notes — location, lighting, tone, pace",
-  "client_risk_level": "נמוך | בינוני | גבוה"
-}`;
-
-    const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
-    await saveGeneration(base44, user.id, project_id, "assembleFinalBrief", STRATEGY_MODEL, { client_name, selected_category, selected_hook, selected_body, selected_cta }, parsed, inputTokens, outputTokens, true);
-    return Response.json({ final_brief: parsed });
-  }
-
-  // ── ACTION: rewriteOption ──────────────────────────────────────────────────
+  // ── rewriteOption ──────────────────────────────────────────────────────────
   if (action === "rewriteOption") {
     const { project_id, original_text, rewrite_action, business_context, selected_category } = payload;
     const prompt = `Rewrite this text with the following instruction: "${rewrite_action}"
@@ -426,6 +669,8 @@ Original text: "${original_text}"
 Business context: ${business_context || ""}
 Category: ${selected_category || ""}
 ${intelligenceCtx}
+
+Keep it in natural Israeli Hebrew. Make it practical and usable.
 
 Return JSON:
 {

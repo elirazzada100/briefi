@@ -1,0 +1,39 @@
+{
+  "name": "UserFeedback",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "description": "\u05de\u05d6\u05d4\u05d4 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8"
+    },
+    "video_brief_id": {
+      "type": "string",
+      "description": "\u05de\u05d6\u05d4\u05d4 \u05d1\u05e8\u05d9\u05e3"
+    },
+    "main_feedback": {
+      "type": "string",
+      "enum": [
+        "\u05d0\u05d4\u05d1\u05ea\u05d9",
+        "\u05d7\u05dc\u05e9",
+        "\u05dc\u05d0 \u05de\u05e1\u05e4\u05d9\u05e7 \u05d9\u05e9\u05e8\u05d0\u05dc\u05d9"
+      ],
+      "description": "\u05e4\u05d9\u05d3\u05d1\u05e7 \u05e8\u05d0\u05e9\u05d9"
+    },
+    "specific_feedback": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05e4\u05d9\u05d3\u05d1\u05e7 \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9"
+    },
+    "triggered_rewrite": {
+      "type": "boolean",
+      "default": false,
+      "description": "\u05d4\u05e4\u05e2\u05d9\u05dc \u05e9\u05db\u05ea\u05d5\u05d1"
+    }
+  },
+  "required": [
+    "project_id",
+    "video_brief_id"
+  ]
+}

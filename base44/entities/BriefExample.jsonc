@@ -1,0 +1,50 @@
+{
+  "name": "BriefExample",
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string",
+      "description": "\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4"
+    },
+    "industry": {
+      "type": "string",
+      "description": "\u05ea\u05e2\u05e9\u05d9\u05d9\u05d4"
+    },
+    "example_type": {
+      "type": "string",
+      "enum": [
+        "hook",
+        "concept",
+        "script",
+        "cta",
+        "shot_structure",
+        "full_brief"
+      ],
+      "description": "\u05e1\u05d5\u05d2 \u05d3\u05d5\u05d2\u05de\u05d4"
+    },
+    "example_content": {
+      "type": "string",
+      "description": "\u05ea\u05d5\u05db\u05df \u05d4\u05d3\u05d5\u05d2\u05de\u05d4"
+    },
+    "why_it_works": {
+      "type": "string",
+      "description": "\u05dc\u05de\u05d4 \u05d6\u05d4 \u05e2\u05d5\u05d1\u05d3"
+    },
+    "tone_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05ea\u05d2\u05d9\u05d5\u05ea \u05d8\u05d5\u05df"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "\u05e4\u05e2\u05d9\u05dc"
+    }
+  },
+  "required": [
+    "example_type",
+    "example_content"
+  ]
+}

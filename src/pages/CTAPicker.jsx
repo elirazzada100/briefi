@@ -12,6 +12,12 @@ const ctaTypeColors = {
   "פנייה / הודעה": { bg: "rgba(242,81,157,0.08)", border: "rgba(242,81,157,0.3)", text: "#F2519D" },
 };
 
+const LOADING_MESSAGES = [
+  "מרכיבים את הבריף...",
+  "בודקים שניתן לצלם מחר...",
+  "בודקים שהסקריפט נשמע טבעי...",
+  "משפרים אם צריך...",
+];
 
 export default function CTAPicker() {
   const { projectId } = useParams();
@@ -23,6 +29,7 @@ export default function CTAPicker() {
   const [selectedBody] = useState(state?.selectedBody || {});
   const [selectedConcept] = useState(state?.selectedConcept || {});
   const [generating, setGenerating] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0]);
   const [error, setError] = useState(false);
 
   const handleSelect = async (cta) => {
@@ -40,8 +47,9 @@ export default function CTAPicker() {
       selected_category: category,
     });
 
-    // Assemble final brief via OpenAI backend
-    const response = await base44.functions.invoke("briefiAI", {
+    // Step 1: Assemble final brief
+    setLoadingMsg(LOADING_MESSAGES[0]);
+    const briefResponse = await base44.functions.invoke("briefiAI", {
       action: "assembleFinalBrief",
       project_id: projectId,
       client_name: proj?.client_name || "",
@@ -54,8 +62,9 @@ export default function CTAPicker() {
       selected_cta: cta,
     });
 
-    const finalBrief = response.data?.final_brief;
+    let finalBrief = briefResponse.data?.final_brief;
 
+    // Step 2: Save initial brief to get an ID
     const existingBriefs = await base44.entities.VideoBrief.filter({ project_id: projectId });
     const videoNumber = (existingBriefs.length || 0) + 1;
 
@@ -67,8 +76,51 @@ export default function CTAPicker() {
       selected_body: selectedBody,
       selected_cta: cta,
       final_brief: finalBrief,
+      status: "draft"
+    });
+
+    // Step 3: Quality check
+    setLoadingMsg(LOADING_MESSAGES[1]);
+    const qcResponse = await base44.functions.invoke("briefiAI", {
+      action: "checkBriefQuality",
+      project_id: projectId,
+      video_brief_id: savedBrief.id,
+      client_name: proj?.client_name || "",
+      main_goal: proj?.main_goal || "",
+      selected_category: category,
+      selected_concept: selectedConcept,
+      final_brief: finalBrief,
+    });
+
+    const qualityCheck = qcResponse.data || {};
+
+    // Step 4: Auto-improve if needed
+    if (qualityCheck.needs_rewrite) {
+      setLoadingMsg(LOADING_MESSAGES[3]);
+      const improveResponse = await base44.functions.invoke("briefiAI", {
+        action: "improveFinalBrief",
+        project_id: projectId,
+        video_brief_id: savedBrief.id,
+        original_brief: finalBrief,
+        quality_check: qualityCheck,
+        client_name: proj?.client_name || "",
+        main_goal: proj?.main_goal || "",
+        selected_category: category,
+        selected_concept: selectedConcept,
+        creative_dna: proj?.creative_dna || {},
+      });
+      finalBrief = improveResponse.data?.final_brief || finalBrief;
+    }
+
+    // Step 5: Update saved brief with final version
+    await base44.entities.VideoBrief.update(savedBrief.id, {
+      final_brief: finalBrief,
       status: "ready"
     });
+
+    await base44.entities.BriefQualityCheck.update
+      ? null // entity has no standalone update from client, handled in backend
+      : null;
 
     await base44.entities.Project.update(projectId, {
       completed_briefs_count: videoNumber,
@@ -76,11 +128,21 @@ export default function CTAPicker() {
     });
 
     setGenerating(false);
-    navigate(`/project/${projectId}/final-brief`, { state: { briefId: savedBrief.id } });
+    navigate(`/project/${projectId}/final-brief`, {
+      state: { briefId: savedBrief.id, wasImproved: qualityCheck.needs_rewrite }
+    });
   };
 
-  if (generating) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState message="מרכיבים את הבריף הסופי..." /></div>;
-  if (error) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><ErrorState onRetry={() => setError(false)} /></div>;
+  if (generating) return (
+    <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl">
+      <LoadingState message={loadingMsg} />
+    </div>
+  );
+  if (error) return (
+    <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl">
+      <ErrorState onRetry={() => setError(false)} />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-briefi-bg" dir="rtl">
@@ -97,7 +159,6 @@ export default function CTAPicker() {
       </div>
 
       <div className="max-w-lg mx-auto px-5 py-5 space-y-4">
-        {/* Context pills */}
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-3 space-y-1">
           <p className="text-xs font-bold text-primary">ההוק שבחרתם</p>
           <p className="text-sm font-bold text-briefi-navy">"{selectedHook?.hook_text}"</p>
@@ -124,7 +185,6 @@ export default function CTAPicker() {
                   </div>
 
                   <p className="text-briefi-navy font-black text-base leading-snug">"{cta.cta_text}"</p>
-
                   <p className="text-sm text-briefi-secondary">{cta.why_it_fits}</p>
 
                   <button

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowRight, Pencil, Check, X, FileText, Plus } from "lucide-react";
+import { ArrowRight, Pencil, Check, X, FileText, Plus, RefreshCw, ThumbsUp, ThumbsDown } from "lucide-react";
 import LoadingState from "@/components/briefi/LoadingState";
 
 const riskColors = {
@@ -17,16 +17,22 @@ const scriptFormatLabels = {
   "text_only": "טקסט בלבד",
 };
 
+const SPECIFIC_FEEDBACK_OPTIONS = [
+  "ההוק ארוך מדי",
+  "הטקסט לא מדבר טבעי",
+  "לא ברור מה לצלם",
+  "יותר מכירתי",
+  "יותר מצחיק",
+  "יותר לקוח-מאשר",
+];
+
 function EditableField({ label, value, onSave, prominent = false, hint = null }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(value || "");
 
   useEffect(() => { setVal(value || ""); }, [value]);
 
-  const handleSave = () => {
-    onSave(val);
-    setEditing(false);
-  };
+  const handleSave = () => { onSave(val); setEditing(false); };
 
   return (
     <div className="space-y-1.5">
@@ -44,7 +50,7 @@ function EditableField({ label, value, onSave, prominent = false, hint = null })
             value={val}
             onChange={e => setVal(e.target.value)}
             autoFocus
-            rows={prominent ? 5 : 3}
+            rows={prominent ? 6 : 3}
             className="w-full p-3 rounded-xl border border-primary/30 bg-primary/5 text-briefi-navy text-sm font-medium focus:outline-none resize-none"
           />
           <div className="flex gap-2">
@@ -59,7 +65,7 @@ function EditableField({ label, value, onSave, prominent = false, hint = null })
       ) : (
         <>
           <p className={`text-sm text-briefi-navy font-medium leading-relaxed whitespace-pre-wrap ${prominent ? "text-base" : ""}`}>{val || "—"}</p>
-          {hint && <p className="text-xs text-briefi-muted mt-1">{hint}</p>}
+          {hint && <p className="text-xs text-briefi-muted mt-1 italic">{hint}</p>}
         </>
       )}
     </div>
@@ -70,12 +76,19 @@ export default function FinalBrief() {
   const { projectId } = useParams();
   const { state } = useLocation();
   const briefId = state?.briefId;
+  const wasImproved = state?.wasImproved || false;
   const navigate = useNavigate();
   const [brief, setBrief] = useState(null);
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Feedback state
+  const [mainFeedback, setMainFeedback] = useState(null);
+  const [specificFeedback, setSpecificFeedback] = useState([]);
+  const [feedbackSaved, setFeedbackSaved] = useState(false);
+  const [improving, setImproving] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -101,7 +114,64 @@ export default function FinalBrief() {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const toggleSpecificFeedback = (item) => {
+    setSpecificFeedback(prev =>
+      prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]
+    );
+  };
+
+  const handleSaveFeedback = async (main) => {
+    setMainFeedback(main);
+    await base44.entities.UserFeedback.create({
+      project_id: projectId,
+      video_brief_id: briefId,
+      main_feedback: main,
+      specific_feedback: specificFeedback,
+      triggered_rewrite: false,
+    });
+    setFeedbackSaved(true);
+  };
+
+  const handleImproveWithFeedback = async () => {
+    if (!mainFeedback && specificFeedback.length === 0) return;
+    setImproving(true);
+
+    // Save feedback with rewrite flag
+    await base44.entities.UserFeedback.create({
+      project_id: projectId,
+      video_brief_id: briefId,
+      main_feedback: mainFeedback,
+      specific_feedback: specificFeedback,
+      triggered_rewrite: true,
+    });
+
+    const response = await base44.functions.invoke("briefiAI", {
+      action: "improveFinalBrief",
+      project_id: projectId,
+      video_brief_id: briefId,
+      original_brief: brief?.final_brief,
+      quality_check: { issues: specificFeedback, fix_suggestions: [] },
+      client_name: project?.client_name || "",
+      main_goal: project?.main_goal || "",
+      selected_category: brief?.category || "",
+      selected_concept: {},
+      creative_dna: project?.creative_dna || {},
+      feedback_tags: [mainFeedback, ...specificFeedback].filter(Boolean),
+    });
+
+    const improved = response.data?.final_brief;
+    if (improved) {
+      setBrief(prev => ({ ...prev, final_brief: improved }));
+      await base44.entities.VideoBrief.update(briefId, { final_brief: improved });
+    }
+    setImproving(false);
+    setMainFeedback(null);
+    setSpecificFeedback([]);
+    setFeedbackSaved(false);
+  };
+
   if (loading) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState message="טוען את הבריף..." /></div>;
+  if (improving) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState message="משפרים לפי הפידבק..." /></div>;
 
   const fb = brief?.final_brief || {};
   const riskClass = riskColors[fb.client_risk_level] || riskColors["בינוני"];
@@ -115,11 +185,16 @@ export default function FinalBrief() {
             <ArrowRight className="w-5 h-5 text-briefi-secondary" />
           </button>
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-black text-briefi-navy">הבריף מוכן</h1>
               {fb.client_risk_level && (
                 <span className={`text-xs px-2 py-0.5 rounded-full border font-bold ${riskClass}`}>
                   {fb.client_risk_level}
+                </span>
+              )}
+              {wasImproved && (
+                <span className="text-xs px-2 py-0.5 rounded-full border font-bold text-green-600 bg-green-50 border-green-200">
+                  ✓ בדיקת איכות בוצעה
                 </span>
               )}
             </div>
@@ -136,7 +211,7 @@ export default function FinalBrief() {
 
           {/* 2. קונספט */}
           <div className="border-t border-muted pt-4">
-            <EditableField label="קונספט לסרטון" value={fb.video_concept} onSave={v => updateBriefField("video_concept", v)} />
+            <EditableField label="קונספט לסרטון" value={fb.video_concept || fb.main_idea} onSave={v => updateBriefField("video_concept", v)} />
           </div>
 
           {/* 3. הוק */}
@@ -145,17 +220,19 @@ export default function FinalBrief() {
           </div>
 
           {/* 4. טקסט / ווייסאובר — prominent */}
-          <div className="border-t border-muted pt-4 bg-primary/3 rounded-xl p-3 -mx-1">
-            {scriptLabel && (
-              <span className="inline-block text-xs bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full mb-2">{scriptLabel}</span>
-            )}
-            <EditableField
-              label="טקסט / ווייסאובר"
-              value={fb.script_text}
-              onSave={v => updateBriefField("script_text", v)}
-              prominent
-              hint="זה הטקסט שאפשר להקריא, להגיד למצלמה או להשתמש בו כבסיס לצילום."
-            />
+          <div className="border-t border-muted pt-4">
+            <div className="bg-primary/5 rounded-2xl p-4 space-y-2">
+              {scriptLabel && (
+                <span className="inline-block text-xs bg-primary/10 text-primary font-bold px-2.5 py-1 rounded-full">{scriptLabel}</span>
+              )}
+              <EditableField
+                label="טקסט / ווייסאובר"
+                value={fb.script_text}
+                onSave={v => updateBriefField("script_text", v)}
+                prominent
+                hint="זה הטקסט שאפשר להקריא, להגיד למצלמה או להשתמש בו כבסיס לצילום."
+              />
+            </div>
           </div>
 
           {/* 5. מבנה צילום */}
@@ -201,6 +278,61 @@ export default function FinalBrief() {
           <div className="border-t border-muted pt-4">
             <EditableField label="הערות צילום" value={fb.production_notes} onSave={v => updateBriefField("production_notes", v)} />
           </div>
+        </div>
+
+        {/* Feedback Section */}
+        <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
+          <p className="text-xs font-bold text-briefi-muted">מה דעתכם על הבריף?</p>
+
+          {/* Main feedback */}
+          {!feedbackSaved ? (
+            <div className="flex gap-2">
+              {["אהבתי", "חלש", "לא מספיק ישראלי"].map(opt => (
+                <button
+                  key={opt}
+                  onClick={() => handleSaveFeedback(opt)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                    mainFeedback === opt
+                      ? "bg-primary text-white border-primary"
+                      : "bg-muted/30 text-briefi-secondary border-border hover:border-primary/30"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-xs text-green-600 font-bold">תודה על הפידבק ✓</div>
+          )}
+
+          {/* Specific feedback */}
+          <div className="flex flex-wrap gap-1.5">
+            {SPECIFIC_FEEDBACK_OPTIONS.map(opt => (
+              <button
+                key={opt}
+                onClick={() => toggleSpecificFeedback(opt)}
+                className={`text-xs px-2.5 py-1 rounded-lg border transition-all font-medium ${
+                  specificFeedback.includes(opt)
+                    ? "bg-primary/10 text-primary border-primary/30"
+                    : "bg-muted/30 text-briefi-secondary border-border hover:border-primary/20"
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+
+          {/* Rewrite with feedback */}
+          {(mainFeedback || specificFeedback.length > 0) && (
+            <button
+              onClick={handleImproveWithFeedback}
+              className="w-full h-10 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+              style={{ background: "linear-gradient(135deg, #23C98B 0%, #249BFF 100%)" }}
+            >
+              <RefreshCw className="w-4 h-4" />
+              שפרו את הבריף לפי הפידבק
+            </button>
+          )}
         </div>
 
         {/* Action Buttons */}

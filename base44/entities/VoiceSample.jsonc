@@ -1,0 +1,68 @@
+{
+  "name": "VoiceSample",
+  "type": "object",
+  "properties": {
+    "sample_type": {
+      "type": "string",
+      "enum": [
+        "good",
+        "bad",
+        "rewrite",
+        "ranked"
+      ],
+      "description": "\u05e1\u05d5\u05d2 \u05d3\u05d2\u05d9\u05de\u05d4"
+    },
+    "category": {
+      "type": "string",
+      "description": "\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4"
+    },
+    "industry": {
+      "type": "string",
+      "description": "\u05ea\u05e2\u05e9\u05d9\u05d9\u05d4"
+    },
+    "context": {
+      "type": "string",
+      "description": "\u05d4\u05e7\u05e9\u05e8"
+    },
+    "input_text": {
+      "type": "string",
+      "description": "\u05d8\u05e7\u05e1\u05d8 \u05e7\u05dc\u05d8"
+    },
+    "output_text": {
+      "type": "string",
+      "description": "\u05d8\u05e7\u05e1\u05d8 \u05e4\u05dc\u05d8"
+    },
+    "rating": {
+      "type": "string",
+      "enum": [
+        "good",
+        "bad",
+        "american",
+        "cringe",
+        "close",
+        "excellent"
+      ],
+      "description": "\u05d3\u05d9\u05e8\u05d5\u05d2"
+    },
+    "why": {
+      "type": "string",
+      "description": "\u05dc\u05de\u05d4"
+    },
+    "tone_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05ea\u05d2\u05d9\u05d5\u05ea \u05d8\u05d5\u05df"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "\u05e4\u05e2\u05d9\u05dc"
+    }
+  },
+  "required": [
+    "sample_type",
+    "output_text"
+  ]
+}
