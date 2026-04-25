@@ -1,0 +1,69 @@
+{
+  "name": "Project",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "description": "\u05de\u05d6\u05d4\u05d4 \u05dc\u05e7\u05d5\u05d7"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "\u05e9\u05dd \u05d4\u05dc\u05e7\u05d5\u05d7"
+    },
+    "project_name": {
+      "type": "string",
+      "description": "\u05e9\u05dd \u05d4\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "in_progress",
+        "ready_to_export",
+        "exported"
+      ],
+      "default": "draft",
+      "description": "\u05e1\u05d8\u05d8\u05d5\u05e1 \u05d4\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8"
+    },
+    "creative_dna": {
+      "type": "object",
+      "description": "Creative DNA \u05de\u05d4\u05e0\u05d9\u05ea\u05d5\u05d7",
+      "properties": {
+        "main_angle": {
+          "type": "string"
+        },
+        "audience_truth": {
+          "type": "string"
+        },
+        "what_is_interesting": {
+          "type": "string"
+        },
+        "what_to_avoid": {
+          "type": "string"
+        },
+        "recommended_content_directions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "completed_briefs_count": {
+      "type": "number",
+      "default": 0,
+      "description": "\u05de\u05e1\u05e4\u05e8 \u05d1\u05e8\u05d9\u05e4\u05d9\u05dd \u05e9\u05d4\u05d5\u05e9\u05dc\u05de\u05d5"
+    },
+    "main_goal": {
+      "type": "string",
+      "description": "\u05de\u05d8\u05e8\u05d4 \u05e2\u05d9\u05e7\u05e8\u05d9\u05ea"
+    },
+    "raw_notes": {
+      "type": "string",
+      "description": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05d2\u05d5\u05dc\u05de\u05d9\u05d5\u05ea"
+    }
+  },
+  "required": [
+    "client_name"
+  ]
+}
