@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowRight, Download, Check } from "lucide-react";
+import { ArrowRight, Download, Check, Printer } from "lucide-react";
 import LoadingState from "@/components/briefi/LoadingState";
-import jsPDF from "jspdf";
 
 const DNA_LABELS = {
   main_angle: "הזווית המרכזית",
@@ -13,23 +12,29 @@ const DNA_LABELS = {
   recommended_content_directions: "כיווני תוכן מומלצים",
 };
 
+const scriptFormatLabels = {
+  "voiceover": "ווייסאובר",
+  "person_to_camera": "דיבור למצלמה",
+  "dialogue": "דיאלוג",
+  "text_only": "טקסט בלבד",
+};
+
 export default function PDFExport() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [briefs, setBriefs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [done, setDone] = useState(false);
 
   const [pdfTitle, setPdfTitle] = useState("חבילת בריפים לסושיאל");
   const [preparedBy, setPreparedBy] = useState("");
   const [includeSections, setIncludeSections] = useState({
-    hooks: true,
-    body: true,
+    script: true,
+    shot_structure: true,
     cta: true,
     production_notes: true,
     creative_dna: true,
+    caption: true,
   });
 
   useEffect(() => {
@@ -47,278 +52,317 @@ export default function PDFExport() {
     setIncludeSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const generatePDF = async () => {
-    setGenerating(true);
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageW = 210;
-    const pageH = 297;
-    const margin = 20;
-    const contentW = pageW - margin * 2;
+  const generateHTML = () => {
+    const dna = project?.creative_dna || {};
 
-    const addRTLText = (text, x, y, options = {}) => {
-      if (!text) return;
-      const str = String(text);
-      doc.text(str, x, y, { align: "right", ...options });
-    };
-
-    const addWrappedRTLText = (text, x, y, maxWidth, lineHeight = 6) => {
-      if (!text) return y;
-      const str = String(text);
-      const lines = doc.splitTextToSize(str, maxWidth);
-      lines.forEach((line, i) => {
-        doc.text(line, x + maxWidth, y + i * lineHeight, { align: "right" });
-      });
-      return y + lines.length * lineHeight;
-    };
-
-    const checkNewPage = (currentY, neededSpace = 20) => {
-      if (currentY + neededSpace > pageH - margin) {
-        doc.addPage();
-        return margin + 10;
-      }
-      return currentY;
-    };
-
-    // COVER PAGE
-    doc.setFillColor(250, 250, 247);
-    doc.rect(0, 0, pageW, pageH, "F");
-
-    // Purple accent bar at top
-    doc.setFillColor(108, 53, 255);
-    doc.rect(0, 0, pageW, 8, "F");
-
-    // Logo placeholder (pencil mark)
-    doc.setDrawColor(108, 53, 255);
-    doc.setLineWidth(2);
-    doc.line(margin + 5, 40, margin + 35, 25);
-    doc.setFillColor(11, 27, 54);
-    doc.circle(margin + 5, 40, 2, "F");
-
-    let y = 60;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(28);
-    doc.setTextColor(11, 27, 54);
-    addRTLText("Briefi", pageW - margin, y);
-
-    y += 12;
-    doc.setFontSize(20);
-    addRTLText(pdfTitle, pageW - margin, y);
-
-    y += 8;
-    doc.setFontSize(12);
-    doc.setTextColor(95, 102, 117);
-    doc.setFont("helvetica", "normal");
-    addRTLText("8 רעיונות לסרטוני וידאו קצרים", pageW - margin, y);
-
-    y += 20;
-    doc.setFontSize(11);
-    doc.setTextColor(11, 27, 54);
-    doc.setFont("helvetica", "bold");
-    addRTLText(`לקוח: ${project?.client_name || ""}`, pageW - margin, y);
-
-    if (preparedBy) {
-      y += 7;
-      addRTLText(`הוכן על ידי: ${preparedBy}`, pageW - margin, y);
-    }
-
-    y += 7;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(154, 161, 173);
-    addRTLText(new Date().toLocaleDateString("he-IL"), pageW - margin, y);
-
-    y += 15;
-    doc.setDrawColor(230, 228, 220);
-    doc.setLineWidth(0.5);
-    doc.line(margin, y, pageW - margin, y);
-
-    if (project?.main_goal) {
-      y += 10;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      doc.setTextColor(95, 102, 117);
-      addRTLText(`מטרה: ${project.main_goal}`, pageW - margin, y);
-    }
-
-    y += 15;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(11, 27, 54);
-    addRTLText(`סה"כ ${briefs.length} בריפים מוכנים`, pageW - margin, y);
-
-    // Bottom bar
-    doc.setFillColor(108, 53, 255);
-    doc.rect(0, pageH - 8, pageW, 8, "F");
-
-    // CREATIVE DNA PAGE
-    if (includeSections.creative_dna && project?.creative_dna) {
-      doc.addPage();
-      doc.setFillColor(250, 250, 247);
-      doc.rect(0, 0, pageW, pageH, "F");
-      doc.setFillColor(108, 53, 255);
-      doc.rect(0, 0, pageW, 8, "F");
-
-      y = margin + 15;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.setTextColor(11, 27, 54);
-      addRTLText("Creative DNA", pageW - margin, y);
-
-      y += 5;
-      doc.setDrawColor(108, 53, 255);
-      doc.setLineWidth(2);
-      doc.line(pageW - margin, y, pageW - margin - 40, y);
-
-      y += 10;
-      const dna = project.creative_dna;
-      Object.entries(DNA_LABELS).forEach(([key, label]) => {
-        const val = dna[key];
-        if (!val) return;
-        y = checkNewPage(y, 25);
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.setTextColor(108, 53, 255);
-        addRTLText(label, pageW - margin, y);
-
-        y += 5;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(95, 102, 117);
-
-        if (Array.isArray(val)) {
-          val.forEach(item => {
-            y = checkNewPage(y, 10);
-            y = addWrappedRTLText(`• ${item}`, margin, y, contentW) + 3;
-          });
-        } else {
-          y = addWrappedRTLText(val, margin, y, contentW) + 3;
-        }
-        y += 6;
-      });
-    }
-
-    // BRIEF PAGES
-    briefs.forEach((brief, idx) => {
-      doc.addPage();
-      doc.setFillColor(250, 250, 247);
-      doc.rect(0, 0, pageW, pageH, "F");
-      doc.setFillColor(108, 53, 255);
-      doc.rect(0, 0, pageW, 8, "F");
-
+    const briefsHTML = briefs.map((brief, idx) => {
       const fb = brief.final_brief || {};
-      y = margin + 15;
+      const scriptLabel = scriptFormatLabels[fb.script_format] || fb.script_format || "";
+      const shotItems = fb.shot_structure || fb.video_structure || [];
 
-      // Brief number chip
-      doc.setFillColor(108, 53, 255);
-      doc.roundedRect(margin, y - 5, 18, 8, 2, 2, "F");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.setTextColor(255, 255, 255);
-      doc.text(`#${brief.video_number}`, margin + 9, y, { align: "center" });
+      return `
+        <div class="brief-page page-break">
+          <div class="brief-header">
+            <span class="brief-num">#${brief.video_number}</span>
+            <div class="brief-header-text">
+              <h2>${fb.brief_title || `בריף ${brief.video_number}`}</h2>
+              <span class="category-tag">${brief.category || ""}</span>
+              ${fb.client_risk_level ? `<span class="risk-tag risk-${fb.client_risk_level}">${fb.client_risk_level}</span>` : ""}
+            </div>
+          </div>
 
-      doc.setTextColor(11, 27, 54);
-      doc.setFontSize(15);
-      addRTLText(fb.brief_title || `בריף ${brief.video_number}`, pageW - margin, y);
+          ${fb.video_concept ? `<div class="section"><div class="section-label">קונספט לסרטון</div><p>${fb.video_concept}</p></div>` : ""}
 
-      y += 4;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(154, 161, 173);
-      addRTLText(brief.category || "", pageW - margin, y);
+          ${includeSections.script && fb.hook ? `<div class="section hook-section"><div class="section-label">הוק</div><p class="hook-text">${fb.hook}</p></div>` : ""}
 
-      y += 8;
-      doc.setDrawColor(230, 228, 220);
-      doc.setLineWidth(0.3);
-      doc.line(margin, y, pageW - margin, y);
+          ${includeSections.script && fb.script_text ? `
+            <div class="section script-section">
+              <div class="section-label">טקסט / ווייסאובר ${scriptLabel ? `<span class="script-format-tag">${scriptLabel}</span>` : ""}</div>
+              <p class="script-text">${fb.script_text.replace(/\n/g, "<br>")}</p>
+              <p class="script-hint">זה הטקסט שאפשר להקריא, להגיד למצלמה או להשתמש בו כבסיס לצילום.</p>
+            </div>
+          ` : ""}
 
-      const fields = [
-        { label: "מטרה", value: fb.goal },
-        includeSections.hooks ? { label: "הוק", value: fb.hook } : null,
-        { label: "רעיון מרכזי", value: fb.main_idea },
-      ].filter(Boolean);
+          ${includeSections.shot_structure && shotItems.length ? `
+            <div class="section">
+              <div class="section-label">מבנה צילום</div>
+              ${shotItems.map((step, i) => `
+                <div class="shot-item">
+                  <span class="shot-num">${step.step || i + 1}</span>
+                  <div class="shot-content">
+                    ${step.visual ? `<p class="shot-visual">${step.visual}</p>` : ""}
+                    ${step.spoken_or_overlay_text ? `<p class="shot-spoken">"${step.spoken_or_overlay_text}"</p>` : ""}
+                    ${step.description ? `<p class="shot-visual">${step.description}</p>` : ""}
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          ` : ""}
 
-      fields.forEach(f => {
-        y = checkNewPage(y, 20);
-        y += 7;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(108, 53, 255);
-        addRTLText(f.label, pageW - margin, y);
-        y += 4;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(11, 27, 54);
-        y = addWrappedRTLText(f.value || "—", margin, y, contentW) + 2;
-      });
+          ${fb.text_overlays?.length ? `
+            <div class="section">
+              <div class="section-label">טקסטים למסך</div>
+              ${fb.text_overlays.map(t => `<div class="overlay-item">"${t}"</div>`).join("")}
+            </div>
+          ` : ""}
 
-      if (includeSections.body && fb.video_structure?.length) {
-        y = checkNewPage(y, 25);
-        y += 8;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(108, 53, 255);
-        addRTLText("מבנה הסרטון", pageW - margin, y);
-        y += 4;
-        fb.video_structure.forEach(step => {
-          y = checkNewPage(y, 12);
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(10);
-          doc.setTextColor(11, 27, 54);
-          y = addWrappedRTLText(`${step.step}. ${step.description}`, margin, y, contentW) + 3;
-        });
-      }
+          ${includeSections.cta && fb.cta ? `<div class="section"><div class="section-label">קריאה לפעולה</div><p>${fb.cta}</p></div>` : ""}
 
-      if (includeSections.cta && fb.cta) {
-        y = checkNewPage(y, 20);
-        y += 8;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(108, 53, 255);
-        addRTLText("CTA", pageW - margin, y);
-        y += 5;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(11, 27, 54);
-        y = addWrappedRTLText(fb.cta, margin, y, contentW) + 2;
-      }
+          ${includeSections.caption && fb.caption_suggestion ? `<div class="section"><div class="section-label">כיתוב לפוסט</div><p class="caption-text">${fb.caption_suggestion}</p></div>` : ""}
 
-      if (includeSections.production_notes && fb.production_notes) {
-        y = checkNewPage(y, 20);
-        y += 8;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(108, 53, 255);
-        addRTLText("הערות צילום", pageW - margin, y);
-        y += 5;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(95, 102, 117);
-        y = addWrappedRTLText(fb.production_notes, margin, y, contentW) + 2;
-      }
+          ${includeSections.production_notes && fb.production_notes ? `<div class="section notes-section"><div class="section-label">הערות צילום</div><p>${fb.production_notes}</p></div>` : ""}
+        </div>
+      `;
+    }).join("");
 
-      // Bottom bar
-      doc.setFillColor(108, 53, 255);
-      doc.rect(0, pageH - 8, pageW, 8, "F");
-    });
+    const dnaHTML = includeSections.creative_dna && project?.creative_dna ? `
+      <div class="brief-page page-break dna-page">
+        <h2 class="dna-title">Creative DNA</h2>
+        ${Object.entries(DNA_LABELS).map(([key, label]) => {
+          const val = dna[key];
+          if (!val) return "";
+          if (Array.isArray(val)) {
+            return `<div class="section"><div class="section-label">${label}</div><ul>${val.map(v => `<li>${v}</li>`).join("")}</ul></div>`;
+          }
+          return `<div class="section"><div class="section-label">${label}</div><p>${val}</p></div>`;
+        }).join("")}
+      </div>
+    ` : "";
 
-    doc.save(`${project?.client_name || "briefi"}-briefs.pdf`);
+    return `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>${pdfTitle}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    // Update project status
+    html, body {
+      direction: rtl;
+      unicode-bidi: plaintext;
+      font-family: 'Heebo', 'Arial', sans-serif;
+      font-size: 13px;
+      color: #0B1B36;
+      background: #FAFAF7;
+      line-height: 1.6;
+    }
+
+    .text, p, h1, h2, h3, li, span, div {
+      direction: rtl;
+      text-align: right;
+      unicode-bidi: plaintext;
+    }
+
+    @media print {
+      body { background: white; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none !important; }
+    }
+
+    .cover {
+      padding: 60px 50px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-bottom: 6px solid #6C35FF;
+    }
+
+    .cover-brand { font-size: 36px; font-weight: 900; color: #6C35FF; margin-bottom: 10px; }
+    .cover-title { font-size: 26px; font-weight: 800; color: #0B1B36; margin-bottom: 6px; }
+    .cover-sub { font-size: 14px; color: #5F6675; margin-bottom: 30px; }
+    .cover-meta { font-size: 13px; color: #0B1B36; font-weight: 600; line-height: 2; }
+    .cover-date { font-size: 11px; color: #9AA1AD; margin-top: 8px; }
+    .cover-divider { border: none; border-top: 1px solid #E6E4DC; margin: 24px 0; }
+    .cover-count { font-size: 15px; font-weight: 700; color: #6C35FF; }
+
+    .dna-page { padding: 50px; }
+    .dna-title { font-size: 22px; font-weight: 900; color: #6C35FF; margin-bottom: 24px; border-bottom: 3px solid #6C35FF; padding-bottom: 10px; display: inline-block; }
+
+    .brief-page {
+      padding: 40px 50px 60px;
+      min-height: 100vh;
+    }
+
+    .brief-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #E6E4DC;
+    }
+
+    .brief-num {
+      background: #6C35FF;
+      color: white;
+      font-weight: 900;
+      font-size: 13px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      white-space: nowrap;
+      margin-top: 4px;
+    }
+
+    .brief-header-text h2 { font-size: 20px; font-weight: 900; color: #0B1B36; }
+
+    .category-tag {
+      display: inline-block;
+      font-size: 11px;
+      color: #9AA1AD;
+      margin-top: 4px;
+      margin-left: 8px;
+    }
+
+    .risk-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 4px;
+    }
+    .risk-tag.risk-נמוך { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .risk-tag.risk-בינוני { background: #fefce8; color: #ca8a04; border: 1px solid #fde68a; }
+    .risk-tag.risk-גבוה { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
+
+    .section { margin-bottom: 20px; }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: #6C35FF;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .script-format-tag {
+      font-size: 10px;
+      background: #6C35FF;
+      color: white;
+      padding: 1px 7px;
+      border-radius: 20px;
+      font-weight: 700;
+      text-transform: none;
+    }
+
+    .hook-section { background: #F3EFFF; border-right: 4px solid #6C35FF; padding: 14px 16px; border-radius: 10px; }
+    .hook-text { font-size: 16px; font-weight: 800; color: #0B1B36; }
+
+    .script-section { background: #F9F8FF; border-right: 4px solid #6C35FF; padding: 14px 16px; border-radius: 10px; }
+    .script-text { font-size: 14px; font-weight: 500; color: #0B1B36; line-height: 1.8; }
+    .script-hint { font-size: 10px; color: #9AA1AD; margin-top: 8px; font-style: italic; }
+
+    .shot-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px;
+      background: #F5F5F2;
+      border-radius: 8px;
+      margin-bottom: 6px;
+    }
+    .shot-num {
+      background: rgba(108,53,255,0.12);
+      color: #6C35FF;
+      font-weight: 900;
+      font-size: 11px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .shot-content { flex: 1; }
+    .shot-visual { font-size: 13px; font-weight: 600; color: #0B1B36; }
+    .shot-spoken { font-size: 12px; color: #5F6675; font-style: italic; margin-top: 2px; }
+
+    .overlay-item {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0B1B36;
+      background: #F0EEF7;
+      padding: 6px 12px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+      display: inline-block;
+      margin-left: 6px;
+    }
+
+    .caption-text { font-size: 12px; color: #5F6675; line-height: 1.8; }
+
+    .notes-section p { font-size: 12px; color: #5F6675; }
+
+    ul { padding-right: 20px; }
+    ul li { margin-bottom: 4px; font-size: 13px; color: #5F6675; }
+
+    .print-btn {
+      position: fixed;
+      bottom: 30px;
+      left: 30px;
+      background: #6C35FF;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-family: 'Heebo', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 30px rgba(108,53,255,0.4);
+      z-index: 9999;
+    }
+    .print-btn:hover { background: #5a28e0; }
+  </style>
+</head>
+<body>
+
+  <!-- Cover -->
+  <div class="cover">
+    <div class="cover-brand">Briefi ✦</div>
+    <div class="cover-title">${pdfTitle}</div>
+    <div class="cover-sub">חבילת בריפים לסרטונים קצרים</div>
+    <div class="cover-meta">
+      לקוח: ${project?.client_name || ""}${preparedBy ? `<br>הוכן על ידי: ${preparedBy}` : ""}
+    </div>
+    <div class="cover-date">${new Date().toLocaleDateString("he-IL")}</div>
+    <hr class="cover-divider">
+    <div class="cover-count">${briefs.length} בריפים מוכנים לצילום</div>
+  </div>
+
+  ${dnaHTML}
+  ${briefsHTML}
+
+  <button class="print-btn no-print" onclick="window.print()">🖨️ הדפסה / שמירה כ-PDF</button>
+</body>
+</html>`;
+  };
+
+  const handleExport = async () => {
+    const html = generateHTML();
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank");
+    if (!win) alert("אנא אפשרו חלון קופץ בדפדפן ונסו שנית.");
     await base44.entities.Project.update(projectId, { status: "exported" });
-
-    setGenerating(false);
-    setDone(true);
-    setTimeout(() => setDone(false), 3000);
   };
 
   if (loading) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState /></div>;
-  if (generating) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState message="מייצרים PDF..." /></div>;
 
   const checkboxes = [
-    { key: "hooks", label: "הוקים" },
-    { key: "body", label: "מבנה סרטון" },
-    { key: "cta", label: "CTA" },
+    { key: "script", label: "הוק + טקסט / ווייסאובר" },
+    { key: "shot_structure", label: "מבנה צילום" },
+    { key: "cta", label: "קריאה לפעולה" },
+    { key: "caption", label: "כיתוב לפוסט" },
     { key: "production_notes", label: "הערות צילום" },
     { key: "creative_dna", label: "Creative DNA" },
   ];
@@ -331,23 +375,26 @@ export default function PDFExport() {
             <ArrowRight className="w-5 h-5 text-briefi-secondary" />
           </button>
           <div>
-            <h1 className="text-xl font-black text-briefi-navy">ייצוא ל־PDF</h1>
+            <h1 className="text-xl font-black text-briefi-navy">ייצוא בריפים</h1>
             <p className="text-xs text-briefi-muted">הפכו את הבריפים למסמך שאפשר לשלוח ללקוח.</p>
           </div>
         </div>
       </div>
 
       <div className="max-w-lg mx-auto px-5 py-5 space-y-5">
-        {/* Summary */}
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
           <p className="text-sm font-bold text-primary">{project?.client_name}</p>
           <p className="text-briefi-secondary text-sm">{briefs.length} בריפים מוכנים לייצוא</p>
         </div>
 
-        {/* Fields */}
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+          <p className="text-sm font-bold text-blue-700 mb-1">איך זה עובד?</p>
+          <p className="text-xs text-blue-600">המסמך ייפתח בחלון חדש בעברית מלאה עם כל הבריפים. לשמירה כ-PDF — לחצו על כפתור ההדפסה בתחתית הדף ובחרו "שמור כ-PDF".</p>
+        </div>
+
         <div className="bg-white rounded-2xl border border-border p-5 space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-bold text-briefi-navy">כותרת ה-PDF</label>
+            <label className="text-sm font-bold text-briefi-navy">כותרת המסמך</label>
             <input
               type="text"
               value={pdfTitle}
@@ -367,7 +414,6 @@ export default function PDFExport() {
           </div>
         </div>
 
-        {/* Sections */}
         <div className="bg-white rounded-2xl border border-border p-5 space-y-3">
           <h3 className="font-bold text-briefi-navy text-sm">סעיפים לכלול</h3>
           <div className="space-y-2">
@@ -386,18 +432,14 @@ export default function PDFExport() {
           </div>
         </div>
 
-        {/* Export Button */}
         <button
-          onClick={generatePDF}
+          onClick={handleExport}
           disabled={briefs.length === 0}
-          className={`w-full h-16 rounded-2xl font-black text-lg text-white flex items-center justify-center gap-3 transition-all active:scale-95 ${done ? "bg-green-500" : ""} ${briefs.length === 0 ? "opacity-40 cursor-not-allowed" : ""}`}
-          style={!done && briefs.length > 0 ? { background: "linear-gradient(135deg, #1E8BFF 0%, #8B3DFF 100%)" } : {}}
+          className="w-full h-16 rounded-2xl font-black text-lg text-white flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ background: "linear-gradient(135deg, #1E8BFF 0%, #8B3DFF 100%)" }}
         >
-          {done ? (
-            <><Check className="w-6 h-6" /> PDF מוכן!</>
-          ) : (
-            <><Download className="w-6 h-6" /> ייצאו PDF</>
-          )}
+          <Printer className="w-6 h-6" />
+          פתח מסמך לייצוא
         </button>
 
         <button

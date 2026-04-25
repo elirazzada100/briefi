@@ -289,7 +289,7 @@ Use exactly these 4 types in order: ישיר, רך, שמירה / שיתוף, פ�
   // ── ACTION: assembleFinalBrief ─────────────────────────────────────────────
   if (action === "assembleFinalBrief") {
     const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook, selected_body, selected_cta } = payload;
-    const prompt = `Assemble a final client-ready video brief based on these user selections.
+    const prompt = `Assemble a final client-ready, shootable video brief based on these selections.
 
 Client: ${client_name}
 Goal: ${main_goal}
@@ -300,23 +300,32 @@ Selected body: ${JSON.stringify(selected_body)}
 Selected CTA: ${JSON.stringify(selected_cta)}
 ${intelligenceCtx}
 
-Return JSON:
+CRITICAL RULES:
+- Write entirely in Hebrew.
+- The hook must fit within the first 2 seconds of a Reel or TikTok — keep it short and punchy.
+- script_text is MANDATORY. It must be the actual spoken text for the video — voiceover, person talking to camera, short dialogue, or text-only if no one speaks. It must sound natural in spoken Hebrew. Do NOT leave it empty or vague.
+- shot_structure must describe exactly what to film and what is said/shown at each step.
+- Avoid generic marketing copy. Make every line practical and shootable.
+- Choose the script_format that fits the category and business context best.
+- If the video works better without voiceover, use script_format: "text_only" and strengthen text_overlays.
+
+Return JSON exactly:
 {
-  "brief_title": "short descriptive title for this video",
-  "goal": "one sentence goal",
-  "category": "${selected_category}",
-  "hook": "the hook text exactly as it should open the video",
-  "main_idea": "core concept in 1-2 sentences",
-  "video_structure": [
-    { "step": 1, "description": "opening/hook" },
-    { "step": 2, "description": "body/content" },
-    { "step": 3, "description": "CTA/close" }
+  "brief_title": "short descriptive title in Hebrew",
+  "video_concept": "1-2 sentence description of the video concept in Hebrew",
+  "hook": "the hook text exactly as it opens the video — short, max 2 seconds spoken",
+  "script_format": "voiceover | person_to_camera | dialogue | text_only",
+  "script_text": "the full spoken script or narration text in natural Hebrew — this is what the person says or what appears as text. Must be complete and usable.",
+  "shot_structure": [
+    { "step": 1, "visual": "what is filmed/shown", "spoken_or_overlay_text": "what is said or shown as text" },
+    { "step": 2, "visual": "what is filmed/shown", "spoken_or_overlay_text": "what is said or shown as text" },
+    { "step": 3, "visual": "what is filmed/shown", "spoken_or_overlay_text": "what is said or shown as text" }
   ],
-  "text_overlays": ["text overlay 1", "text overlay 2", "text overlay 3"],
-  "cta": "the CTA text exactly",
-  "production_notes": "practical filming notes",
-  "client_risk_level": "נמוך | בינוני | גבוה",
-  "caption_suggestion": "a suggested social media caption for this video"
+  "text_overlays": ["overlay 1", "overlay 2", "overlay 3"],
+  "cta": "the CTA text exactly as spoken or shown",
+  "caption_suggestion": "a suggested social media caption in Hebrew",
+  "production_notes": "practical filming notes — location, lighting, tone, pace",
+  "client_risk_level": "נמוך | בינוני | גבוה"
 }`;
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);

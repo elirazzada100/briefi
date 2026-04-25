@@ -8,14 +8,20 @@ const riskColors = {
   "נמוך": "text-green-600 bg-green-50 border-green-200",
   "בינוני": "text-yellow-600 bg-yellow-50 border-yellow-200",
   "גבוה": "text-red-500 bg-red-50 border-red-200",
-  "low": "text-green-600 bg-green-50 border-green-200",
-  "medium": "text-yellow-600 bg-yellow-50 border-yellow-200",
-  "high": "text-red-500 bg-red-50 border-red-200",
 };
 
-function EditableField({ label, value, onSave }) {
+const scriptFormatLabels = {
+  "voiceover": "ווייסאובר",
+  "person_to_camera": "דיבור למצלמה",
+  "dialogue": "דיאלוג",
+  "text_only": "טקסט בלבד",
+};
+
+function EditableField({ label, value, onSave, prominent = false, hint = null }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(value || "");
+
+  useEffect(() => { setVal(value || ""); }, [value]);
 
   const handleSave = () => {
     onSave(val);
@@ -25,7 +31,7 @@ function EditableField({ label, value, onSave }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-bold text-briefi-muted">{label}</p>
+        <p className={`text-xs font-bold ${prominent ? "text-primary" : "text-briefi-muted"}`}>{label}</p>
         {!editing && (
           <button onClick={() => setEditing(true)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors">
             <Pencil className="w-3 h-3 text-briefi-muted" />
@@ -38,7 +44,8 @@ function EditableField({ label, value, onSave }) {
             value={val}
             onChange={e => setVal(e.target.value)}
             autoFocus
-            className="w-full min-h-[70px] p-3 rounded-xl border border-primary/30 bg-primary/5 text-briefi-navy text-sm font-medium focus:outline-none resize-none"
+            rows={prominent ? 5 : 3}
+            className="w-full p-3 rounded-xl border border-primary/30 bg-primary/5 text-briefi-navy text-sm font-medium focus:outline-none resize-none"
           />
           <div className="flex gap-2">
             <button onClick={handleSave} className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold">
@@ -50,7 +57,10 @@ function EditableField({ label, value, onSave }) {
           </div>
         </div>
       ) : (
-        <p className="text-sm text-briefi-navy font-medium leading-relaxed">{val || "—"}</p>
+        <>
+          <p className={`text-sm text-briefi-navy font-medium leading-relaxed whitespace-pre-wrap ${prominent ? "text-base" : ""}`}>{val || "—"}</p>
+          {hint && <p className="text-xs text-briefi-muted mt-1">{hint}</p>}
+        </>
       )}
     </div>
   );
@@ -95,6 +105,7 @@ export default function FinalBrief() {
 
   const fb = brief?.final_brief || {};
   const riskClass = riskColors[fb.client_risk_level] || riskColors["בינוני"];
+  const scriptLabel = scriptFormatLabels[fb.script_format] || fb.script_format || "";
 
   return (
     <div className="min-h-screen bg-briefi-bg" dir="rtl">
@@ -112,33 +123,61 @@ export default function FinalBrief() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-briefi-muted">סרטון #{brief?.video_number} · {fb.category || brief?.category}</p>
+            <p className="text-xs text-briefi-muted">סרטון #{brief?.video_number} · {brief?.category}</p>
           </div>
         </div>
       </div>
 
       <div className="max-w-lg mx-auto px-5 py-5 space-y-4">
-        {/* Brief Card */}
         <div className="bg-white rounded-2xl border border-border p-5 space-y-5">
+
+          {/* 1. שם הסרטון */}
           <EditableField label="שם הסרטון" value={fb.brief_title} onSave={v => updateBriefField("brief_title", v)} />
+
+          {/* 2. קונספט */}
           <div className="border-t border-muted pt-4">
-            <EditableField label="מטרה" value={fb.goal} onSave={v => updateBriefField("goal", v)} />
+            <EditableField label="קונספט לסרטון" value={fb.video_concept} onSave={v => updateBriefField("video_concept", v)} />
           </div>
+
+          {/* 3. הוק */}
           <div className="border-t border-muted pt-4">
             <EditableField label="הוק" value={fb.hook} onSave={v => updateBriefField("hook", v)} />
           </div>
-          <div className="border-t border-muted pt-4">
-            <EditableField label="רעיון מרכזי" value={fb.main_idea} onSave={v => updateBriefField("main_idea", v)} />
+
+          {/* 4. טקסט / ווייסאובר — prominent */}
+          <div className="border-t border-muted pt-4 bg-primary/3 rounded-xl p-3 -mx-1">
+            {scriptLabel && (
+              <span className="inline-block text-xs bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full mb-2">{scriptLabel}</span>
+            )}
+            <EditableField
+              label="טקסט / ווייסאובר"
+              value={fb.script_text}
+              onSave={v => updateBriefField("script_text", v)}
+              prominent
+              hint="זה הטקסט שאפשר להקריא, להגיד למצלמה או להשתמש בו כבסיס לצילום."
+            />
           </div>
-          <div className="border-t border-muted pt-4 space-y-2">
-            <p className="text-xs font-bold text-briefi-muted">מבנה הסרטון</p>
-            {(fb.video_structure || []).map((step, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{step.step || i + 1}</div>
-                <p className="text-sm text-briefi-navy font-medium">{step.description}</p>
-              </div>
-            ))}
-          </div>
+
+          {/* 5. מבנה צילום */}
+          {(fb.shot_structure || fb.video_structure)?.length > 0 && (
+            <div className="border-t border-muted pt-4 space-y-2">
+              <p className="text-xs font-bold text-briefi-muted">מבנה צילום</p>
+              {(fb.shot_structure || fb.video_structure).map((step, i) => (
+                <div key={i} className="flex items-start gap-3 bg-muted/30 rounded-xl p-3">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{step.step || i + 1}</div>
+                  <div className="flex-1 space-y-0.5">
+                    {step.visual && <p className="text-sm text-briefi-navy font-medium">{step.visual}</p>}
+                    {step.spoken_or_overlay_text && (
+                      <p className="text-xs text-briefi-secondary italic">"{step.spoken_or_overlay_text}"</p>
+                    )}
+                    {step.description && <p className="text-sm text-briefi-navy font-medium">{step.description}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 6. טקסטים למסך */}
           {(fb.text_overlays || []).length > 0 && (
             <div className="border-t border-muted pt-4 space-y-1.5">
               <p className="text-xs font-bold text-briefi-muted">טקסטים למסך</p>
@@ -147,17 +186,21 @@ export default function FinalBrief() {
               ))}
             </div>
           )}
+
+          {/* 7. קריאה לפעולה */}
           <div className="border-t border-muted pt-4">
-            <EditableField label="CTA" value={fb.cta} onSave={v => updateBriefField("cta", v)} />
+            <EditableField label="קריאה לפעולה" value={fb.cta} onSave={v => updateBriefField("cta", v)} />
           </div>
+
+          {/* 8. כיתוב לפוסט */}
+          <div className="border-t border-muted pt-4">
+            <EditableField label="כיתוב לפוסט" value={fb.caption_suggestion} onSave={v => updateBriefField("caption_suggestion", v)} />
+          </div>
+
+          {/* 9. הערות צילום */}
           <div className="border-t border-muted pt-4">
             <EditableField label="הערות צילום" value={fb.production_notes} onSave={v => updateBriefField("production_notes", v)} />
           </div>
-          {fb.caption_suggestion && (
-            <div className="border-t border-muted pt-4">
-              <EditableField label="הצעה לכיתוב" value={fb.caption_suggestion} onSave={v => updateBriefField("caption_suggestion", v)} />
-            </div>
-          )}
         </div>
 
         {/* Action Buttons */}
