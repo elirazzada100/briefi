@@ -17,6 +17,8 @@ import CTAPicker from './pages/CTAPicker';
 import FinalBrief from './pages/FinalBrief';
 import BriefPack from './pages/BriefPack';
 import PDFExport from './pages/PDFExport';
+import ConceptPicker from './pages/ConceptPicker';
+import UserProfile from './pages/UserProfile';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -47,12 +49,14 @@ const AuthenticatedApp = () => {
       <Route path="/new-project" element={<NewProject />} />
       <Route path="/project/:projectId/creative-dna" element={<CreativeDNA />} />
       <Route path="/project/:projectId/category" element={<CategoryPicker />} />
+      <Route path="/project/:projectId/concepts" element={<ConceptPicker />} />
       <Route path="/project/:projectId/hooks" element={<HookPicker />} />
       <Route path="/project/:projectId/body" element={<BodyPicker />} />
       <Route path="/project/:projectId/cta" element={<CTAPicker />} />
       <Route path="/project/:projectId/final-brief" element={<FinalBrief />} />
       <Route path="/project/:projectId/brief-pack" element={<BriefPack />} />
       <Route path="/project/:projectId/export" element={<PDFExport />} />
+      <Route path="/profile" element={<UserProfile />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

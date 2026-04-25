@@ -39,9 +39,8 @@ export default function CategoryPicker() {
     if (!selected || !project) return;
     setLoading(true);
 
-    // Generate hooks via OpenAI backend
     const response = await base44.functions.invoke("briefiAI", {
-      action: "generateHooks",
+      action: "generateVideoConcepts",
       project_id: projectId,
       client_name: project.client_name,
       main_goal: project.main_goal,
@@ -50,12 +49,12 @@ export default function CategoryPicker() {
       selected_category: selected,
     });
 
-    const hooks = response.data?.hooks || [];
+    const concepts = response.data?.concepts || [];
     setLoading(false);
-    navigate(`/project/${projectId}/hooks`, { state: { hooks, category: selected } });
+    navigate(`/project/${projectId}/concepts`, { state: { concepts, category: selected } });
   };
 
-  if (!project || loading) return <div className="min-h-screen bg-background flex items-center justify-center"><LoadingState message={loading ? "מייצרים 4 הוקים..." : "טוען..."} /></div>;
+  if (!project || loading) return <div className="min-h-screen bg-background flex items-center justify-center"><LoadingState message={loading ? "מייצרים 4 קונספטים..." : "טוען..."} /></div>;
 
   return (
     <motion.div
@@ -109,7 +108,7 @@ export default function CategoryPicker() {
           className="w-full h-14 rounded-2xl text-base font-bold gap-2 shadow-lg shadow-primary/20"
         >
           <Sparkles className="h-5 w-5" />
-          תנו לי 4 הוקים
+          תנו לי 4 קונספטים
         </Button>
 
         <button

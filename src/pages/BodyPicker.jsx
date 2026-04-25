@@ -15,6 +15,7 @@ export default function BodyPicker() {
   const [bodyOptions, setBodyOptions] = useState(state?.bodyOptions || []);
   const [category, setCategory] = useState(state?.category || "");
   const [selectedHook, setSelectedHook] = useState(state?.selectedHook || {});
+  const [selectedConcept] = useState(state?.selectedConcept || {});
   const [expandedIdx, setExpandedIdx] = useState(null);
   const [rewritingIdx, setRewritingIdx] = useState(null);
   const [generating, setGenerating] = useState(false);
@@ -48,7 +49,7 @@ export default function BodyPicker() {
 
     setGenerating(false);
     navigate(`/project/${projectId}/cta`, {
-      state: { ctas: response.data?.ctas || [], category, selectedHook, selectedBody: body }
+      state: { ctas: response.data?.ctas || [], category, selectedHook, selectedBody: body, selectedConcept }
     });
   };
 

@@ -192,16 +192,61 @@ Return JSON:
     return Response.json({ creative_dna: parsed });
   }
 
+  // ── ACTION: generateVideoConcepts ─────────────────────────────────────────
+  if (action === "generateVideoConcepts") {
+    const { project_id, client_name, main_goal, raw_notes, creative_dna, selected_category } = payload;
+    const prompt = `Generate exactly 4 video concepts for this Israeli business.
+
+Client: ${client_name}
+Goal: ${main_goal}
+Notes: ${raw_notes || ""}
+Category: ${selected_category}
+Creative DNA: ${JSON.stringify(creative_dna)}
+${intelligenceCtx}
+
+RULES:
+- Return exactly 4 concepts, each meaningfully different.
+- Hebrew only.
+- A concept is the creative IDEA of the video — not the hook or the script yet.
+- Do not write the full script. Do not write the CTA.
+- Make each concept practical and shootable.
+- The viewer should clearly understand what happens in the video and why they would care.
+- Each concept should be understandable to a social media manager AND to a client.
+- Avoid vague or generic concepts.
+- Vary the 4 concepts: 1) Safe/client-friendly, 2) Social/native feel, 3) Funny/human, 4) Sharper or more emotional.
+
+Return JSON:
+{
+  "concepts": [
+    {
+      "concept_title": "short punchy title in Hebrew",
+      "concept_summary": "2-3 sentences describing the video idea and what the viewer will see and feel",
+      "why_it_works": "1 sentence explanation",
+      "visual_direction": "brief description of what to film",
+      "tone": "tone label, e.g. רך, מצחיק, ישיר, אמוציונלי",
+      "risk_level": "נמוך | בינוני | גבוה"
+    }
+  ]
+}`;
+
+    const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
+    await saveGeneration(base44, user.id, project_id, "generateVideoConcepts", STRATEGY_MODEL, { client_name, main_goal, selected_category, creative_dna }, parsed, inputTokens, outputTokens, true);
+    return Response.json(parsed);
+  }
+
   // ── ACTION: generateHooks ──────────────────────────────────────────────────
   if (action === "generateHooks") {
-    const { project_id, client_name, main_goal, creative_dna, selected_category } = payload;
+    const { project_id, client_name, main_goal, raw_notes, creative_dna, selected_category, selected_concept } = payload;
     const prompt = `Generate exactly 4 hook options for this video.
 
 Client: ${client_name}
 Goal: ${main_goal}
 Category: ${selected_category}
+Selected concept: ${JSON.stringify(selected_concept)}
 Creative DNA: ${JSON.stringify(creative_dna)}
 ${intelligenceCtx}
+
+The hooks must be tailored to the selected concept above. A hook is the opening line — max 1-2 sentences that make someone stop scrolling.
 
 Return JSON with exactly 4 hooks:
 {
@@ -225,13 +270,14 @@ Vary the 4 hooks: 1) Safe/client-friendly, 2) Social/native, 3) Funny/human, 4) 
 
   // ── ACTION: generateBodyOptions ────────────────────────────────────────────
   if (action === "generateBodyOptions") {
-    const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook } = payload;
+    const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook, selected_concept } = payload;
     const prompt = `Generate exactly 4 body structure options for this video.
 
 Client: ${client_name}
 Goal: ${main_goal}
 Category: ${selected_category}
 Creative DNA: ${JSON.stringify(creative_dna)}
+Selected concept: ${JSON.stringify(selected_concept)}
 Selected hook: ${JSON.stringify(selected_hook)}
 ${intelligenceCtx}
 
@@ -286,15 +332,53 @@ Use exactly these 4 types in order: ישיר, רך, שמירה / שיתוף, פ�
     return Response.json(parsed);
   }
 
+  // ── ACTION: generateClientBriefSummary ────────────────────────────────────
+  if (action === "generateClientBriefSummary") {
+    const { project_id, client_name, main_goal, creative_dna, video_briefs } = payload;
+    const prompt = `Create short, client-friendly summaries for each of these video briefs.
+
+Client: ${client_name}
+Goal: ${main_goal}
+Creative DNA: ${JSON.stringify(creative_dna)}
+Video Briefs: ${JSON.stringify(video_briefs)}
+
+RULES:
+- Hebrew only.
+- Each summary must be short and easy for a business owner to approve.
+- Do NOT include internal production details, long voiceover scripts, or technical jargon.
+- Do NOT use words like "UGC", "retention", "conversion" unless necessary.
+- Keep tone professional, simple, confident.
+- Each video should take 20-40 seconds to read.
+
+Return JSON:
+{
+  "client_briefs": [
+    {
+      "brief_title": "video title",
+      "category": "category",
+      "short_client_concept": "2-3 sentence concept description for a business owner",
+      "hook": "the hook as it will open the video",
+      "short_visual_summary": "1-2 sentences describing what the viewer will see",
+      "cta": "the call to action"
+    }
+  ]
+}`;
+
+    const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
+    await saveGeneration(base44, user.id, project_id, "generateClientBriefSummary", STRATEGY_MODEL, { client_name, main_goal }, parsed, inputTokens, outputTokens, true);
+    return Response.json(parsed);
+  }
+
   // ── ACTION: assembleFinalBrief ─────────────────────────────────────────────
   if (action === "assembleFinalBrief") {
-    const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook, selected_body, selected_cta } = payload;
+    const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook, selected_body, selected_cta, selected_concept } = payload;
     const prompt = `Assemble a final client-ready, shootable video brief based on these selections.
 
 Client: ${client_name}
 Goal: ${main_goal}
 Category: ${selected_category}
 Creative DNA: ${JSON.stringify(creative_dna)}
+Selected concept: ${JSON.stringify(selected_concept)}
 Selected hook: ${JSON.stringify(selected_hook)}
 Selected body: ${JSON.stringify(selected_body)}
 Selected CTA: ${JSON.stringify(selected_cta)}

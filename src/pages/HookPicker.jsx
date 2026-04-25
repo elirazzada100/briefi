@@ -22,6 +22,7 @@ export default function HookPicker() {
   const navigate = useNavigate();
   const [hooks, setHooks] = useState(state?.hooks || []);
   const [category, setCategory] = useState(state?.category || "");
+  const [selectedConcept] = useState(state?.selectedConcept || {});
   const [project] = useState(null);
   const [expandedIdx, setExpandedIdx] = useState(null);
   const [rewritingIdx, setRewritingIdx] = useState(null);
@@ -56,12 +57,13 @@ export default function HookPicker() {
       main_goal: proj?.main_goal || "",
       creative_dna: proj?.creative_dna || {},
       selected_category: category,
+      selected_concept: selectedConcept,
       selected_hook: hook,
     });
 
     setGenerating(false);
     navigate(`/project/${projectId}/body`, {
-      state: { bodyOptions: response.data?.body_options || [], category, selectedHook: hook }
+      state: { bodyOptions: response.data?.body_options || [], category, selectedHook: hook, selectedConcept }
     });
   };
 
@@ -92,7 +94,7 @@ export default function HookPicker() {
     <div className="min-h-screen bg-briefi-bg" dir="rtl">
       <div className="bg-white border-b border-border px-5 pt-safe pt-4 pb-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <button onClick={() => navigate(`/project/${projectId}/category`)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
+          <button onClick={() => navigate(`/project/${projectId}/concepts`, { state: { concepts: [], category } })} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
             <ArrowRight className="w-5 h-5 text-briefi-secondary" />
           </button>
           <ProgressSteps currentStep={3} />

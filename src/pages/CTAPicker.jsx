@@ -21,6 +21,7 @@ export default function CTAPicker() {
   const [category] = useState(state?.category || "");
   const [selectedHook] = useState(state?.selectedHook || {});
   const [selectedBody] = useState(state?.selectedBody || {});
+  const [selectedConcept] = useState(state?.selectedConcept || {});
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(false);
 
@@ -47,6 +48,7 @@ export default function CTAPicker() {
       main_goal: proj?.main_goal || "",
       creative_dna: proj?.creative_dna || {},
       selected_category: category,
+      selected_concept: selectedConcept,
       selected_hook: selectedHook,
       selected_body: selectedBody,
       selected_cta: cta,

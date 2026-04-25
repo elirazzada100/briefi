@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, FolderOpen, FileText, ChevronLeft } from "lucide-react";
+import { Plus, FolderOpen, FileText, ChevronLeft, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
@@ -54,12 +54,19 @@ export default function Dashboard() {
             בריף חדש
           </Button>
         </Link>
-        <Link to="/projects">
-          <Button variant="outline" className="w-full h-12 rounded-2xl text-sm font-semibold gap-2">
-            <FolderOpen className="h-4 w-4" />
-            הפרויקטים שלי
-          </Button>
-        </Link>
+        <div className="flex gap-3">
+          <Link to="/projects" className="flex-1">
+            <Button variant="outline" className="w-full h-12 rounded-2xl text-sm font-semibold gap-2">
+              <FolderOpen className="h-4 w-4" />
+              הפרויקטים
+            </Button>
+          </Link>
+          <Link to="/profile">
+            <Button variant="outline" className="h-12 w-12 rounded-2xl">
+              <User className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {isLoading ? (
