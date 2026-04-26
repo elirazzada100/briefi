@@ -15,9 +15,9 @@ export default function AppLayout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-background font-heebo" dir="rtl">
+    <div className="min-h-screen w-full bg-background font-heebo overflow-x-hidden" dir="rtl">
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
-        <div className="flex items-center justify-between px-4 h-14 max-w-lg mx-auto">
+        <div className="flex items-center justify-between px-4 h-14 w-full max-w-[430px] mx-auto">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="shrink-0">
@@ -53,7 +53,7 @@ export default function AppLayout() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 pb-24">
+      <main className="w-full max-w-[430px] mx-auto px-4 pb-24 overflow-x-hidden">
         <Outlet />
       </main>
     </div>

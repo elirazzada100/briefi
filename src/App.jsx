@@ -9,7 +9,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 // Page imports
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
-import NewProject from './pages/NewProject';
+import NewProject from './pages/NewProject.jsx';
 import CreativeDNA from './pages/CreativeDNA';
 import CategoryPicker from './pages/CategoryPicker';
 import HookPicker from './pages/HookPicker';

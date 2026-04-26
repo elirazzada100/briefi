@@ -1,10 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import LoadingState from "@/components/shared/LoadingState";
@@ -44,45 +40,56 @@ export default function NewProject() {
   };
 
   if (loading) {
-    return <LoadingState message="יוצרים את הפרויקט..." />;
+    return (
+      <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl">
+        <LoadingState message="יוצרים את הפרויקט..." />
+      </div>
+    );
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="py-8"
+      transition={{ duration: 0.35 }}
+      className="py-5"
+      dir="rtl"
     >
-      <div className="mb-8">
-        <h1 className="text-xl font-extrabold text-foreground mb-2">ספרו לנו על העסק</h1>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-black text-briefi-navy leading-tight mb-1">
+          ספרו לנו על העסק
+        </h1>
+        <p className="text-sm text-briefi-secondary leading-relaxed">
           אפשר לכתוב מבולגן. Briefi יסדר את זה לבריף ברור.
         </p>
       </div>
 
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Label className="text-sm font-bold">שם הלקוח</Label>
-          <Input
+      <div className="space-y-5">
+        {/* Client name */}
+        <div className="space-y-1.5">
+          <label className="block text-sm font-bold text-briefi-navy">שם הלקוח</label>
+          <input
             value={clientName}
             onChange={(e) => setClientName(e.target.value)}
             placeholder="לדוגמה: בר שכונתי"
-            className="h-12 rounded-xl text-sm"
             dir="rtl"
+            className="w-full h-12 rounded-full border border-border bg-white px-5 text-sm text-briefi-navy placeholder:text-briefi-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label className="text-sm font-bold">מה המטרה?</Label>
+        {/* Goal chips */}
+        <div className="space-y-1.5">
+          <label className="block text-sm font-bold text-briefi-navy">מה המטרה?</label>
           <div className="flex flex-wrap gap-2">
             {goals.map((goal) => (
               <button
                 key={goal}
                 onClick={() => setMainGoal(goal)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all border
+                className={`h-9 px-3.5 rounded-full text-[13px] font-semibold border transition-all whitespace-nowrap
                   ${mainGoal === goal
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-card border-border text-foreground hover:border-primary/40"
+                    ? "bg-primary text-white border-primary shadow-sm"
+                    : "bg-white border-border text-briefi-navy hover:border-primary/40"
                   }`}
               >
                 {goal}
@@ -91,32 +98,40 @@ export default function NewProject() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label className="text-sm font-bold">מה אתם יודעים על העסק?</Label>
-          <Textarea
+        {/* Notes textarea */}
+        <div className="space-y-1.5">
+          <label className="block text-sm font-bold text-briefi-navy">מה אתם יודעים על העסק?</label>
+          <textarea
             value={rawNotes}
             onChange={(e) => setRawNotes(e.target.value)}
             placeholder="הדביקו כאן הערות מפגישת הלקוח, הודעות וואטסאפ, רעיונות, כל מה שיש..."
-            className="min-h-[160px] rounded-xl text-sm leading-relaxed resize-none"
             dir="rtl"
+            rows={6}
+            className="w-full rounded-3xl border border-border bg-white px-5 py-4 text-sm text-briefi-navy placeholder:text-briefi-muted leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none"
           />
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[12px] text-briefi-muted">
             אפשר לכתוב חופשי. לא צריך בריף מסודר.
           </p>
         </div>
 
-        <Button
+        {/* CTA */}
+        <button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="w-full h-14 rounded-2xl text-base font-bold gap-2 shadow-lg shadow-primary/20"
+          className={`w-full h-13 rounded-full text-[15px] font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]
+            ${canSubmit
+              ? "shadow-md shadow-primary/20 active:shadow-sm"
+              : "opacity-50 cursor-not-allowed"
+            }`}
+          style={canSubmit ? { background: "linear-gradient(135deg, #6C35FF 0%, #249BFF 100%)" } : { background: "#9AA1AD" }}
         >
-          <Sparkles className="h-5 w-5" />
+          <Sparkles className="h-4 w-4" />
           נתחו לי את העסק
-        </Button>
+        </button>
 
         <button
           onClick={() => navigate(-1)}
-          className="w-full text-center text-sm text-muted-foreground font-medium flex items-center justify-center gap-1"
+          className="w-full text-center text-sm text-briefi-muted font-medium flex items-center justify-center gap-1 py-1"
         >
           <ArrowRight className="h-4 w-4" />
           חזרה
