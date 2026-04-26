@@ -263,6 +263,42 @@ function buildIntelligenceContext({
   return ctx;
 }
 
+function buildDebugSummary({ voiceRules, hookPatterns, scriptPatterns, voiceSamples, briefExamples, category, industry, mainGoal }) {
+  const loadedVoiceRules = (voiceRules || []).filter(r =>
+    r.is_active && (r.category === "global" || r.category === category)
+  ).map(r => `[${r.priority}] ${r.rule_name}`);
+
+  const loadedHookPatterns = (hookPatterns || []).filter(p =>
+    p.is_active && (!p.category_fit?.length || p.category_fit.includes(category) || p.category_fit.includes("general"))
+  ).slice(0, 5).map(p => p.pattern_name);
+
+  const loadedScriptPatterns = (scriptPatterns || []).filter(p => p.is_active).sort((a, b) => {
+    const aScore = (a.category_fit?.includes(category) ? 2 : 0) + (a.industry_fit?.includes(industry) ? 1 : 0);
+    const bScore = (b.category_fit?.includes(category) ? 2 : 0) + (b.industry_fit?.includes(industry) ? 1 : 0);
+    return bScore - aScore;
+  }).slice(0, 3).map(p => p.script_pattern_name);
+
+  const loadedVoiceSamples = [
+    ...(voiceSamples || []).filter(s => s.is_active && s.sample_type === "rewrite" && s.rating === "excellent").slice(0, 2),
+    ...(voiceSamples || []).filter(s => s.is_active && ["good","excellent"].includes(s.rating) && (s.category === "global" || s.category === category)).slice(0, 3),
+    ...(voiceSamples || []).filter(s => s.is_active && ["bad","cringe","american"].includes(s.rating) && s.category === "global").slice(0, 2),
+  ].map(s => `[${s.sample_type}/${s.rating}] ${(s.input_text || s.output_text || "").slice(0, 50)}`);
+
+  const loadedBriefExamples = (briefExamples || []).filter(e =>
+    e.is_active && (e.category === category || e.category === "global" || !e.category)
+  ).slice(0, 2).map(e => `[${e.example_type}] ${e.category || "global"}`);
+
+  return {
+    action_category: category,
+    action_industry: industry,
+    loaded_voice_rules: loadedVoiceRules,
+    loaded_hook_patterns: loadedHookPatterns,
+    loaded_script_patterns: loadedScriptPatterns,
+    loaded_voice_samples: loadedVoiceSamples,
+    loaded_brief_examples: loadedBriefExamples,
+  };
+}
+
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const user = await base44.auth.me();
@@ -286,12 +322,20 @@ Deno.serve(async (req) => {
     base44.asServiceRole.entities.BadExample.list(),
   ]);
 
+  const category = payload.selected_category || "";
+  const industry = payload.industry || "general";
+  const mainGoal = payload.main_goal || "";
+
   const intelligenceCtx = buildIntelligenceContext({
     voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns,
     voiceSamples, briefExamples, goodExamples, badExamples,
-    category: payload.selected_category || "",
-    industry: payload.industry || "general",
-    mainGoal: payload.main_goal || "",
+    category, industry, mainGoal,
+  });
+
+  // Debug summary: which rows were actually loaded per table
+  const debugSummary = buildDebugSummary({
+    voiceRules, hookPatterns, scriptPatterns, voiceSamples, briefExamples,
+    category, industry, mainGoal,
   });
 
   // ── generateCreativeDNA ────────────────────────────────────────────────────
@@ -316,7 +360,7 @@ Return JSON:
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
     await saveGeneration(base44, user.id, project_id, "generateCreativeDNA", STRATEGY_MODEL, { client_name, main_goal, raw_notes }, parsed, inputTokens, outputTokens, true);
     await base44.asServiceRole.entities.Project.update(project_id, { creative_dna: parsed });
-    return Response.json({ creative_dna: parsed });
+    return Response.json({ creative_dna: parsed, _debug: debugSummary });
   }
 
   // ── generateVideoConcepts ──────────────────────────────────────────────────
@@ -366,7 +410,7 @@ Return JSON:
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
     await saveGeneration(base44, user.id, project_id, "generateVideoConcepts", STRATEGY_MODEL, { client_name, main_goal, selected_category, creative_dna }, parsed, inputTokens, outputTokens, true);
-    return Response.json(parsed);
+    return Response.json({ ...parsed, _debug: debugSummary });
   }
 
   // ── generateHooks ──────────────────────────────────────────────────────────
@@ -408,7 +452,7 @@ Return JSON:
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, FAST_MODEL, prompt);
     await saveGeneration(base44, user.id, project_id, "generateHooks", FAST_MODEL, { client_name, main_goal, selected_category, selected_concept, creative_dna }, parsed, inputTokens, outputTokens, true);
-    return Response.json(parsed);
+    return Response.json({ ...parsed, _debug: debugSummary });
   }
 
   // ── generateBodyOptions ────────────────────────────────────────────────────
@@ -451,7 +495,7 @@ Return JSON:
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
     await saveGeneration(base44, user.id, project_id, "generateBodyOptions", STRATEGY_MODEL, { client_name, selected_category, selected_hook, selected_concept, creative_dna }, parsed, inputTokens, outputTokens, true);
-    return Response.json(parsed);
+    return Response.json({ ...parsed, _debug: debugSummary });
   }
 
   // ── generateCTAOptions ─────────────────────────────────────────────────────
@@ -483,7 +527,7 @@ Return JSON:
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, FAST_MODEL, prompt);
     await saveGeneration(base44, user.id, project_id, "generateCTAOptions", FAST_MODEL, { client_name, main_goal, selected_category, selected_hook, selected_body }, parsed, inputTokens, outputTokens, true);
-    return Response.json(parsed);
+    return Response.json({ ...parsed, _debug: debugSummary });
   }
 
   // ── assembleFinalBrief ─────────────────────────────────────────────────────
@@ -536,7 +580,7 @@ Return JSON:
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
     await saveGeneration(base44, user.id, project_id, "assembleFinalBrief", STRATEGY_MODEL, { client_name, selected_category, selected_hook, selected_body, selected_cta, selected_concept }, parsed, inputTokens, outputTokens, true);
-    return Response.json({ final_brief: parsed });
+    return Response.json({ final_brief: parsed, _debug: debugSummary });
   }
 
   // ── checkBriefQuality ──────────────────────────────────────────────────────
@@ -599,7 +643,7 @@ Return JSON:
     });
 
     await saveGeneration(base44, user.id, project_id, "checkBriefQuality", FAST_MODEL, { client_name, selected_category, selected_concept }, parsed, inputTokens, outputTokens, true);
-    return Response.json(parsed);
+    return Response.json({ ...parsed, _debug: debugSummary });
   }
 
   // ── improveFinalBrief ──────────────────────────────────────────────────────
@@ -659,7 +703,7 @@ Return the same JSON schema as the final brief:
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
     await saveGeneration(base44, user.id, project_id, "improveFinalBrief", STRATEGY_MODEL, { client_name, selected_category, selected_concept, original_brief, quality_check }, parsed, inputTokens, outputTokens, true);
-    return Response.json({ final_brief: parsed });
+    return Response.json({ final_brief: parsed, _debug: debugSummary });
   }
 
   // ── generateClientBriefSummary ─────────────────────────────────────────────
