@@ -160,7 +160,8 @@ export default function PDFExport() {
 
           ${fb.caption_suggestion ? `<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">כיתוב לפוסט</div><p style="font-size:12px;color:#5F6675;margin:0;">${fb.caption_suggestion}</p></div>` : ""}
 
-          ${fb.production_notes ? `<div style="background:#FFFBEB;border-right:3px solid #F8B900;padding:10px 12px;border-radius:8px;"><div style="font-size:10px;font-weight:800;color:#C48E00;margin-bottom:3px;">הערות צילום</div><p style="font-size:12px;color:#5F6675;margin:0;">${fb.production_notes}</p></div>` : ""}
+          ${fb.production_notes ? `<div style="background:#FFFBEB;border-right:3px solid #F8B900;padding:10px 12px;border-radius:8px;margin-bottom:10px;"><div style="font-size:10px;font-weight:800;color:#C48E00;margin-bottom:3px;">הערות צילום</div><p style="font-size:12px;color:#5F6675;margin:0;">${fb.production_notes}</p></div>` : ""}
+          ${fb.shooting_time_priority ? `<div style="background:#F0FDF4;border-right:3px solid #16A34A;padding:10px 12px;border-radius:8px;"><div style="font-size:10px;font-weight:800;color:#16A34A;margin-bottom:3px;">עדיפות לצילום</div><p style="font-size:13px;font-weight:700;color:#0B1B36;margin:0 0 3px;">${fb.shooting_time_priority}</p>${fb.shooting_time_reason ? `<p style="font-size:12px;color:#5F6675;margin:0;">${fb.shooting_time_reason}</p>` : ""}</div>` : ""}
         </div>
       `;
     }).join("");

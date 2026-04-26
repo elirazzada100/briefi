@@ -275,6 +275,19 @@ export default function FinalBrief() {
           <div className="border-t border-muted pt-4">
             <EditableField label="הערות צילום" value={fb.production_notes} onSave={v => updateBriefField("production_notes", v)} />
           </div>
+
+          {/* 10. עדיפות לצילום */}
+          {(fb.shooting_time_priority || fb.shooting_time_reason) && (
+            <div className="border-t border-muted pt-4 space-y-1.5">
+              <p className="text-xs font-bold text-muted-foreground">עדיפות לצילום</p>
+              {fb.shooting_time_priority && (
+                <p className="text-sm font-bold text-foreground">{fb.shooting_time_priority}</p>
+              )}
+              {fb.shooting_time_reason && (
+                <p className="text-sm text-muted-foreground">{fb.shooting_time_reason}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Feedback Section */}

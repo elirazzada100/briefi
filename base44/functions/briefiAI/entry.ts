@@ -641,7 +641,7 @@ Return JSON:
 
   // ── assembleFinalBrief ─────────────────────────────────────────────────────
   if (action === "assembleFinalBrief") {
-    const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook, selected_body, selected_cta, selected_concept } = payload;
+    const { project_id, client_name, main_goal, creative_dna, selected_category, selected_hook, selected_body, selected_cta, selected_concept, brief_video_count, current_video_number, existing_categories } = payload;
     const prompt = `Assemble a final client-ready, shootable video brief.
 
 Client: ${client_name}
@@ -652,6 +652,7 @@ Selected concept: ${JSON.stringify(selected_concept)}
 Selected hook: ${JSON.stringify(selected_hook)}
 Selected body: ${JSON.stringify(selected_body)}
 Selected CTA: ${JSON.stringify(selected_cta)}
+${brief_video_count ? `Pack size: video ${current_video_number || "?"} of ${brief_video_count}. Previously used categories: ${(existing_categories || []).join(", ") || "none"}.` : ""}
 ${intelligenceCtx}
 
 CRITICAL RULES:
@@ -684,7 +685,9 @@ Return JSON:
   "cta": "the CTA text",
   "caption_suggestion": "social caption in Hebrew",
   "production_notes": "specific practical filming notes — location, lighting, pace, tone",
-  "client_risk_level": "נמוך | בינוני | גבוה"
+  "client_risk_level": "נמוך | בינוני | גבוה",
+  "shooting_time_priority": "חשוב לצלם באור יום | חשוב לצלם בלילה | עדיף לצלם בזמן עומס / פעילות | עדיף לצלם כשהמקום רגוע | לא קריטי",
+  "shooting_time_reason": "one short practical sentence explaining why"
 }`;
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);
@@ -837,6 +840,10 @@ REDUCE overall_score by 1 for each of these issues found:
 PENALIZE THESE GENERIC PHRASES (reduce israeli_tone_score by 1 each if found):
 חוויה בלתי נשכחת, טעם של עוד, שירות מקצועי ואמין, איכות ללא פשרות, פתרון מושלם, אווירה קסומה, מגוון עשיר, לקחת את העסק לשלב הבא, למקסם תוצאות, ערך אמיתי, תוכן איכותי, שיווק מנצח, תוצאה מושלמת, יחס אישי ומקצועי
 
+SHOOTING TIME CHECK:
+- Does the brief include shooting_time_priority? If missing or vague, set needs_rewrite = true.
+- Does shooting_time_reason make practical sense for the concept and industry?
+
 POSITIVE SCORING BONUS:
 Add +0.5 to overall_score for each found:
 - Starts from a real situation or specific behavior
@@ -846,6 +853,7 @@ Add +0.5 to overall_score for each found:
 - Has a shootable structure
 - CTA matches save/share/comment/DM/booking behavior
 - Uses relevant industry patterns
+- Has a clear and useful shooting_time_priority
 
 SCORING RULES (1-10, be strict):
 - hook_score: Is the hook short enough for the first 2 seconds? Is it specific to the concept?
@@ -898,7 +906,7 @@ Return JSON:
 
   // ── improveFinalBrief ──────────────────────────────────────────────────────
   if (action === "improveFinalBrief") {
-    const { project_id, video_brief_id, original_brief, quality_check, client_name, main_goal, selected_category, selected_concept, creative_dna, feedback_tags } = payload;
+    const { project_id, video_brief_id, original_brief, quality_check, client_name, main_goal, selected_category, selected_concept, creative_dna, feedback_tags, brief_video_count, current_video_number } = payload;
     const prompt = `Improve this Israeli video brief based on the quality check results.
 
 Client: ${client_name}
@@ -959,7 +967,9 @@ Return the same JSON schema as the final brief:
   "cta": "",
   "caption_suggestion": "",
   "production_notes": "",
-  "client_risk_level": ""
+  "client_risk_level": "",
+  "shooting_time_priority": "חשוב לצלם באור יום | חשוב לצלם בלילה | עדיף לצלם בזמן עומס / פעילות | עדיף לצלם כשהמקום רגוע | לא קריטי",
+  "shooting_time_reason": "one short practical sentence"
 }`;
 
     const { parsed, inputTokens, outputTokens } = await callOpenAI(openai, STRATEGY_MODEL, prompt);

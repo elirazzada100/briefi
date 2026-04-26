@@ -53,6 +53,9 @@ export default function CTAPicker() {
 
     // Step 1: Assemble final brief
     setLoadingMsg(LOADING_MESSAGES[0]);
+    const existingBriefsForCtx = await base44.entities.VideoBrief.filter({ project_id: projectId });
+    const existingCategories = existingBriefsForCtx.map(b => b.category).filter(Boolean);
+    const videoNumber = (existingBriefsForCtx.length || 0) + 1;
     const briefResponse = await base44.functions.invoke("briefiAI", {
       action: "assembleFinalBrief",
       project_id: projectId,
@@ -64,13 +67,14 @@ export default function CTAPicker() {
       selected_hook: selectedHook,
       selected_body: selectedBody,
       selected_cta: cta,
+      brief_video_count: proj?.brief_video_count || 8,
+      current_video_number: videoNumber,
+      existing_categories: existingCategories,
     });
 
     let finalBrief = briefResponse.data?.final_brief;
 
     // Step 2: Save initial brief to get an ID
-    const existingBriefs = await base44.entities.VideoBrief.filter({ project_id: projectId });
-    const videoNumber = (existingBriefs.length || 0) + 1;
 
     const savedBrief = await base44.entities.VideoBrief.create({
       project_id: projectId,

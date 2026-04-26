@@ -14,11 +14,14 @@ const goals = [
   "אחר",
 ];
 
+const QUICK_COUNTS = [3, 5, 8, 10];
+
 export default function NewProject() {
   const navigate = useNavigate();
   const [clientName, setClientName] = useState("");
   const [mainGoal, setMainGoal] = useState("");
   const [rawNotes, setRawNotes] = useState("");
+  const [briefVideoCount, setBriefVideoCount] = useState(8);
   const [loading, setLoading] = useState(false);
 
   const canSubmit = clientName.trim() && mainGoal && rawNotes.trim().length >= 10;
@@ -36,6 +39,7 @@ export default function NewProject() {
       status: "draft",
       completed_briefs_count: 0,
       owner_id: user.id,
+      brief_video_count: briefVideoCount,
     });
 
     navigate(`/project/${project.id}/creative-dna`);
@@ -101,6 +105,41 @@ export default function NewProject() {
                   {goal}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Video count stepper */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-foreground/70 tracking-wide uppercase">כמה סרטונים תרצו לבנות?</label>
+            <p className="text-[11px] text-muted-foreground">אפשר לבחור בין 1 ל־10. תמיד אפשר להתחיל קטן ולהוסיף עוד בהמשך.</p>
+            {/* Quick picks */}
+            <div className="flex gap-2">
+              {QUICK_COUNTS.map(n => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setBriefVideoCount(n)}
+                  className={`flex-1 h-9 rounded-xl text-sm font-bold border transition-all ${briefVideoCount === n ? "briefi-chip-active border-transparent" : "briefi-chip-inactive"}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            {/* Stepper */}
+            <div className="flex items-center justify-between bg-muted/40 rounded-2xl px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setBriefVideoCount(v => Math.max(1, v - 1))}
+                className="w-8 h-8 rounded-full bg-white border border-border text-lg font-bold flex items-center justify-center hover:border-primary/40 transition-colors disabled:opacity-30"
+                disabled={briefVideoCount <= 1}
+              >−</button>
+              <span className="text-base font-black text-foreground">{briefVideoCount} סרטונים</span>
+              <button
+                type="button"
+                onClick={() => setBriefVideoCount(v => Math.min(10, v + 1))}
+                className="w-8 h-8 rounded-full bg-white border border-border text-lg font-bold flex items-center justify-center hover:border-primary/40 transition-colors disabled:opacity-30"
+                disabled={briefVideoCount >= 10}
+              >+</button>
             </div>
           </div>
 

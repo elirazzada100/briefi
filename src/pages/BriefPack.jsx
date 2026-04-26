@@ -52,8 +52,10 @@ export default function BriefPack() {
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="טוען בריפים..." /></div>;
 
+  const totalTarget = project?.brief_video_count || 8;
   const completedCount = briefs.length;
-  const progress = Math.min((completedCount / 8) * 100, 100);
+  const progress = Math.min((completedCount / totalTarget) * 100, 100);
+  const allDone = completedCount >= totalTarget;
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -77,10 +79,10 @@ export default function BriefPack() {
               <p className="text-xs text-muted-foreground mb-0.5">בריפים מוכנים</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-black text-primary">{completedCount}</span>
-                <span className="text-lg font-bold text-muted-foreground">/ 8</span>
+                <span className="text-lg font-bold text-muted-foreground">/ {totalTarget}</span>
               </div>
             </div>
-            <div className="text-3xl">{completedCount >= 8 ? "🎉" : "📋"}</div>
+            <div className="text-3xl">{allDone ? "🎉" : "📋"}</div>
           </div>
 
           {/* Progress Bar */}
@@ -95,7 +97,7 @@ export default function BriefPack() {
           </div>
 
           <div className="flex gap-1.5">
-            {Array.from({ length: 8 }).map((_, i) => (
+            {Array.from({ length: totalTarget }).map((_, i) => (
               <div
                 key={i}
                 className={`flex-1 h-1.5 rounded-full ${i < completedCount ? "bg-primary" : "bg-muted"}`}
@@ -103,20 +105,28 @@ export default function BriefPack() {
             ))}
           </div>
 
-          {completedCount < 8 && (
-            <p className="text-xs text-muted-foreground">אפשר לייצא גם עכשיו, אבל חבילה מלאה נראית מקצועית יותר.</p>
+          {!allDone ? (
+            <p className="text-xs text-muted-foreground">בניתם {completedCount} מתוך {totalTarget} סרטונים. אפשר לייצא גם עכשיו.</p>
+          ) : (
+            <p className="text-xs text-green-600 font-semibold">כל {totalTarget} הסרטונים מוכנים! 🎉</p>
           )}
         </div>
 
         {/* Action Buttons */}
         <div className="flex gap-2.5">
-          <button
-            onClick={() => navigate(`/project/${projectId}/category`)}
-            className="briefi-btn-primary flex-1"
-          >
-            <Plus className="w-4 h-4" />
-            בריף נוסף
-          </button>
+          {completedCount < 10 ? (
+            <button
+              onClick={() => navigate(`/project/${projectId}/category`)}
+              className="briefi-btn-primary flex-1"
+            >
+              <Plus className="w-4 h-4" />
+              {allDone ? "סרטון נוסף" : "בריף נוסף"}
+            </button>
+          ) : (
+            <div className="flex-1 h-11 rounded-2xl bg-muted text-muted-foreground text-xs font-semibold flex items-center justify-center">
+              הגעתם למקסימום של 10 סרטונים
+            </div>
+          )}
           <button
             onClick={() => navigate(`/project/${projectId}/export`)}
             className="briefi-btn-secondary flex-1"
