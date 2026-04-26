@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 // Page imports
+import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import NewProject from './pages/NewProject';
 import CreativeDNA from './pages/CreativeDNA';
@@ -45,7 +46,8 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<Dashboard />} />
+      <Route path="/" element={<Home />} />
+      <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/new-project" element={<NewProject />} />
       <Route path="/project/:projectId/creative-dna" element={<CreativeDNA />} />
       <Route path="/project/:projectId/category" element={<CategoryPicker />} />

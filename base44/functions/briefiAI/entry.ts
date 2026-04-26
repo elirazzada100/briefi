@@ -118,6 +118,7 @@ function matchesCategory(row, category, field = "category_fit") {
 }
 
 const FOOD_INDUSTRIES = ["food", "bars", "cafes", "street_food", "restaurants", "local_food", "nightlife_food"];
+const BEAUTY_INDUSTRIES = ["beauty", "aesthetics", "nails", "brows", "lashes", "hair", "skincare", "makeup", "clinic", "aesthetic_clinic"];
 
 function buildIntelligenceContext({
   voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns,
@@ -148,20 +149,24 @@ function buildIntelligenceContext({
 
   // HOOK PATTERNS: industry+category match first, then category-only, then global fallback (max 6)
   const isFoodIndustry = FOOD_INDUSTRIES.includes(industry);
+  const isBeautyIndustry = BEAUTY_INDUSTRIES.includes(industry);
   const industryAndCategoryHooks = (hookPatterns || []).filter(p =>
-    p.is_active && p.category_fit?.includes(category) && p.industry_fit?.some(i => FOOD_INDUSTRIES.includes(i))
+    p.is_active && p.category_fit?.includes(category) &&
+    (p.industry_fit?.some(i => FOOD_INDUSTRIES.includes(i)) || p.industry_fit?.some(i => BEAUTY_INDUSTRIES.includes(i)))
   );
   const categoryHooks = (hookPatterns || []).filter(p =>
     p.is_active && p.category_fit?.includes(category) && !industryAndCategoryHooks.includes(p)
   );
   const industryHooks = (hookPatterns || []).filter(p =>
-    p.is_active && p.industry_fit?.some(i => FOOD_INDUSTRIES.includes(i)) && !industryAndCategoryHooks.includes(p)
+    p.is_active &&
+    (p.industry_fit?.some(i => FOOD_INDUSTRIES.includes(i)) || p.industry_fit?.some(i => BEAUTY_INDUSTRIES.includes(i)))
+    && !industryAndCategoryHooks.includes(p)
   );
   const globalHooks = (hookPatterns || []).filter(p =>
     p.is_active && (!p.category_fit?.length || p.category_fit.includes("general"))
     && !industryAndCategoryHooks.includes(p) && !categoryHooks.includes(p)
   );
-  const allHooks = isFoodIndustry
+  const allHooks = (isFoodIndustry || isBeautyIndustry)
     ? [...industryAndCategoryHooks, ...industryHooks, ...categoryHooks].slice(0, 6)
     : [...categoryHooks, ...globalHooks].slice(0, 5);
   if (allHooks.length) {
@@ -221,10 +226,14 @@ function buildIntelligenceContext({
     });
   }
 
-  // VOICE SAMPLES: global good/excellent first, then category-specific (max 5)
+  // VOICE SAMPLES: industry match first, then global good/excellent, then category-specific (max 7 for beauty)
+  const industryVoiceSamples = (voiceSamples || []).filter(s =>
+    s.is_active && s.industry && (BEAUTY_INDUSTRIES.includes(s.industry) || FOOD_INDUSTRIES.includes(s.industry))
+    && s.industry === industry && ["good","excellent"].includes(s.rating)
+  ).slice(0, 4);
   const goodSamples = (voiceSamples || []).filter(s =>
     s.is_active && (s.category === "global" || s.category === category) &&
-    ["good","excellent"].includes(s.rating)
+    ["good","excellent"].includes(s.rating) && !industryVoiceSamples.includes(s)
   ).slice(0, 3);
   const badSamples = (voiceSamples || []).filter(s =>
     s.is_active && s.category === "global" && ["bad","cringe","american"].includes(s.rating)
@@ -232,7 +241,7 @@ function buildIntelligenceContext({
   const rewriteSamples = (voiceSamples || []).filter(s =>
     s.is_active && s.sample_type === "rewrite" && s.rating === "excellent"
   ).slice(0, 2);
-  const allSamples = [...rewriteSamples, ...goodSamples, ...badSamples];
+  const allSamples = [...rewriteSamples, ...industryVoiceSamples, ...goodSamples, ...badSamples];
   if (allSamples.length) {
     ctx += "\n\n--- VOICE SAMPLES (tone reference) ---\n";
     allSamples.forEach(s => {
@@ -274,6 +283,13 @@ function buildIntelligenceContext({
 
   if (isFoodCtx) {
     ctx += "\n\n--- FOOD / BARS / CAFÉS INSTRUCTION ---\nFor food, bars, cafés, and street food, write through real appetite moments and social situations. Use specific visual details: bite, crunch, sauce, table, beer, line, smell, hands preparing food, first reaction. Avoid restaurant PR language (חוויה קולינרית, טעם של עוד, אווירה קסומה, מנות איכותיות, מגוון עשיר). The content should feel like a sharp Israeli recommendation, not a polished ad.\n";
+  }
+
+  const isBeautyCtx = BEAUTY_INDUSTRIES.includes(industry) ||
+    (voiceSamples || []).some(s => s.industry && BEAUTY_INDUSTRIES.includes(s.industry) && s.is_active);
+
+  if (isBeautyCtx) {
+    ctx += "\n\n--- BEAUTY / AESTHETICS / NAILS / BROWS / HAIR / CLINIC INSTRUCTION ---\nFor beauty, nails, brows, lashes, hair, skincare, and aesthetics, write through trust, precision, client fears, and process. Use specific details: face shape, shade, symmetry, preparation, healing, maintenance, aftercare, natural light, result after two weeks. Avoid generic beauty advertising. Do not overpromise. Do not use: תוצאה מושלמת, חוויה מפנקת, אווירה קסומה, גלואו מטורף, יחס אישי ומקצועי, טיפול שישנה לך את החיים. Make the content feel like a professional explaining clearly to a client — trust content wearing a pretty outfit.\n";
   }
 
   ctx += "\n\n--- INSTRUCTION ---\nUse the Content Intelligence rows above as style and structure guidance only. Do not copy them directly. Generate original Israeli short-form content based on the user's specific business, goal, category, selected concept, and previous selections.\n";
@@ -606,6 +622,25 @@ Return JSON:
     const { project_id, video_brief_id, client_name, main_goal, selected_category, selected_concept, final_brief } = payload;
 
     const isFood = FOOD_INDUSTRIES.includes(industry);
+    const isBeauty = BEAUTY_INDUSTRIES.includes(industry);
+
+    const beautyQualitySection = isBeauty ? `
+BEAUTY-SPECIFIC EXTRA CHECKS (apply when industry is beauty/aesthetics/nails/brows/lashes/hair/skincare/clinic):
+1. Does the hook address a real client fear or desire (not generic)?
+2. Does the concept build trust, not only show a result?
+3. Does the script include specific beauty/professional details (face shape, shade, symmetry, prep, healing, aftercare)?
+4. Does it avoid fake luxury and generic beauty ad language?
+5. Does it avoid overpromising?
+6. Does it include process, consultation, or aftercare when relevant?
+7. Does the CTA match beauty behavior: save before appointment, send to friend, DM for consultation?
+8. Can this be shot tomorrow with phone footage?
+9. Does it sound natural and client-safe?
+
+BEAUTY PENALTY RULES:
+- If the brief contains any of these phrases, REDUCE israeli_tone_score and client_safe_score by 2 points each (unless used ironically):
+  תוצאה מושלמת, חוויה מפנקת, אווירה קסומה, גלואו מטורף, יחס אישי ומקצועי, טיפול שישנה לך את החיים
+- If script_text has no specific beauty detail or process detail, set needs_rewrite to true regardless of overall_score.
+` : "";
 
     const foodQualitySection = isFood ? `
 FOOD-SPECIFIC EXTRA CHECKS (apply when industry is food/bars/cafés/street food):
@@ -635,6 +670,7 @@ Industry: ${industry}
 Selected concept: ${JSON.stringify(selected_concept)}
 Final brief: ${JSON.stringify(final_brief)}
 ${intelligenceCtx}
+${beautyQualitySection}
 ${foodQualitySection}
 
 SCORING RULES (1-10, be strict):
