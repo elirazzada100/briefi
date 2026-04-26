@@ -117,6 +117,8 @@ function matchesCategory(row, category, field = "category_fit") {
   return null;
 }
 
+const FOOD_INDUSTRIES = ["food", "bars", "cafes", "street_food", "restaurants", "local_food", "nightlife_food"];
+
 function buildIntelligenceContext({
   voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns,
   voiceSamples, briefExamples, goodExamples, badExamples,
@@ -144,15 +146,24 @@ function buildIntelligenceContext({
     });
   }
 
-  // HOOK PATTERNS: category-specific first, then global fallback (max 5)
+  // HOOK PATTERNS: industry+category match first, then category-only, then global fallback (max 6)
+  const isFoodIndustry = FOOD_INDUSTRIES.includes(industry);
+  const industryAndCategoryHooks = (hookPatterns || []).filter(p =>
+    p.is_active && p.category_fit?.includes(category) && p.industry_fit?.some(i => FOOD_INDUSTRIES.includes(i))
+  );
   const categoryHooks = (hookPatterns || []).filter(p =>
-    p.is_active && p.category_fit?.includes(category)
+    p.is_active && p.category_fit?.includes(category) && !industryAndCategoryHooks.includes(p)
+  );
+  const industryHooks = (hookPatterns || []).filter(p =>
+    p.is_active && p.industry_fit?.some(i => FOOD_INDUSTRIES.includes(i)) && !industryAndCategoryHooks.includes(p)
   );
   const globalHooks = (hookPatterns || []).filter(p =>
     p.is_active && (!p.category_fit?.length || p.category_fit.includes("general"))
-    && !categoryHooks.includes(p)
+    && !industryAndCategoryHooks.includes(p) && !categoryHooks.includes(p)
   );
-  const allHooks = [...categoryHooks, ...globalHooks].slice(0, 5);
+  const allHooks = isFoodIndustry
+    ? [...industryAndCategoryHooks, ...industryHooks, ...categoryHooks].slice(0, 6)
+    : [...categoryHooks, ...globalHooks].slice(0, 5);
   if (allHooks.length) {
     ctx += "\n\n--- HOOK PATTERNS (use for structure, not copy) ---\n";
     allHooks.forEach(p => {
@@ -256,6 +267,13 @@ function buildIntelligenceContext({
   if (bads.length) {
     ctx += "\n\n--- ADDITIONAL BAD EXAMPLES ---\n";
     bads.forEach(e => ctx += `• "${e.bad_text}" — ${e.why_bad}\n`);
+  }
+
+  const isFoodCtx = FOOD_INDUSTRIES.includes(industry) ||
+    (voiceSamples || []).some(s => s.industry && FOOD_INDUSTRIES.includes(s.industry) && s.is_active);
+
+  if (isFoodCtx) {
+    ctx += "\n\n--- FOOD / BARS / CAFÉS INSTRUCTION ---\nFor food, bars, cafés, and street food, write through real appetite moments and social situations. Use specific visual details: bite, crunch, sauce, table, beer, line, smell, hands preparing food, first reaction. Avoid restaurant PR language (חוויה קולינרית, טעם של עוד, אווירה קסומה, מנות איכותיות, מגוון עשיר). The content should feel like a sharp Israeli recommendation, not a polished ad.\n";
   }
 
   ctx += "\n\n--- INSTRUCTION ---\nUse the Content Intelligence rows above as style and structure guidance only. Do not copy them directly. Generate original Israeli short-form content based on the user's specific business, goal, category, selected concept, and previous selections.\n";
@@ -586,6 +604,26 @@ Return JSON:
   // ── checkBriefQuality ──────────────────────────────────────────────────────
   if (action === "checkBriefQuality") {
     const { project_id, video_brief_id, client_name, main_goal, selected_category, selected_concept, final_brief } = payload;
+
+    const isFood = FOOD_INDUSTRIES.includes(industry);
+
+    const foodQualitySection = isFood ? `
+FOOD-SPECIFIC EXTRA CHECKS (apply when industry is food/bars/cafés/street food):
+1. Is the hook short and appetite/socially driven (NOT generic or PR-like)?
+2. Does the concept include a real food situation (not just "show the vibe")?
+3. Does the script include specific visual food details (bite, crunch, sauce, line, hands)?
+4. Does it AVOID generic restaurant PR language?
+5. Does the CTA match food behavior: save, send, tag, visit, group decision?
+6. Can this be shot tomorrow with phone footage?
+7. Is there at least one concrete food visual?
+8. Does it sound Israeli and natural when spoken aloud?
+
+FOOD PENALTY RULES:
+- If the brief contains any of these phrases, REDUCE israeli_tone_score and clarity_score by 2 points (unless used ironically):
+  חוויה קולינרית, טעם של עוד, אווירה קסומה, מנות איכותיות, מגוון עשיר, שירות ברמה הגבוהה ביותר
+- If script_text has no concrete food visual detail, set needs_rewrite to true regardless of overall_score.
+` : "";
+
     const prompt = `You are a strict Israeli social media brief quality checker.
 
 Check this video brief and score it honestly. Be strict. Do not praise weak briefs.
@@ -593,9 +631,11 @@ Check this video brief and score it honestly. Be strict. Do not praise weak brie
 Client: ${client_name}
 Goal: ${main_goal}
 Category: ${selected_category}
+Industry: ${industry}
 Selected concept: ${JSON.stringify(selected_concept)}
 Final brief: ${JSON.stringify(final_brief)}
 ${intelligenceCtx}
+${foodQualitySection}
 
 SCORING RULES (1-10, be strict):
 - hook_score: Is the hook short enough for the first 2 seconds? Is it specific to the concept?
