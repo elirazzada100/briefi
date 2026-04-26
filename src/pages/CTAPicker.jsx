@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import LoadingState from "@/components/briefi/LoadingState";
 import ErrorState from "@/components/briefi/ErrorState";
 import StepProgress from "@/components/shared/StepProgress";
+import { useProjectGuard } from "@/hooks/useProjectGuard";
 
 const ctaTypeColors = {
   "ישיר": { bg: "rgba(255,122,47,0.08)", border: "rgba(255,122,47,0.3)", text: "#FF7A2F" },
@@ -33,11 +34,13 @@ export default function CTAPicker() {
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0]);
   const [error, setError] = useState(false);
 
+  const { project: guardProject } = useProjectGuard(projectId);
+
   const handleSelect = async (cta) => {
     setGenerating(true);
     setError(false);
 
-    const proj = await base44.entities.Project.filter({ id: projectId }).then(r => r[0]);
+    const proj = guardProject;
 
     // Track user choice
     await base44.entities.UserChoice.create({

@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Pencil, Check, X, FileText, Plus, RefreshCw, ThumbsUp, ThumbsDown } from "lucide-react";
 import LoadingState from "@/components/briefi/LoadingState";
+import { useProjectGuard } from "@/hooks/useProjectGuard";
 
 const riskColors = {
   "נמוך": "text-green-600 bg-green-50 border-green-200",
@@ -79,8 +80,6 @@ export default function FinalBrief() {
   const wasImproved = state?.wasImproved || false;
   const navigate = useNavigate();
   const [brief, setBrief] = useState(null);
-  const [project, setProject] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -90,15 +89,13 @@ export default function FinalBrief() {
   const [feedbackSaved, setFeedbackSaved] = useState(false);
   const [improving, setImproving] = useState(false);
 
+  // Ownership guard
+  const { project, loading } = useProjectGuard(projectId);
+
   useEffect(() => {
-    Promise.all([
-      base44.entities.VideoBrief.filter({ id: briefId }).then(r => r[0]),
-      base44.entities.Project.filter({ id: projectId }).then(r => r[0])
-    ]).then(([b, p]) => {
-      setBrief(b);
-      setProject(p);
-    }).finally(() => setLoading(false));
-  }, [briefId, projectId]);
+    if (!briefId) return;
+    base44.entities.VideoBrief.filter({ id: briefId }).then(r => setBrief(r[0]));
+  }, [briefId]);
 
   const updateBriefField = async (field, value) => {
     const updatedFinalBrief = { ...(brief?.final_brief || {}), [field]: value };

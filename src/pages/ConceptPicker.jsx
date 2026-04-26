@@ -5,6 +5,7 @@ import { ArrowRight, ChevronDown, ChevronUp, RefreshCw, Sparkles } from "lucide-
 import LoadingState from "@/components/briefi/LoadingState";
 import ErrorState from "@/components/briefi/ErrorState";
 import StepProgress from "@/components/shared/StepProgress";
+import { useProjectGuard } from "@/hooks/useProjectGuard";
 
 const riskStyle = {
   "נמוך": { bg: "#D1FAE5", color: "#059669" },
@@ -25,10 +26,12 @@ export default function ConceptPicker() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(false);
 
+  const { project: guardProject } = useProjectGuard(projectId);
+
   const handleSelect = async (concept) => {
     setGenerating(true);
     setError(false);
-    const proj = await base44.entities.Project.filter({ id: projectId }).then(r => r[0]);
+    const proj = guardProject;
     await base44.entities.UserChoice.create({
       project_id: projectId,
       choice_type: "category",
@@ -54,7 +57,7 @@ export default function ConceptPicker() {
 
   const handleRewrite = async (idx, action) => {
     setRewritingIdx(idx);
-    const proj = await base44.entities.Project.filter({ id: projectId }).then(r => r[0]);
+    const proj = guardProject;
     const concept = concepts[idx];
     const response = await base44.functions.invoke("briefiAI", {
       action: "rewriteOption",

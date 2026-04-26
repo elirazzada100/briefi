@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Check } from "lucide-react";
 import StepProgress from "@/components/shared/StepProgress";
 import LoadingState from "@/components/shared/LoadingState";
+import { useProjectGuard } from "@/hooks/useProjectGuard";
 
 const categories = [
   { id: "מצחיק", label: "מצחיק", emoji: "😂", color: "#F59E0B", bg: "#FEF3C7", desc: "קלילות, תשומת לב, שיתופים" },
@@ -23,13 +23,7 @@ export default function CategoryPicker() {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const { data: project } = useQuery({
-    queryKey: ["project", projectId],
-    queryFn: async () => {
-      const projects = await base44.entities.Project.filter({ id: projectId });
-      return projects[0];
-    },
-  });
+  const { project, loading: guardLoading } = useProjectGuard(projectId);
 
   const handleContinue = async () => {
     if (!selected || !project) return;
@@ -50,7 +44,7 @@ export default function CategoryPicker() {
     navigate(`/project/${projectId}/concepts`, { state: { concepts, category: selected } });
   };
 
-  if (!project || loading) return (
+  if (guardLoading || !project || loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <LoadingState message={loading ? "מייצרים 4 קונספטים..." : "טוען..."} />
     </div>

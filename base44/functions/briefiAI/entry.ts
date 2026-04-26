@@ -376,6 +376,23 @@ function buildDebugSummary({ voiceRules, hookPatterns, scriptPatterns, voiceSamp
   };
 }
 
+// Verify the authenticated user owns the project before any action
+async function verifyProjectOwnership(base44, userId, projectId) {
+  if (!projectId) return null; // some actions don't need a project
+  const projects = await base44.asServiceRole.entities.Project.filter({ id: projectId });
+  const project = projects[0];
+  if (!project) return null;
+  // If owner_id is set, enforce it. If not set (legacy), allow access.
+  if (project.owner_id && project.owner_id !== userId) return null;
+  return project;
+}
+
+// Sanitize text to prevent injection in prompts
+function sanitizeText(text, maxLen = 3000) {
+  if (!text) return "";
+  return String(text).slice(0, maxLen).replace(/[<>]/g, "");
+}
+
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const user = await base44.auth.me();
@@ -384,6 +401,21 @@ Deno.serve(async (req) => {
   const openai = new OpenAI({ apiKey: Deno.env.get("OPENAI_API_KEY") });
   const body = await req.json();
   const { action, ...payload } = body;
+
+  // Verify project ownership for all project-scoped actions
+  const project_id = payload.project_id;
+  if (project_id) {
+    const ownedProject = await verifyProjectOwnership(base44, user.id, project_id);
+    if (!ownedProject) {
+      return Response.json({ error: "Forbidden: לא מצאנו את הפרויקט הזה או שאין לך גישה אליו." }, { status: 403 });
+    }
+  }
+
+  // Sanitize user-supplied text fields to prevent oversized inputs
+  if (payload.raw_notes) payload.raw_notes = sanitizeText(payload.raw_notes, 3000);
+  if (payload.client_name) payload.client_name = sanitizeText(payload.client_name, 200);
+  if (payload.original_text) payload.original_text = sanitizeText(payload.original_text, 1000);
+  if (payload.business_context) payload.business_context = sanitizeText(payload.business_context, 1000);
 
   // Load all intelligence tables in parallel
   const [voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns, voiceSamples, briefExamples, goodExamples, badExamples] = await Promise.all([

@@ -33,8 +33,8 @@ export default function PDFExport() {
         base44.entities.VideoBrief.filter({ project_id: projectId }),
         base44.entities.UserBranding.filter({ user_id: user.id }).then(r => r[0] || null),
       ]);
-      // Ownership check
-      if (!p || (p.owner_id && p.owner_id !== user.id)) {
+      // Ownership check — block if project not found OR owner mismatch
+      if (!p || p.owner_id !== user.id) {
         navigate("/dashboard");
         return;
       }

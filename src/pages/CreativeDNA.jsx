@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Pencil, Check, RotateCcw } from "lucide-react";
 import LoadingState from "@/components/shared/LoadingState";
 import ErrorState from "@/components/shared/ErrorState";
+import { useProjectGuard } from "@/hooks/useProjectGuard";
 
 const dnaFields = [
   { key: "main_angle", label: "הזווית המרכזית", icon: "🎯" },
@@ -26,13 +26,7 @@ export default function CreativeDNA() {
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState("");
 
-  const { data: project } = useQuery({
-    queryKey: ["project", projectId],
-    queryFn: async () => {
-      const projects = await base44.entities.Project.filter({ id: projectId });
-      return projects[0];
-    },
-  });
+  const { project, loading: guardLoading } = useProjectGuard(projectId);
 
   useEffect(() => {
     if (project?.creative_dna) {
@@ -80,14 +74,7 @@ export default function CreativeDNA() {
     navigate(`/project/${projectId}/category`);
   };
 
-  if (!projectId) return (
-    <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-      <p className="text-destructive font-bold text-lg">שגיאה: מזהה פרויקט חסר</p>
-      <button onClick={() => navigate("/")} className="text-primary underline text-sm">חזרה לדף הבית</button>
-    </div>
-  );
-
-  if (!project) return <LoadingState message="טוען פרויקט..." />;
+  if (guardLoading || !project) return <LoadingState message="טוען פרויקט..." />;
   if (generating) return <LoadingState message="Briefi מנתח את העסק..." />;
   if (error) return <ErrorState onRetry={generateDNA} />;
   if (!dna) return <LoadingState />;

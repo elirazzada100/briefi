@@ -38,8 +38,8 @@ export default function BriefPack() {
         base44.entities.Project.filter({ id: projectId }).then(r => r[0]),
         base44.entities.VideoBrief.filter({ project_id: projectId })
       ]);
-      // Ownership check
-      if (!p || (p.owner_id && p.owner_id !== user.id)) {
+      // Ownership check — block if project not found OR owner mismatch
+      if (!p || p.owner_id !== user.id) {
         navigate("/dashboard");
         return;
       }
