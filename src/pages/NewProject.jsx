@@ -27,6 +27,7 @@ export default function NewProject() {
     if (!canSubmit) return;
     setLoading(true);
 
+    const user = await base44.auth.me();
     const project = await base44.entities.Project.create({
       client_name: clientName.trim(),
       project_name: `בריפים - ${clientName.trim()}`,
@@ -34,6 +35,7 @@ export default function NewProject() {
       raw_notes: rawNotes.trim(),
       status: "draft",
       completed_briefs_count: 0,
+      owner_id: user.id,
     });
 
     navigate(`/project/${project.id}/creative-dna`);

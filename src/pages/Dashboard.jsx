@@ -23,7 +23,10 @@ const statusColors = {
 export default function Dashboard() {
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
-    queryFn: () => base44.entities.Project.list("-created_date", 50),
+    queryFn: async () => {
+      const user = await base44.auth.me();
+      return base44.entities.Project.filter({ owner_id: user.id }, "-created_date", 50);
+    },
   });
 
   return (

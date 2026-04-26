@@ -20,16 +20,17 @@ import BriefPack from './pages/BriefPack';
 import PDFExport from './pages/PDFExport';
 import ConceptPicker from './pages/ConceptPicker';
 import UserProfile from './pages/UserProfile';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-briefi-bg">
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <p className="text-briefi-muted text-sm font-medium">Briefi טוען...</p>
+          <p className="text-muted-foreground text-sm font-medium">Briefi טוען...</p>
         </div>
       </div>
     );
@@ -46,19 +47,22 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
+      {/* Public routes */}
       <Route path="/" element={<Home />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/new-project" element={<NewProject />} />
-      <Route path="/project/:projectId/creative-dna" element={<CreativeDNA />} />
-      <Route path="/project/:projectId/category" element={<CategoryPicker />} />
-      <Route path="/project/:projectId/concepts" element={<ConceptPicker />} />
-      <Route path="/project/:projectId/hooks" element={<HookPicker />} />
-      <Route path="/project/:projectId/body" element={<BodyPicker />} />
-      <Route path="/project/:projectId/cta" element={<CTAPicker />} />
-      <Route path="/project/:projectId/final-brief" element={<FinalBrief />} />
-      <Route path="/project/:projectId/brief-pack" element={<BriefPack />} />
-      <Route path="/project/:projectId/export" element={<PDFExport />} />
-      <Route path="/profile" element={<UserProfile />} />
+
+      {/* Protected routes */}
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/new-project" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
+      <Route path="/project/:projectId/creative-dna" element={<ProtectedRoute><CreativeDNA /></ProtectedRoute>} />
+      <Route path="/project/:projectId/category" element={<ProtectedRoute><CategoryPicker /></ProtectedRoute>} />
+      <Route path="/project/:projectId/concepts" element={<ProtectedRoute><ConceptPicker /></ProtectedRoute>} />
+      <Route path="/project/:projectId/hooks" element={<ProtectedRoute><HookPicker /></ProtectedRoute>} />
+      <Route path="/project/:projectId/body" element={<ProtectedRoute><BodyPicker /></ProtectedRoute>} />
+      <Route path="/project/:projectId/cta" element={<ProtectedRoute><CTAPicker /></ProtectedRoute>} />
+      <Route path="/project/:projectId/final-brief" element={<ProtectedRoute><FinalBrief /></ProtectedRoute>} />
+      <Route path="/project/:projectId/brief-pack" element={<ProtectedRoute><BriefPack /></ProtectedRoute>} />
+      <Route path="/project/:projectId/export" element={<ProtectedRoute><PDFExport /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

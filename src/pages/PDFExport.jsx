@@ -33,6 +33,11 @@ export default function PDFExport() {
         base44.entities.VideoBrief.filter({ project_id: projectId }),
         base44.entities.UserBranding.filter({ user_id: user.id }).then(r => r[0] || null),
       ]);
+      // Ownership check
+      if (!p || (p.owner_id && p.owner_id !== user.id)) {
+        navigate("/dashboard");
+        return;
+      }
       setProject(p);
       setBriefs(b.sort((a, x) => (a.video_number || 0) - (x.video_number || 0)));
       setBranding(br);
@@ -298,27 +303,27 @@ export default function PDFExport() {
     await base44.entities.Project.update(projectId, { status: "exported" });
   };
 
-  if (loading) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState /></div>;
-  if (generating) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState message="מכינים את המסמך..." /></div>;
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState /></div>;
+  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="מכינים את המסמך..." /></div>;
 
   return (
-    <div className="min-h-screen bg-briefi-bg" dir="rtl">
-      <div className="bg-white border-b border-border px-5 pt-safe pt-4 pb-3">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
-          <button onClick={() => navigate(`/project/${projectId}/brief-pack`)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
-            <ArrowRight className="w-5 h-5 text-briefi-secondary" />
+    <div className="min-h-screen bg-background" dir="rtl">
+      <div className="briefi-header">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(`/project/${projectId}/brief-pack`)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+            <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
           <div>
-            <h1 className="text-xl font-black text-briefi-navy">ייצוא PDF</h1>
-            <p className="text-xs text-briefi-muted">בחרו למי המסמך מיועד.</p>
+            <h1 className="text-base font-black text-foreground">ייצוא PDF</h1>
+            <p className="text-xs text-muted-foreground">בחרו למי המסמך מיועד.</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-5 py-5 space-y-5">
+      <div className="briefi-page-container space-y-5">
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
           <p className="text-sm font-bold text-primary">{project?.client_name}</p>
-          <p className="text-briefi-secondary text-sm">{briefs.length} בריפים מוכנים לייצוא</p>
+          <p className="text-muted-foreground text-sm">{briefs.length} בריפים מוכנים לייצוא</p>
         </div>
 
         {/* Branding notice */}
@@ -327,8 +332,8 @@ export default function PDFExport() {
             <div className="flex items-center gap-3">
               <img src={branding.logo_url} alt="לוגו" className="w-10 h-10 object-contain rounded-lg border border-border" />
               <div className="flex-1">
-                <p className="text-sm font-bold text-briefi-navy">{branding.business_name || branding.display_name}</p>
-                <p className="text-xs text-briefi-muted">הלוגו שלכם יופיע במסמך</p>
+                <p className="text-sm font-bold text-foreground">{branding.business_name || branding.display_name}</p>
+                <p className="text-xs text-muted-foreground">הלוגו שלכם יופיע במסמך</p>
               </div>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -338,7 +343,7 @@ export default function PDFExport() {
               >
                 {includeLogo && <Check className="w-3 h-3 text-white" />}
               </div>
-              <span className="text-sm text-briefi-navy font-medium">כלול את הלוגו שלי במסמך</span>
+              <span className="text-sm text-foreground font-medium">כלול את הלוגו שלי במסמך</span>
             </label>
           </div>
         ) : (
@@ -358,13 +363,13 @@ export default function PDFExport() {
 
         {/* Prepared by */}
         <div className="bg-white rounded-2xl border border-border p-4 space-y-2">
-          <label className="text-xs font-bold text-briefi-muted">הוכן על ידי</label>
+          <label className="text-xs font-bold text-muted-foreground">הוכן על ידי</label>
           <input
             type="text"
             value={preparedBy}
             onChange={e => setPreparedBy(e.target.value)}
             placeholder="השם שלכם / שם הסוכנות"
-            className="w-full h-11 px-4 rounded-xl border border-border bg-muted/20 text-sm text-briefi-navy font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-briefi-muted"
+            className="briefi-input"
           />
         </div>
 
@@ -378,11 +383,11 @@ export default function PDFExport() {
                   <FileText className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-black text-briefi-navy text-base">בריף לעצמי</h3>
-                  <p className="text-xs text-briefi-muted">מפורט, פרקטי, כולל טקסטים, מבנה צילום והערות הפקה.</p>
+                  <h3 className="font-black text-foreground text-base">בריף לעצמי</h3>
+                  <p className="text-xs text-muted-foreground">מפורט, פרקטי, כולל טקסטים, מבנה צילום והערות הפקה.</p>
                 </div>
               </div>
-              <div className="text-xs text-briefi-secondary bg-muted/30 rounded-xl px-3 py-2">
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded-xl px-3 py-2">
                 מתאים לתכנון, צילום והפקה
               </div>
               <button
@@ -400,15 +405,15 @@ export default function PDFExport() {
           <div className="bg-white rounded-2xl border-2 border-border overflow-hidden">
             <div className="p-5 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-briefi-atmosphere/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-briefi-atmosphere" />
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
-                  <h3 className="font-black text-briefi-navy text-base">בריף לבעל העסק</h3>
-                  <p className="text-xs text-briefi-muted">קצר, נקי ומוכן לשליחה לאישור לקוח.</p>
+                  <h3 className="font-black text-foreground text-base">בריף לבעל העסק</h3>
+                  <p className="text-xs text-muted-foreground">קצר, נקי ומוכן לשליחה לאישור לקוח.</p>
                 </div>
               </div>
-              <div className="text-xs text-briefi-secondary bg-muted/30 rounded-xl px-3 py-2">
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded-xl px-3 py-2">
                 מתאים לשליחה ואישור לקוח
               </div>
               <button
@@ -425,7 +430,7 @@ export default function PDFExport() {
 
         <button
           onClick={() => navigate(`/project/${projectId}/brief-pack`)}
-          className="w-full h-12 rounded-2xl font-medium text-sm text-briefi-secondary bg-white border border-border text-center transition-all active:scale-95"
+          className="briefi-btn-secondary w-full"
         >
           חזרה לבריפים
         </button>
@@ -433,7 +438,7 @@ export default function PDFExport() {
         {/* Profile shortcut */}
         <button
           onClick={() => navigate("/profile")}
-          className="w-full flex items-center justify-center gap-2 text-xs text-briefi-muted font-medium py-2"
+          className="briefi-btn-ghost w-full"
         >
           <User className="w-3.5 h-3.5" />
           עריכת מיתוג ולוגו

@@ -32,13 +32,22 @@ export default function BriefPack() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      base44.entities.Project.filter({ id: projectId }).then(r => r[0]),
-      base44.entities.VideoBrief.filter({ project_id: projectId })
-    ]).then(([p, b]) => {
+    const load = async () => {
+      const user = await base44.auth.me();
+      const [p, b] = await Promise.all([
+        base44.entities.Project.filter({ id: projectId }).then(r => r[0]),
+        base44.entities.VideoBrief.filter({ project_id: projectId })
+      ]);
+      // Ownership check
+      if (!p || (p.owner_id && p.owner_id !== user.id)) {
+        navigate("/dashboard");
+        return;
+      }
       setProject(p);
       setBriefs(b.sort((a, b) => (a.video_number || 0) - (b.video_number || 0)));
-    }).finally(() => setLoading(false));
+      setLoading(false);
+    };
+    load();
   }, [projectId]);
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="טוען בריפים..." /></div>;

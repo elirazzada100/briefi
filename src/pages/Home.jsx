@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { Plus, FolderOpen, User, Sparkles } from "lucide-react";
+import { Plus, FolderOpen, User, Sparkles, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/lib/AuthContext";
 
 const navItems = [
   { to: "/dashboard", icon: FolderOpen, label: "הפרויקטים שלי", desc: "כל הבריפים במקום אחד", color: "#7C3AED" },
@@ -8,6 +9,8 @@ const navItems = [
 ];
 
 export default function Home() {
+  const { isAuthenticated, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5 py-10" dir="rtl">
       <motion.div
@@ -65,6 +68,16 @@ export default function Home() {
         <p className="text-xs text-muted-foreground text-center">
           הבריפים והלקוחות שמורים אוטומטית ✓
         </p>
+
+        {isAuthenticated && (
+          <button
+            onClick={() => logout()}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            התנתקות
+          </button>
+        )}
       </motion.div>
     </div>
   );
