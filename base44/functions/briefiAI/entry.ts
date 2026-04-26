@@ -6,46 +6,46 @@ const STRATEGY_MODEL = Deno.env.get("OPENAI_STRATEGY_MODEL") || "gpt-4o";
 
 const SYSTEM_PROMPT = `You are Briefi, an Israeli social media brief-building assistant.
 
-Your job is to help social media managers create client-ready short-form video briefs for Israeli businesses.
+Your job is to help social media managers create sharp, practical, client-ready short-form video briefs for Israeli businesses.
 
 You do not write generic marketing content.
+You do not write like an American guru.
+You do not write like an agency presentation.
 You do not create a full brief immediately.
 You guide the user step by step.
 
-The flow is:
+Core product flow:
 1. Analyze the business
 2. Create Creative DNA
 3. Generate 4 video concepts
 4. Generate 4 hooks based on the selected concept
-5. Generate 4 script/body options based on the selected hook and concept
+5. Generate 4 script/body options
 6. Generate 4 CTA options
-7. Assemble a clean final video brief
+7. Assemble a final brief
 8. Check and improve quality if needed
 
-Write in Hebrew unless the user asks otherwise.
+Core writing principles:
+- Start from a real situation, not a generic topic.
+- A situation is something the viewer recognizes from real life — not a marketing statement.
+- WEAK: "שיווק לעסק" | STRONG: "בעל עסק שהעלה ריל וקיבל 214 צפיות ולא מבין למה"
+- WEAK: "אוכל טעים באווירה טובה" | STRONG: "החבר שאמר רק ביס ואז גמר לכם חצי מנה"
+- Write in practical Israeli Hebrew. Clear over clever. Specific over pretty.
+- Shootable over conceptual. Spoken rhythm over polished copy.
+- Client-safe, but not dead.
+- One idea per Reel.
+- The hook must create a small laugh, small discomfort, or "wait, that's me".
+- Every final brief must include actual script_text.
+- script_text is what the person says, the voiceover says, or the text-led video communicates.
+- A final brief without script_text is incomplete.
+- If the copy could fit any business, it is too generic.
+- If it sounds like a marketing blog, rewrite it.
+- If it sounds like a translated American Twitter thread, rewrite it.
+- If it cannot be said out loud naturally in Hebrew, rewrite it.
+- If it cannot be filmed tomorrow with a phone, rewrite it.
+- Use Content Intelligence rows (VoiceRules, HookPatterns, ScriptPatterns, etc.) as style and structure guidance only.
+- Do not copy examples directly. Generate original content for the user's specific business, goal, concept, and category.
 
-Core rules:
-- Practical Israeli Hebrew.
-- Clear over clever.
-- Shootable over conceptual.
-- Specific over vague.
-- Client-approvable over edgy.
-- Spoken rhythm over corporate copy.
-- Do not sound like an American marketing guru translated into Hebrew.
-- Do not use fake Gen Z slang.
-- Do not overuse cynicism.
-- Do not make the business sound weaker just to appear authentic.
-- Strong CTAs are allowed.
-- Promotional language is allowed when useful.
-- Humor should be simple, clear, and client-approvable.
-- Never give 4 versions of the same idea.
-
-Important:
-Every final brief must include actual script_text.
-script_text is what the person says, the voiceover says, or the text-led video communicates.
-A final brief without script_text is incomplete.
-
-When creating 4 options, vary them:
+When generating 4 options, make them meaningfully different:
 1. Safe/client-friendly
 2. Social/native
 3. More human/funny
@@ -108,119 +108,157 @@ async function saveGeneration(base44, userId, projectId, actionType, model, inpu
   return gen;
 }
 
+// Smart relevance scoring: category match > global > none
+function matchesCategory(row, category, field = "category_fit") {
+  const fit = row[field];
+  if (!fit || !fit.length) return "global";
+  if (fit.includes(category)) return "category";
+  if (fit.includes("global")) return "global";
+  return null;
+}
+
 function buildIntelligenceContext({
   voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns,
   voiceSamples, briefExamples, goodExamples, badExamples,
-  category, selectedConcept, mainGoal
+  category, industry, mainGoal
 }) {
   let ctx = "";
 
-  // Voice Rules — global + category-specific
-  const globalRules = (voiceRules || []).filter(r => r.is_active && r.category === "global");
-  const catRules = (voiceRules || []).filter(r => r.is_active && r.category === category);
-  const allRules = [...globalRules, ...catRules];
+  // VOICE RULES: always load global high-priority + category-specific
+  const highPriorityGlobal = (voiceRules || []).filter(r =>
+    r.is_active && r.category === "global" && r.priority === "high"
+  );
+  const catRules = (voiceRules || []).filter(r =>
+    r.is_active && r.category === category
+  );
+  const mediumGlobal = (voiceRules || []).filter(r =>
+    r.is_active && r.category === "global" && r.priority !== "high"
+  ).slice(0, 3);
+  const allRules = [...highPriorityGlobal, ...catRules, ...mediumGlobal];
   if (allRules.length) {
-    ctx += "\n\n--- VOICE RULES ---\n";
+    ctx += "\n\n--- VOICE RULES (follow strictly) ---\n";
     allRules.forEach(r => {
       ctx += `[${r.rule_type.toUpperCase()}] ${r.rule_text}\n`;
-      if (r.example_good) ctx += `  ✓ Good: "${r.example_good}"\n`;
+      if (r.example_good) ctx += `  ✓ "${r.example_good}"\n`;
       if (r.example_bad) ctx += `  ✗ Avoid: "${r.example_bad}"\n`;
     });
   }
 
-  // Hook Patterns — matching category
-  const matchingHookPatterns = (hookPatterns || []).filter(p =>
-    p.is_active && (!p.category_fit?.length || p.category_fit.includes(category))
+  // HOOK PATTERNS: category-specific first, then global fallback (max 5)
+  const categoryHooks = (hookPatterns || []).filter(p =>
+    p.is_active && p.category_fit?.includes(category)
   );
-  if (matchingHookPatterns.length) {
-    ctx += "\n\n--- HOOK PATTERNS ---\n";
-    matchingHookPatterns.slice(0, 6).forEach(p => {
-      ctx += `• ${p.pattern_name}: "${p.template}"\n  Example: "${p.example_hebrew}"\n`;
-      if (p.risk_notes) ctx += `  Note: ${p.risk_notes}\n`;
+  const globalHooks = (hookPatterns || []).filter(p =>
+    p.is_active && (!p.category_fit?.length || p.category_fit.includes("general"))
+    && !categoryHooks.includes(p)
+  );
+  const allHooks = [...categoryHooks, ...globalHooks].slice(0, 5);
+  if (allHooks.length) {
+    ctx += "\n\n--- HOOK PATTERNS (use for structure, not copy) ---\n";
+    allHooks.forEach(p => {
+      ctx += `• ${p.pattern_name}: "${p.template}"\n  e.g. "${p.example_hebrew}"\n`;
+      if (p.risk_notes) ctx += `  ⚠ ${p.risk_notes}\n`;
     });
   }
 
-  // Script Patterns — matching category
-  const matchingScriptPatterns = (scriptPatterns || []).filter(p =>
-    p.is_active && (!p.category_fit?.length || p.category_fit.includes(category))
-  );
-  if (matchingScriptPatterns.length) {
-    ctx += "\n\n--- SCRIPT PATTERNS TO USE ---\n";
-    matchingScriptPatterns.slice(0, 4).forEach(p => {
-      ctx += `• ${p.script_pattern_name}:\n  Structure: ${(p.structure || []).join(" → ")}\n  Example:\n${p.example_script}\n`;
+  // SCRIPT PATTERNS: category+industry match first, then category, then global (max 3)
+  const matchedScripts = (scriptPatterns || []).filter(p => p.is_active).sort((a, b) => {
+    const aScore = (a.category_fit?.includes(category) ? 2 : 0) + (a.industry_fit?.includes(industry) ? 1 : 0);
+    const bScore = (b.category_fit?.includes(category) ? 2 : 0) + (b.industry_fit?.includes(industry) ? 1 : 0);
+    return bScore - aScore;
+  }).slice(0, 3);
+  if (matchedScripts.length) {
+    ctx += "\n\n--- SCRIPT PATTERNS (structure guidance) ---\n";
+    matchedScripts.forEach(p => {
+      ctx += `• ${p.script_pattern_name}: ${(p.structure || []).join(" → ")}\n`;
+      if (p.example_script) ctx += `  Example script:\n${p.example_script}\n`;
     });
   }
 
-  // CTA Patterns — matching goal
-  const matchingCTAPatterns = (ctaPatterns || []).filter(p => p.is_active);
-  if (matchingCTAPatterns.length) {
+  // CTA PATTERNS: goal-match first (max 4)
+  const goalCTAs = (ctaPatterns || []).filter(p =>
+    p.is_active && p.goal_fit?.some(g => mainGoal?.includes(g) || ["leads","saves","awareness"].includes(g))
+  ).slice(0, 4);
+  const fallbackCTAs = (ctaPatterns || []).filter(p => p.is_active && !goalCTAs.includes(p)).slice(0, 2);
+  const allCTAs = [...goalCTAs, ...fallbackCTAs];
+  if (allCTAs.length) {
     ctx += "\n\n--- CTA PATTERNS ---\n";
-    matchingCTAPatterns.slice(0, 6).forEach(p => {
+    allCTAs.forEach(p => {
       ctx += `• [${p.cta_type}] "${p.template}" — e.g. "${p.example_hebrew}"\n`;
     });
   }
 
-  // Caption Patterns
-  const matchingCaptionPatterns = (captionPatterns || []).filter(p =>
-    p.is_active && (!p.category_fit?.length || p.category_fit.includes(category))
-  );
-  if (matchingCaptionPatterns.length) {
+  // CAPTION PATTERNS: category or global (max 3)
+  const matchedCaptions = (captionPatterns || []).filter(p =>
+    p.is_active && (!p.category_fit?.length || p.category_fit.includes(category) || p.category_fit.includes("global"))
+  ).slice(0, 3);
+  if (matchedCaptions.length) {
     ctx += "\n\n--- CAPTION PATTERNS ---\n";
-    matchingCaptionPatterns.slice(0, 4).forEach(p => {
-      ctx += `• ${p.pattern_name}: "${p.template}"\n  Example: "${p.example_hebrew}"\n`;
+    matchedCaptions.forEach(p => {
+      ctx += `• ${p.pattern_name}: "${p.template}"\n  e.g. "${p.example_hebrew}"\n`;
     });
   }
 
-  // Trend Patterns — always include if category is טרנדי or relevant
-  const matchingTrends = (trendPatterns || []).filter(t =>
-    t.is_active && (!t.category_fit?.length || t.category_fit.includes(category) || category === "טרנדי")
-  );
-  if (matchingTrends.length) {
+  // TREND PATTERNS: טרנדי always, others only if category matches (max 3)
+  const matchedTrends = (trendPatterns || []).filter(t =>
+    t.is_active && (category === "טרנדי" || t.category_fit?.includes(category))
+  ).slice(0, 3);
+  if (matchedTrends.length) {
     ctx += "\n\n--- TREND FORMATS ---\n";
-    matchingTrends.slice(0, 4).forEach(t => {
-      ctx += `• ${t.trend_name}: "${t.example_hebrew}"\n  How to adapt: ${t.how_to_adapt}\n`;
+    matchedTrends.forEach(t => {
+      ctx += `• ${t.trend_name}: "${t.example_hebrew}"\n  Adapt: ${t.how_to_adapt}\n`;
     });
   }
 
-  // Voice Samples
-  const relevantSamples = (voiceSamples || []).filter(s =>
-    s.is_active && (s.category === "global" || s.category === category)
-  );
-  if (relevantSamples.length) {
-    ctx += "\n\n--- VOICE SAMPLES ---\n";
-    relevantSamples.slice(0, 5).forEach(s => {
+  // VOICE SAMPLES: global good/excellent first, then category-specific (max 5)
+  const goodSamples = (voiceSamples || []).filter(s =>
+    s.is_active && (s.category === "global" || s.category === category) &&
+    ["good","excellent"].includes(s.rating)
+  ).slice(0, 3);
+  const badSamples = (voiceSamples || []).filter(s =>
+    s.is_active && s.category === "global" && ["bad","cringe","american"].includes(s.rating)
+  ).slice(0, 2);
+  const rewriteSamples = (voiceSamples || []).filter(s =>
+    s.is_active && s.sample_type === "rewrite" && s.rating === "excellent"
+  ).slice(0, 2);
+  const allSamples = [...rewriteSamples, ...goodSamples, ...badSamples];
+  if (allSamples.length) {
+    ctx += "\n\n--- VOICE SAMPLES (tone reference) ---\n";
+    allSamples.forEach(s => {
       if (s.sample_type === "rewrite" && s.input_text && s.output_text) {
-        ctx += `• [REWRITE ${s.rating.toUpperCase()}] "${s.input_text}" → "${s.output_text}"\n  Why: ${s.why}\n`;
-      } else if (s.sample_type === "good" && s.output_text) {
+        ctx += `• [REWRITE ✓] "${s.input_text}"\n  → "${s.output_text}" — ${s.why}\n`;
+      } else if (["good","excellent"].includes(s.rating) && s.output_text) {
         ctx += `• [GOOD] "${s.output_text}" — ${s.why}\n`;
-      } else if (s.sample_type === "bad" && s.input_text) {
+      } else if (s.input_text) {
         ctx += `• [AVOID] "${s.input_text}" — ${s.why}\n`;
       }
     });
   }
 
-  // Brief Examples
-  const matchingBriefExamples = (briefExamples || []).filter(e =>
-    e.is_active && (e.category === category || !e.category)
-  );
-  if (matchingBriefExamples.length) {
-    ctx += "\n\n--- BRIEF EXAMPLES (IMITATE THESE) ---\n";
-    matchingBriefExamples.slice(0, 3).forEach(e => {
-      ctx += `• [${e.example_type.toUpperCase()}] ${e.why_it_works}\n${e.example_content}\n`;
+  // BRIEF EXAMPLES: category match, then global (max 2)
+  const matchedBriefs = (briefExamples || []).filter(e =>
+    e.is_active && (e.category === category || e.category === "global" || !e.category)
+  ).slice(0, 2);
+  if (matchedBriefs.length) {
+    ctx += "\n\n--- BRIEF EXAMPLES (structure to imitate, not copy) ---\n";
+    matchedBriefs.forEach(e => {
+      ctx += `• [${(e.example_type || "").toUpperCase()}] Why it works: ${e.why_it_works}\n${e.example_content}\n`;
     });
   }
 
-  // Legacy good/bad examples
-  const goods = (goodExamples || []).filter(e => e.is_active).slice(0, 3);
+  // LEGACY good/bad examples
+  const goods = (goodExamples || []).filter(e => e.is_active).slice(0, 2);
   if (goods.length) {
-    ctx += "\n\n--- GOOD EXAMPLES ---\n";
+    ctx += "\n\n--- ADDITIONAL GOOD EXAMPLES ---\n";
     goods.forEach(e => ctx += `• "${e.example_text}" — ${e.why_it_works}\n`);
   }
-  const bads = (badExamples || []).filter(e => e.is_active).slice(0, 3);
+  const bads = (badExamples || []).filter(e => e.is_active).slice(0, 2);
   if (bads.length) {
-    ctx += "\n\n--- BAD EXAMPLES TO AVOID ---\n";
+    ctx += "\n\n--- ADDITIONAL BAD EXAMPLES ---\n";
     bads.forEach(e => ctx += `• "${e.bad_text}" — ${e.why_bad}\n`);
   }
+
+  ctx += "\n\n--- INSTRUCTION ---\nUse the Content Intelligence rows above as style and structure guidance only. Do not copy them directly. Generate original Israeli short-form content based on the user's specific business, goal, category, selected concept, and previous selections.\n";
 
   return ctx;
 }
@@ -252,7 +290,7 @@ Deno.serve(async (req) => {
     voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns,
     voiceSamples, briefExamples, goodExamples, badExamples,
     category: payload.selected_category || "",
-    selectedConcept: payload.selected_concept || null,
+    industry: payload.industry || "general",
     mainGoal: payload.main_goal || "",
   });
 

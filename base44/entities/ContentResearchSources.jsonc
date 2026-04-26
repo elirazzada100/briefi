@@ -1,0 +1,47 @@
+{
+  "name": "ContentResearchSources",
+  "type": "object",
+  "properties": {
+    "source_name": {
+      "type": "string",
+      "description": "\u05e9\u05dd \u05d4\u05de\u05e7\u05d5\u05e8"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "manual_rnd_doc",
+        "external_url",
+        "social_observation",
+        "client_feedback"
+      ],
+      "description": "\u05e1\u05d5\u05d2 \u05de\u05e7\u05d5\u05e8"
+    },
+    "source_url": {
+      "type": "string",
+      "description": "URL \u05d0\u05d5 \u05de\u05d6\u05d4\u05d4"
+    },
+    "insight": {
+      "type": "string",
+      "description": "\u05ea\u05d5\u05d1\u05e0\u05d4 \u05de\u05e8\u05db\u05d6\u05d9\u05ea"
+    },
+    "patterns_extracted": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05d8\u05d1\u05dc\u05d0\u05d5\u05ea \u05e9\u05d7\u05d5\u05dc\u05e6\u05d5"
+    },
+    "created_at": {
+      "type": "string",
+      "description": "\u05ea\u05d0\u05e8\u05d9\u05da \u05d9\u05e6\u05d9\u05e8\u05d4"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "\u05e4\u05e2\u05d9\u05dc"
+    }
+  },
+  "required": [
+    "source_name"
+  ]
+}
