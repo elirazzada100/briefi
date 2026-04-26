@@ -27,10 +27,10 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-briefi-bg" dir="rtl">
+    <div className="min-h-screen bg-background" dir="rtl">
       {/* Header */}
       <div className="briefi-header">
-        <div className="max-w-lg mx-auto flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to="/">
               <button className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">

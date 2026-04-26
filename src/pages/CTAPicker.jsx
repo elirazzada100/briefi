@@ -135,20 +135,20 @@ export default function CTAPicker() {
   };
 
   if (generating) return (
-    <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl">
+    <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
       <LoadingState message={loadingMsg} />
     </div>
   );
   if (error) return (
-    <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl">
+    <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
       <ErrorState onRetry={() => setError(false)} />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-briefi-bg" dir="rtl">
+    <div className="min-h-screen bg-background" dir="rtl">
       <div className="briefi-header">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
             <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -157,13 +157,13 @@ export default function CTAPicker() {
             <p className="text-xs text-muted-foreground">בחרו קריאה לפעולה שמתאימה למטרה.</p>
           </div>
         </div>
-        <div className="max-w-lg mx-auto mt-2">
+        <div className="mt-1">
           <StepProgress currentStep={5} />
         </div>
       </div>
 
       <div className="briefi-page-container space-y-4">
-        <div className="bg-primary/6 border border-primary/15 rounded-2xl px-4 py-3 space-y-0.5">
+        <div className="rounded-2xl px-4 py-3 space-y-0.5" style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
           <p className="text-[11px] font-bold text-primary">ההוק שבחרתם</p>
           <p className="text-sm font-bold text-foreground">"{selectedHook?.hook_text}"</p>
           {selectedBody?.body_title && <p className="text-xs text-muted-foreground">{selectedBody.body_title}</p>}
@@ -187,8 +187,8 @@ export default function CTAPicker() {
                     </span>
                   </div>
 
-                  <p className="text-briefi-navy font-black text-base leading-snug">"{cta.cta_text}"</p>
-                  <p className="text-sm text-briefi-secondary">{cta.why_it_fits}</p>
+                  <p className="font-black text-base leading-snug text-foreground" style={{ overflowWrap: "break-word" }}>"{cta.cta_text}"</p>
+                  <p className="text-sm text-muted-foreground" style={{ overflowWrap: "break-word" }}>{cta.why_it_fits}</p>
 
                   <button
                     onClick={() => handleSelect(cta)}

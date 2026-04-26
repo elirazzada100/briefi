@@ -11,7 +11,7 @@ const steps = [
 
 export default function StepProgress({ currentStep }) {
   return (
-    <div className="flex items-center justify-center gap-1 py-3 mb-4">
+    <div className="flex items-center justify-center gap-1 pt-2 pb-1 overflow-x-hidden">
       {steps.map((step, index) => {
         const stepNum = index + 1;
         const isActive = stepNum === currentStep;

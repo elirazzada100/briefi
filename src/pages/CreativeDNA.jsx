@@ -93,10 +93,11 @@ export default function CreativeDNA() {
   if (!dna) return <LoadingState />;
 
   return (
+    <div className="min-h-screen bg-background" dir="rtl">
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="py-6"
+      className="briefi-page-container"
     >
       <div className="mb-5">
         <h1 className="text-xl font-black text-foreground mb-1">זה מה שהבנו על העסק</h1>
@@ -186,5 +187,6 @@ export default function CreativeDNA() {
         </button>
       </div>
     </motion.div>
+    </div>
   );
 }

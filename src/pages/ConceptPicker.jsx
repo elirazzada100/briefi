@@ -76,7 +76,7 @@ export default function ConceptPicker() {
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <div className="briefi-header">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
             <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -86,7 +86,7 @@ export default function ConceptPicker() {
             </span>
           </div>
         </div>
-        <div className="max-w-lg mx-auto mt-2">
+        <div className="mt-1">
           <StepProgress currentStep={2} />
         </div>
       </div>
@@ -155,7 +155,7 @@ export default function ConceptPicker() {
                         <button
                           key={action}
                           onClick={() => handleRewrite(idx, action)}
-                          className="text-[11px] px-2.5 py-1 rounded-lg bg-muted text-muted-foreground hover:bg-primary/8 hover:text-primary transition-colors font-medium"
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors font-medium"
                         >
                           {action}
                         </button>

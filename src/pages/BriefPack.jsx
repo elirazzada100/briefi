@@ -41,15 +41,15 @@ export default function BriefPack() {
     }).finally(() => setLoading(false));
   }, [projectId]);
 
-  if (loading) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState message="טוען בריפים..." /></div>;
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="טוען בריפים..." /></div>;
 
   const completedCount = briefs.length;
   const progress = Math.min((completedCount / 8) * 100, 100);
 
   return (
-    <div className="min-h-screen bg-briefi-bg" dir="rtl">
+    <div className="min-h-screen bg-background" dir="rtl">
       <div className="briefi-header">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <button onClick={() => navigate("/")} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
             <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -161,7 +161,7 @@ export default function BriefPack() {
                       </div>
                       <p className="font-bold text-foreground text-sm mt-0.5">{fb.brief_title || "בריף ללא שם"}</p>
                       {fb.hook && (
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">"{fb.hook}"</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2" style={{ overflowWrap: "break-word" }}>"{fb.hook}"</p>
                       )}
                     </div>
                   </div>

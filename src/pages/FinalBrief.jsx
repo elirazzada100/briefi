@@ -37,10 +37,10 @@ function EditableField({ label, value, onSave, prominent = false, hint = null })
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <p className={`text-xs font-bold ${prominent ? "text-primary" : "text-briefi-muted"}`}>{label}</p>
+        <p className={`text-xs font-bold ${prominent ? "text-primary" : "text-muted-foreground"}`}>{label}</p>
         {!editing && (
           <button onClick={() => setEditing(true)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors">
-            <Pencil className="w-3 h-3 text-briefi-muted" />
+            <Pencil className="w-3 h-3 text-muted-foreground" />
           </button>
         )}
       </div>
@@ -57,15 +57,15 @@ function EditableField({ label, value, onSave, prominent = false, hint = null })
             <button onClick={handleSave} className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold">
               <Check className="w-3 h-3" /> שמור
             </button>
-            <button onClick={() => setEditing(false)} className="px-3 py-1.5 bg-muted text-briefi-secondary rounded-lg text-xs font-bold">
+            <button onClick={() => setEditing(false)} className="px-3 py-1.5 bg-muted text-muted-foreground rounded-lg text-xs font-bold">
               <X className="w-3 h-3" />
             </button>
           </div>
         </div>
       ) : (
         <>
-          <p className={`text-sm text-briefi-navy font-medium leading-relaxed whitespace-pre-wrap ${prominent ? "text-base" : ""}`}>{val || "—"}</p>
-          {hint && <p className="text-xs text-briefi-muted mt-1 italic">{hint}</p>}
+          <p className={`font-medium leading-relaxed text-foreground ${prominent ? "briefi-script-text text-base" : "text-sm"}`} style={{ whiteSpace: "pre-wrap", overflowWrap: "break-word", wordBreak: "normal" }}>{val || "—"}</p>
+          {hint && <p className="text-xs text-muted-foreground mt-1 italic">{hint}</p>}
         </>
       )}
     </div>
@@ -170,17 +170,17 @@ export default function FinalBrief() {
     setFeedbackSaved(false);
   };
 
-  if (loading) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState message="טוען את הבריף..." /></div>;
-  if (improving) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState message="משפרים לפי הפידבק..." /></div>;
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="טוען את הבריף..." /></div>;
+  if (improving) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="משפרים לפי הפידבק..." /></div>;
 
   const fb = brief?.final_brief || {};
   const riskClass = riskColors[fb.client_risk_level] || riskColors["בינוני"];
   const scriptLabel = scriptFormatLabels[fb.script_format] || fb.script_format || "";
 
   return (
-    <div className="min-h-screen bg-briefi-bg" dir="rtl">
+    <div className="min-h-screen bg-background" dir="rtl">
       <div className="briefi-header">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <button onClick={() => navigate(`/project/${projectId}/brief-pack`)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
             <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -204,7 +204,7 @@ export default function FinalBrief() {
       </div>
 
       <div className="briefi-page-container space-y-4">
-        <div className="bg-white rounded-2xl border border-border p-5 space-y-5">
+        <div className="bg-white rounded-2xl border border-border p-4 space-y-5" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", overflowWrap: "break-word" }}>
 
           {/* 1. שם הסרטון */}
           <EditableField label="שם הסרטון" value={fb.brief_title} onSave={v => updateBriefField("brief_title", v)} />
@@ -221,9 +221,9 @@ export default function FinalBrief() {
 
           {/* 4. טקסט / ווייסאובר — prominent */}
           <div className="border-t border-muted pt-4">
-            <div className="bg-primary/5 rounded-2xl p-4 space-y-2">
+            <div className="rounded-2xl p-4 space-y-2" style={{ background: "rgba(124,58,237,0.05)" }}>
               {scriptLabel && (
-                <span className="inline-block text-xs bg-primary/10 text-primary font-bold px-2.5 py-1 rounded-full">{scriptLabel}</span>
+                <span className="inline-block text-xs text-primary font-bold px-2.5 py-1 rounded-full" style={{ background: "rgba(124,58,237,0.10)" }}>{scriptLabel}</span>
               )}
               <EditableField
                 label="טקסט / ווייסאובר"
@@ -238,16 +238,16 @@ export default function FinalBrief() {
           {/* 5. מבנה צילום */}
           {(fb.shot_structure || fb.video_structure)?.length > 0 && (
             <div className="border-t border-muted pt-4 space-y-2">
-              <p className="text-xs font-bold text-briefi-muted">מבנה צילום</p>
+              <p className="text-xs font-bold text-muted-foreground">מבנה צילום</p>
               {(fb.shot_structure || fb.video_structure).map((step, i) => (
                 <div key={i} className="flex items-start gap-3 bg-muted/30 rounded-xl p-3">
                   <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{step.step || i + 1}</div>
                   <div className="flex-1 space-y-0.5">
-                    {step.visual && <p className="text-sm text-briefi-navy font-medium">{step.visual}</p>}
+                    {step.visual && <p className="text-sm text-foreground font-medium" style={{ overflowWrap: "break-word" }}>{step.visual}</p>}
                     {step.spoken_or_overlay_text && (
-                      <p className="text-xs text-briefi-secondary italic">"{step.spoken_or_overlay_text}"</p>
+                      <p className="text-xs text-muted-foreground italic" style={{ overflowWrap: "break-word" }}>"{step.spoken_or_overlay_text}"</p>
                     )}
-                    {step.description && <p className="text-sm text-briefi-navy font-medium">{step.description}</p>}
+                    {step.description && <p className="text-sm text-foreground font-medium" style={{ overflowWrap: "break-word" }}>{step.description}</p>}
                   </div>
                 </div>
               ))}
@@ -257,9 +257,9 @@ export default function FinalBrief() {
           {/* 6. טקסטים למסך */}
           {(fb.text_overlays || []).length > 0 && (
             <div className="border-t border-muted pt-4 space-y-1.5">
-              <p className="text-xs font-bold text-briefi-muted">טקסטים למסך</p>
+              <p className="text-xs font-bold text-muted-foreground">טקסטים למסך</p>
               {fb.text_overlays.map((text, i) => (
-                <p key={i} className="text-sm text-briefi-navy font-medium bg-muted/50 rounded-lg px-3 py-1.5">"{text}"</p>
+                <p key={i} className="text-sm text-foreground font-medium bg-muted/50 rounded-lg px-3 py-1.5" style={{ overflowWrap: "break-word" }}>"{text}"</p>
               ))}
             </div>
           )}
@@ -282,7 +282,7 @@ export default function FinalBrief() {
 
         {/* Feedback Section */}
         <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
-          <p className="text-xs font-bold text-briefi-muted">מה דעתכם על הבריף?</p>
+          <p className="text-xs font-bold text-muted-foreground">מה דעתכם על הבריף?</p>
 
           {/* Main feedback */}
           {!feedbackSaved ? (
@@ -294,7 +294,7 @@ export default function FinalBrief() {
                   className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
                     mainFeedback === opt
                       ? "bg-primary text-white border-primary"
-                      : "bg-muted/30 text-briefi-secondary border-border hover:border-primary/30"
+                      : "bg-muted/30 text-muted-foreground border-border hover:border-primary/30"
                   }`}
                 >
                   {opt}
@@ -314,7 +314,7 @@ export default function FinalBrief() {
                 className={`text-xs px-2.5 py-1 rounded-lg border transition-all font-medium ${
                   specificFeedback.includes(opt)
                     ? "bg-primary/10 text-primary border-primary/30"
-                    : "bg-muted/30 text-briefi-secondary border-border hover:border-primary/20"
+                    : "bg-muted/30 text-muted-foreground border-border hover:border-primary/20"
                 }`}
               >
                 {opt}
