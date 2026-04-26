@@ -119,6 +119,12 @@ function matchesCategory(row, category, field = "category_fit") {
 
 const FOOD_INDUSTRIES = ["food", "bars", "cafes", "street_food", "restaurants", "local_food", "nightlife_food"];
 const BEAUTY_INDUSTRIES = ["beauty", "aesthetics", "nails", "brows", "lashes", "hair", "skincare", "makeup", "clinic", "aesthetic_clinic"];
+const FITNESS_INDUSTRIES = ["fitness", "nutrition", "personal_training", "gym", "pilates", "yoga", "sports_therapy", "weight_loss", "strength_training", "fitness_studio"];
+const MARKETING_INDUSTRIES = ["marketing", "social_media", "content_creator", "agency", "creative_services", "copywriting", "video_editor", "photographer", "branding", "design", "paid_media", "ai_creator"];
+const COACHING_INDUSTRIES = ["coach", "consultant", "business_coach", "mentor", "career_coach", "sales_consultant", "financial_coach", "leadership"];
+const LOCAL_SERVICE_INDUSTRIES = ["local_service", "technician", "plumber", "electrician", "locksmith", "cleaning", "moving", "handyman", "car_service", "repair", "professional_service"];
+const REAL_ESTATE_INDUSTRIES = ["real_estate", "interior_design", "renovation", "architecture", "contractor", "home_design", "property", "home_staging", "construction", "kitchen_design"];
+const EVENTS_INDUSTRIES = ["events", "weddings", "nightlife", "dj", "event_venue", "party", "event_planner", "catering_events", "photographer_events", "bar_events"];
 
 function buildIntelligenceContext({
   voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns,
@@ -150,23 +156,31 @@ function buildIntelligenceContext({
   // HOOK PATTERNS: industry+category match first, then category-only, then global fallback (max 6)
   const isFoodIndustry = FOOD_INDUSTRIES.includes(industry);
   const isBeautyIndustry = BEAUTY_INDUSTRIES.includes(industry);
+  const isFitnessIndustry = FITNESS_INDUSTRIES.includes(industry);
+  const isMarketingIndustry = MARKETING_INDUSTRIES.includes(industry);
+  const isCoachingIndustry = COACHING_INDUSTRIES.includes(industry);
+  const isLocalServiceIndustry = LOCAL_SERVICE_INDUSTRIES.includes(industry);
+  const isRealEstateIndustry = REAL_ESTATE_INDUSTRIES.includes(industry);
+  const isEventsIndustry = EVENTS_INDUSTRIES.includes(industry);
+  const isSpecializedIndustry = isFoodIndustry || isBeautyIndustry || isFitnessIndustry || isMarketingIndustry || isCoachingIndustry || isLocalServiceIndustry || isRealEstateIndustry || isEventsIndustry;
+
+  const ALL_INDUSTRY_LISTS = [...FOOD_INDUSTRIES, ...BEAUTY_INDUSTRIES, ...FITNESS_INDUSTRIES, ...MARKETING_INDUSTRIES, ...COACHING_INDUSTRIES, ...LOCAL_SERVICE_INDUSTRIES, ...REAL_ESTATE_INDUSTRIES, ...EVENTS_INDUSTRIES];
+
   const industryAndCategoryHooks = (hookPatterns || []).filter(p =>
     p.is_active && p.category_fit?.includes(category) &&
-    (p.industry_fit?.some(i => FOOD_INDUSTRIES.includes(i)) || p.industry_fit?.some(i => BEAUTY_INDUSTRIES.includes(i)))
+    p.industry_fit?.some(i => ALL_INDUSTRY_LISTS.includes(i) && (p.industry_fit.includes(industry) || ALL_INDUSTRY_LISTS.includes(i)))
   );
   const categoryHooks = (hookPatterns || []).filter(p =>
     p.is_active && p.category_fit?.includes(category) && !industryAndCategoryHooks.includes(p)
   );
   const industryHooks = (hookPatterns || []).filter(p =>
-    p.is_active &&
-    (p.industry_fit?.some(i => FOOD_INDUSTRIES.includes(i)) || p.industry_fit?.some(i => BEAUTY_INDUSTRIES.includes(i)))
-    && !industryAndCategoryHooks.includes(p)
+    p.is_active && p.industry_fit?.includes(industry) && !industryAndCategoryHooks.includes(p)
   );
   const globalHooks = (hookPatterns || []).filter(p =>
     p.is_active && (!p.category_fit?.length || p.category_fit.includes("general"))
-    && !industryAndCategoryHooks.includes(p) && !categoryHooks.includes(p)
+    && !industryAndCategoryHooks.includes(p) && !categoryHooks.includes(p) && !industryHooks.includes(p)
   );
-  const allHooks = (isFoodIndustry || isBeautyIndustry)
+  const allHooks = isSpecializedIndustry
     ? [...industryAndCategoryHooks, ...industryHooks, ...categoryHooks].slice(0, 6)
     : [...categoryHooks, ...globalHooks].slice(0, 5);
   if (allHooks.length) {
@@ -226,10 +240,9 @@ function buildIntelligenceContext({
     });
   }
 
-  // VOICE SAMPLES: industry match first, then global good/excellent, then category-specific (max 7 for beauty)
+  // VOICE SAMPLES: industry match first, then global good/excellent, then category-specific
   const industryVoiceSamples = (voiceSamples || []).filter(s =>
-    s.is_active && s.industry && (BEAUTY_INDUSTRIES.includes(s.industry) || FOOD_INDUSTRIES.includes(s.industry))
-    && s.industry === industry && ["good","excellent"].includes(s.rating)
+    s.is_active && s.industry === industry && ["good","excellent"].includes(s.rating)
   ).slice(0, 4);
   const goodSamples = (voiceSamples || []).filter(s =>
     s.is_active && (s.category === "global" || s.category === category) &&
@@ -289,7 +302,37 @@ function buildIntelligenceContext({
     (voiceSamples || []).some(s => s.industry && BEAUTY_INDUSTRIES.includes(s.industry) && s.is_active);
 
   if (isBeautyCtx) {
-    ctx += "\n\n--- BEAUTY / AESTHETICS / NAILS / BROWS / HAIR / CLINIC INSTRUCTION ---\nFor beauty, nails, brows, lashes, hair, skincare, and aesthetics, write through trust, precision, client fears, and process. Use specific details: face shape, shade, symmetry, preparation, healing, maintenance, aftercare, natural light, result after two weeks. Avoid generic beauty advertising. Do not overpromise. Do not use: תוצאה מושלמת, חוויה מפנקת, אווירה קסומה, גלואו מטורף, יחס אישי ומקצועי, טיפול שישנה לך את החיים. Make the content feel like a professional explaining clearly to a client — trust content wearing a pretty outfit.\n";
+    ctx += "\n\n--- BEAUTY / AESTHETICS INSTRUCTION ---\nFor beauty, nails, brows, lashes, hair, skincare, and aesthetics, write through trust, precision, client fears, and process. Use specific details: face shape, shade, symmetry, preparation, healing, maintenance, aftercare. Do not use: תוצאה מושלמת, חוויה מפנקת, אווירה קסומה, גלואו מטורף, יחס אישי ומקצועי, טיפול שישנה לך את החיים.\n";
+  }
+
+  const isFitnessCtx = FITNESS_INDUSTRIES.includes(industry);
+  if (isFitnessCtx) {
+    ctx += "\n\n--- FITNESS / NUTRITION / PILATES INSTRUCTION ---\nFor fitness, nutrition, Pilates, yoga, and training, write through realistic Israeli life. Avoid American gym motivation. Focus on repeatable routines, beginner fears, Friday dinner, after-holidays, form correction, short workouts, and practical coaching. The tone should be direct but supportive. Do not use: no pain no gain, תנו 110 אחוז, גוף מושלם, בלי תירוצים, פשוט תתמידו.\n";
+  }
+
+  const isMarketingCtx = MARKETING_INDUSTRIES.includes(industry);
+  if (isMarketingCtx) {
+    ctx += "\n\n--- MARKETING / SOCIAL MEDIA INSTRUCTION ---\nFor marketing and social media businesses, start from the client's real pain. Avoid empty strategy words: אסטרטגיה, ערך, מיתוג, תוכן איכותי unless immediately grounded in a concrete example. Use before/after structure: weak hook vs strong hook, generic post vs specific post. Be useful fast — give one practical correction per video.\n";
+  }
+
+  const isCoachingCtx = COACHING_INDUSTRIES.includes(industry);
+  if (isCoachingCtx) {
+    ctx += "\n\n--- COACHING / CONSULTING INSTRUCTION ---\nFor coaches and consultants, create a mirror moment: the viewer feels seen, not preached to. Avoid empty inspiration. Teach one distinction per video. Connect every insight to a concrete behavior, decision, or situation. Do not say: תאמינו בעצמכם, תפרצו גבולות, תכבשו את המטרות.\n";
+  }
+
+  const isLocalServiceCtx = LOCAL_SERVICE_INDUSTRIES.includes(industry);
+  if (isLocalServiceCtx) {
+    ctx += "\n\n--- LOCAL SERVICE / TECHNICIAN INSTRUCTION ---\nFor local services, build trust through practical checks, transparency, before/after, and prevention. Avoid: מקצועי, אמין, שירות מכל הלב without proof. Show what the client should ask, what to check, what a bad quote looks like. Great content prevents a problem.\n";
+  }
+
+  const isRealEstateCtx = REAL_ESTATE_INDUSTRIES.includes(industry);
+  if (isRealEstateCtx) {
+    ctx += "\n\n--- REAL ESTATE / DESIGN / RENOVATION INSTRUCTION ---\nFor real estate and design, show what the buyer/client should notice, not only pretty shots. Balance beauty and function. For renovation, prevent expensive mistakes. Do not use: דירה מהממת, מיקום מושלם, עיצוב יוקרתי, מגשימים חלומות.\n";
+  }
+
+  const isEventsCtx = EVENTS_INDUSTRIES.includes(industry);
+  if (isEventsCtx) {
+    ctx += "\n\n--- EVENTS / WEDDINGS / NIGHTLIFE INSTRUCTION ---\nFor events, sell the moment and social feeling, not venue specs. Avoid: חוויה בלתי נשכחת, אירוע מהחלומות, אווירה קסומה. Show energy, crowd, dance floor, the moment people stop posing and start enjoying.\n";
   }
 
   ctx += "\n\n--- INSTRUCTION ---\nUse the Content Intelligence rows above as style and structure guidance only. Do not copy them directly. Generate original Israeli short-form content based on the user's specific business, goal, category, selected concept, and previous selections.\n";
@@ -623,6 +666,12 @@ Return JSON:
 
     const isFood = FOOD_INDUSTRIES.includes(industry);
     const isBeauty = BEAUTY_INDUSTRIES.includes(industry);
+    const isFitness = FITNESS_INDUSTRIES.includes(industry);
+    const isMarketing = MARKETING_INDUSTRIES.includes(industry);
+    const isCoaching = COACHING_INDUSTRIES.includes(industry);
+    const isLocalService = LOCAL_SERVICE_INDUSTRIES.includes(industry);
+    const isRealEstate = REAL_ESTATE_INDUSTRIES.includes(industry);
+    const isEvents = EVENTS_INDUSTRIES.includes(industry);
 
     const beautyQualitySection = isBeauty ? `
 BEAUTY-SPECIFIC EXTRA CHECKS (apply when industry is beauty/aesthetics/nails/brows/lashes/hair/skincare/clinic):
@@ -659,6 +708,66 @@ FOOD PENALTY RULES:
 - If script_text has no concrete food visual detail, set needs_rewrite to true regardless of overall_score.
 ` : "";
 
+    const fitnessQualitySection = isFitness ? `
+FITNESS-SPECIFIC EXTRA CHECKS:
+1. Does the hook address a real behavior or fear (not imported gym motivation)?
+2. Does the concept feel realistic for Israeli life?
+3. Does the script avoid gym bro language (no pain no gain, תנו 110 אחוז)?
+4. Does it avoid shame-heavy language?
+5. Does it include practical action, correction, or routine?
+6. Does the CTA match fitness behavior: save workout, send to partner, comment goal, DM for plan?
+7. Can this be shot tomorrow with phone footage?
+
+PENALTY: Reduce israeli_tone_score and client_safe_score by 2 if brief contains: no pain no gain, תנו 110 אחוז, גוף מושלם, בלי תירוצים.
+PENALTY: If script_text has no practical fitness/nutrition detail, set needs_rewrite to true.
+` : "";
+
+    const marketingQualitySection = isMarketing ? `
+MARKETING-SPECIFIC EXTRA CHECKS:
+1. Does the hook call out a real client pain (not "strategy" language)?
+2. Does the concept give a practical correction quickly?
+3. Does the script avoid empty agency words: אסטרטגיה, ערך, מיתוג, תוכן איכותי?
+4. Does it use before/after or contrast structure?
+5. Can the viewer save this and use it tomorrow?
+
+PENALTY: Reduce israeli_tone_score by 2 if brief sounds like agency pitch.
+` : "";
+
+    const coachingQualitySection = isCoaching ? `
+COACHING-SPECIFIC EXTRA CHECKS:
+1. Does the hook create a mirror moment (viewer feels seen)?
+2. Does the script teach exactly one distinction?
+3. Does it avoid empty inspiration (תאמינו בעצמכם, תפרצו גבולות)?
+4. Is every insight connected to a concrete behavior or decision?
+
+PENALTY: Reduce client_safe_score by 2 if brief sounds like generic motivation.
+` : "";
+
+    const localServiceQualitySection = isLocalService ? `
+LOCAL SERVICE-SPECIFIC EXTRA CHECKS:
+1. Does the hook address trust, prevention, or a real service mistake?
+2. Does the content include specific checks the client should do?
+3. Does it avoid: מקצועי, אמין, שירות מכל הלב without proof?
+4. Does the CTA match save/send/photo-DM/checklist behavior?
+
+PENALTY: Reduce client_safe_score by 2 if only uses generic service phrases.
+` : "";
+
+    const realEstateQualitySection = isRealEstate ? `
+REAL ESTATE/DESIGN-SPECIFIC EXTRA CHECKS:
+1. Does the content show what the buyer/client should notice (not just pretty shots)?
+2. Does it balance beauty and function?
+3. Does it avoid: דירה מהממת, מיקום מושלם, עיצוב יוקרתי, מגשימים חלומות?
+4. Does it prevent a mistake or reveal an overlooked detail?
+` : "";
+
+    const eventsQualitySection = isEvents ? `
+EVENTS/WEDDINGS-SPECIFIC EXTRA CHECKS:
+1. Does the content sell the moment and social feeling (not just specs)?
+2. Does it avoid: חוויה בלתי נשכחת, אירוע מהחלומות, אווירה קסומה?
+3. Does it show energy, crowd, or the real party moment?
+` : "";
+
     const prompt = `You are a strict Israeli social media brief quality checker.
 
 Check this video brief and score it honestly. Be strict. Do not praise weak briefs.
@@ -672,6 +781,39 @@ Final brief: ${JSON.stringify(final_brief)}
 ${intelligenceCtx}
 ${beautyQualitySection}
 ${foodQualitySection}
+${fitnessQualitySection}
+${marketingQualitySection}
+${coachingQualitySection}
+${localServiceQualitySection}
+${realEstateQualitySection}
+${eventsQualitySection}
+
+UNIVERSAL QUALITY PENALTIES (Batch 10 — apply to all industries):
+REDUCE overall_score by 1 for each of these issues found:
+- Hook is longer than 12 Hebrew words
+- Hook explains the whole video instead of creating curiosity
+- Concept is vague ("show the vibe", "present professionally")
+- Script has no concrete situation or real-life moment
+- Script sounds like a brochure or ad
+- Script has no complete spoken line
+- Shot structure is generic
+- CTA does not match the business goal or industry
+- Copy sounds American/guru-like
+- The same idea is repeated across options
+- The business category could be swapped and the text still works
+
+PENALIZE THESE GENERIC PHRASES (reduce israeli_tone_score by 1 each if found):
+חוויה בלתי נשכחת, טעם של עוד, שירות מקצועי ואמין, איכות ללא פשרות, פתרון מושלם, אווירה קסומה, מגוון עשיר, לקחת את העסק לשלב הבא, למקסם תוצאות, ערך אמיתי, תוכן איכותי, שיווק מנצח, תוצאה מושלמת, יחס אישי ומקצועי
+
+POSITIVE SCORING BONUS:
+Add +0.5 to overall_score for each found:
+- Starts from a real situation or specific behavior
+- Includes a concrete visual detail
+- Includes natural spoken Hebrew
+- Has one clear idea per video
+- Has a shootable structure
+- CTA matches save/share/comment/DM/booking behavior
+- Uses relevant industry patterns
 
 SCORING RULES (1-10, be strict):
 - hook_score: Is the hook short enough for the first 2 seconds? Is it specific to the concept?
@@ -745,17 +887,28 @@ ${JSON.stringify(quality_check?.fix_suggestions || [])}
 
 ${feedback_tags?.length ? `User feedback: ${feedback_tags.join(", ")}` : ""}
 
+REWRITE PRIORITIES (Batch 10):
+1. Shorten hook to max 12 Hebrew words.
+2. Make concept more specific — remove all vague language.
+3. Add a real situation or concrete behavior.
+4. Make script_text complete and naturally spoken in Hebrew.
+5. Add concrete shot descriptions.
+6. Replace generic CTA with industry-appropriate CTA.
+7. Remove all generic phrases from the penalty list.
+8. Make Hebrew more spoken, less polished.
+
 RULES:
 - Fix the issues found in the quality check.
 - Keep the core concept if it is good — do not change the whole video.
-- Make the hook shorter if needed.
-- Make the concept clearer if needed.
+- Make the hook shorter if needed (max 12 words).
+- Make the concept clearer if needed — replace vague descriptions.
 - Make script_text more natural and spoken Hebrew.
 - Make shot_structure more practical and specific.
 - The brief must be shootable tomorrow.
 - script_text is MANDATORY and must be complete.
 - Hebrew only.
 - Use VoiceSamples and BriefExamples as reference.
+- Do not simply polish wording — rewrite structurally if score was below 8.
 
 Return the same JSON schema as the final brief:
 {
