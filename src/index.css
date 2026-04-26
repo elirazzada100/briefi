@@ -135,7 +135,7 @@
   }
 
   .briefi-chip-inactive {
-    @apply bg-white border-border text-foreground hover:border-primary/40 hover:bg-primary/4;
+    @apply bg-white border-border text-foreground hover:border-primary/40 hover:bg-primary/5;
   }
 
   .briefi-chip-active {
