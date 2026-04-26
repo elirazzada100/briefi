@@ -179,14 +179,14 @@ export default function FinalBrief() {
 
   return (
     <div className="min-h-screen bg-briefi-bg" dir="rtl">
-      <div className="bg-white border-b border-border px-5 pt-safe pt-4 pb-3">
+      <div className="briefi-header">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <button onClick={() => navigate(`/project/${projectId}/brief-pack`)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
-            <ArrowRight className="w-5 h-5 text-briefi-secondary" />
+          <button onClick={() => navigate(`/project/${projectId}/brief-pack`)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+            <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-black text-briefi-navy">הבריף מוכן</h1>
+              <h1 className="text-base font-black text-foreground">הבריף מוכן</h1>
               {fb.client_risk_level && (
                 <span className={`text-xs px-2 py-0.5 rounded-full border font-bold ${riskClass}`}>
                   {fb.client_risk_level}
@@ -198,12 +198,12 @@ export default function FinalBrief() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-briefi-muted">סרטון #{brief?.video_number} · {brief?.category}</p>
+            <p className="text-xs text-muted-foreground">סרטון #{brief?.video_number} · {brief?.category}</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-5 py-5 space-y-4">
+      <div className="briefi-page-container space-y-4">
         <div className="bg-white rounded-2xl border border-border p-5 space-y-5">
 
           {/* 1. שם הסרטון */}
@@ -336,26 +336,25 @@ export default function FinalBrief() {
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <button
             onClick={handleSave}
-            className={`w-full h-14 rounded-2xl font-black text-base text-white flex items-center justify-center gap-2 transition-all active:scale-95 ${saved ? "bg-green-500" : ""}`}
-            style={!saved ? { background: "linear-gradient(135deg, #1E8BFF 0%, #8B3DFF 100%)" } : {}}
+            className={`briefi-btn-primary w-full ${saved ? "!bg-green-500 !shadow-green-200" : ""}`}
           >
             {saved ? "✓ הבריף נשמר!" : saving ? "שומר..." : "שמור בריף"}
           </button>
 
           <button
             onClick={() => navigate(`/project/${projectId}/category`)}
-            className="w-full h-14 rounded-2xl font-bold text-base text-primary bg-primary/8 border-2 border-primary/20 flex items-center justify-center gap-2 transition-all active:scale-95 hover:bg-primary/10"
+            className="briefi-btn-secondary w-full"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             בנו את הסרטון הבא
           </button>
 
           <button
             onClick={() => navigate(`/project/${projectId}/brief-pack`)}
-            className="w-full h-12 rounded-2xl font-medium text-sm text-briefi-secondary bg-white border border-border flex items-center justify-center gap-2 transition-all active:scale-95"
+            className="briefi-btn-ghost w-full"
           >
             <FileText className="w-4 h-4" />
             למסך הבריפים

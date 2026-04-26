@@ -96,16 +96,16 @@ export default function CreativeDNA() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="py-8"
+      className="py-6"
     >
-      <div className="mb-6">
-        <h1 className="text-xl font-extrabold text-foreground mb-2">זה מה שהבנו על העסק</h1>
+      <div className="mb-5">
+        <h1 className="text-xl font-black text-foreground mb-1">זה מה שהבנו על העסק</h1>
         <p className="text-sm text-muted-foreground">
           אפשר לערוך כל חלק. כשזה נראה טוב, ממשיכים.
         </p>
       </div>
 
-      <div className="space-y-4 mb-8">
+      <div className="space-y-3 mb-6">
         {dnaFields.map((field, index) => {
           const value = dna[field.key];
           const isEditing = editingField === field.key;
@@ -114,10 +114,10 @@ export default function CreativeDNA() {
           return (
             <motion.div
               key={field.key}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.08 }}
-              className="bg-card rounded-2xl border border-border/60 p-4"
+              transition={{ delay: index * 0.07 }}
+              className="bg-white rounded-2xl border border-border/60 shadow-sm p-4"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -160,27 +160,26 @@ export default function CreativeDNA() {
         })}
       </div>
 
-      <div className="space-y-3">
-        <Button
+      <div className="space-y-2.5">
+        <button
           onClick={handleContinue}
-          className="w-full h-14 rounded-2xl text-base font-bold gap-2 shadow-lg shadow-primary/20"
+          className="briefi-btn-primary w-full"
         >
-          <Sparkles className="h-5 w-5" />
+          <Sparkles className="h-4 w-4" />
           נראה טוב, ממשיכים
-        </Button>
+        </button>
 
-        <Button
+        <button
           onClick={generateDNA}
-          variant="outline"
-          className="w-full h-12 rounded-2xl text-sm font-semibold gap-2"
+          className="briefi-btn-secondary w-full"
         >
           <RotateCcw className="h-4 w-4" />
           שפרו את הניתוח
-        </Button>
+        </button>
 
         <button
           onClick={() => navigate(-1)}
-          className="w-full text-center text-sm text-muted-foreground font-medium flex items-center justify-center gap-1 mt-2"
+          className="briefi-btn-ghost w-full"
         >
           <ArrowRight className="h-4 w-4" />
           חזרה

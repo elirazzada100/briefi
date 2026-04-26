@@ -2,28 +2,26 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Check } from "lucide-react";
 import StepProgress from "@/components/shared/StepProgress";
-import InfoChip from "@/components/shared/InfoChip";
-import OptionCard from "@/components/shared/OptionCard";
 import LoadingState from "@/components/shared/LoadingState";
 
 const categories = [
-  { id: "מצחיק", label: "מצחיק", emoji: "😂", color: "#F8B900", desc: "תשומת לב, קלילות, שיתופים" },
-  { id: "תדמית", label: "תדמית", emoji: "💎", color: "#6C35FF", desc: "אמון, בהירות, מקצועיות" },
-  { id: "סרטון אווירה", label: "סרטון אווירה", emoji: "🌿", color: "#23C98B", desc: "תחושה, מקום, חוויה" },
-  { id: "סרטון היכרות", label: "סרטון היכרות", emoji: "👋", color: "#249BFF", desc: "אנשים, סיפור, עסק" },
-  { id: "מכירתי", label: "מכירתי", emoji: "🛒", color: "#FF7A2F", desc: "פעולה, מכירות, לידים" },
-  { id: "כאב / פתרון", label: "כאב / פתרון", emoji: "💡", color: "#F2519D", desc: "בעיה אמיתית → פתרון ברור" },
-  { id: "טרנדי", label: "טרנדי", emoji: "🔥", color: "#11B7C7", desc: "פורמט עכשווי, מהיר, חברתי" },
+  { id: "מצחיק", label: "מצחיק", emoji: "😂", color: "#F59E0B", bg: "#FEF3C7", desc: "קלילות, תשומת לב, שיתופים" },
+  { id: "תדמית", label: "תדמית", emoji: "💎", color: "#7C3AED", bg: "#EDE9FE", desc: "אמון, מקצועיות, בהירות" },
+  { id: "סרטון אווירה", label: "סרטון אווירה", emoji: "🌿", color: "#10B981", bg: "#D1FAE5", desc: "תחושה, מקום, חוויה" },
+  { id: "סרטון היכרות", label: "סרטון היכרות", emoji: "👋", color: "#3B82F6", bg: "#DBEAFE", desc: "אנשים, סיפור, עסק" },
+  { id: "מכירתי", label: "מכירתי", emoji: "🛒", color: "#F97316", bg: "#FFEDD5", desc: "פעולה, מכירות, לידים" },
+  { id: "כאב / פתרון", label: "כאב / פתרון", emoji: "💡", color: "#EC4899", bg: "#FCE7F3", desc: "בעיה אמיתית → פתרון ברור" },
+  { id: "טרנדי", label: "טרנדי", emoji: "🔥", color: "#14B8A6", bg: "#CCFBF1", desc: "פורמט עכשווי, מהיר, חברתי" },
 ];
 
 export default function CategoryPicker() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -32,8 +30,6 @@ export default function CategoryPicker() {
       return projects[0];
     },
   });
-
-  const [loading, setLoading] = useState(false);
 
   const handleContinue = async () => {
     if (!selected || !project) return;
@@ -54,71 +50,96 @@ export default function CategoryPicker() {
     navigate(`/project/${projectId}/concepts`, { state: { concepts, category: selected } });
   };
 
-  if (!project || loading) return <div className="min-h-screen bg-background flex items-center justify-center"><LoadingState message={loading ? "מייצרים 4 קונספטים..." : "טוען..."} /></div>;
+  if (!project || loading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <LoadingState message={loading ? "מייצרים 4 קונספטים..." : "טוען..."} />
+    </div>
+  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="py-6"
-    >
-      <StepProgress currentStep={1} />
-
-      <div className="mb-4">
-        <h1 className="text-xl font-extrabold text-foreground mb-2">איזה סוג סרטון בונים עכשיו?</h1>
-        <p className="text-sm text-muted-foreground">
-          בחרו כיוון אחד. אחר כך נקבל 4 הוקים ונבנה בריף ברור.
-        </p>
+    <div className="min-h-screen bg-background" dir="rtl">
+      <div className="briefi-header">
+        <div className="max-w-lg mx-auto flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+            <ArrowRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground">{project?.client_name}</p>
+          </div>
+        </div>
+        <div className="max-w-lg mx-auto mt-2">
+          <StepProgress currentStep={1} />
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        <InfoChip label="לקוח" value={project.client_name} />
-        <InfoChip label="מטרה" value={project.main_goal} />
-      </div>
+      <div className="briefi-page-container">
+        <div className="mb-5">
+          <h1 className="text-xl font-black text-foreground">איזה סוג סרטון?</h1>
+          <p className="text-sm text-muted-foreground mt-1">בחרו כיוון אחד ונייצר 4 קונספטים.</p>
+        </div>
 
-      <div className="space-y-3 mb-8">
-        {categories.map((cat, index) => (
-          <motion.div
-            key={cat.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.04 }}
-          >
-            <OptionCard
-              selected={selected === cat.id}
-              onClick={() => setSelected(cat.id)}
-              accentColor={cat.color}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{cat.emoji}</span>
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">{cat.label}</h3>
+        <div className="grid grid-cols-1 gap-2.5 mb-6">
+          {categories.map((cat, index) => {
+            const isSelected = selected === cat.id;
+            return (
+              <motion.button
+                key={cat.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.04 }}
+                onClick={() => setSelected(cat.id)}
+                className={`w-full flex items-center gap-3.5 p-3.5 rounded-2xl border-2 text-right transition-all duration-200
+                  ${isSelected
+                    ? "border-transparent shadow-md"
+                    : "border-border/60 bg-white hover:border-primary/25 hover:shadow-sm"
+                  }`}
+                style={isSelected ? {
+                  background: `linear-gradient(135deg, ${cat.bg} 0%, white 100%)`,
+                  borderColor: cat.color,
+                  boxShadow: `0 0 0 2px ${cat.color}30, 0 4px 12px ${cat.color}20`
+                } : {}}
+              >
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                  style={{ background: cat.bg }}
+                >
+                  {cat.emoji}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-foreground text-sm">{cat.label}</p>
                   <p className="text-xs text-muted-foreground">{cat.desc}</p>
                 </div>
-              </div>
-            </OptionCard>
-          </motion.div>
-        ))}
-      </div>
+                {isSelected && (
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: cat.color }}
+                  >
+                    <Check className="w-3.5 h-3.5 text-white" />
+                  </div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
 
-      <div className="space-y-3">
-        <Button
-          onClick={handleContinue}
-          disabled={!selected}
-          className="w-full h-14 rounded-2xl text-base font-bold gap-2 shadow-lg shadow-primary/20"
-        >
-          <Sparkles className="h-5 w-5" />
-          תנו לי 4 קונספטים
-        </Button>
-
-        <button
-          onClick={() => navigate(`/project/${projectId}/creative-dna`)}
-          className="w-full text-center text-sm text-muted-foreground font-medium flex items-center justify-center gap-1"
-        >
-          <ArrowRight className="h-4 w-4" />
-          חזרה
-        </button>
+        <div className="space-y-2.5">
+          <button
+            onClick={handleContinue}
+            disabled={!selected}
+            className="briefi-btn-primary w-full"
+          >
+            <Sparkles className="h-4 w-4" />
+            תנו לי 4 קונספטים
+          </button>
+          <button
+            onClick={() => navigate(-1)}
+            className="briefi-btn-ghost w-full"
+          >
+            <ArrowRight className="h-4 w-4" />
+            חזרה
+          </button>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

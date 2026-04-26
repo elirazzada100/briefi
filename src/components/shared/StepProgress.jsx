@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 
 const steps = [
   { label: "קטגוריה" },
+  { label: "קונספט" },
   { label: "הוק" },
   { label: "מבנה" },
   { label: "CTA" },
@@ -10,7 +11,7 @@ const steps = [
 
 export default function StepProgress({ currentStep }) {
   return (
-    <div className="flex items-center justify-center gap-2 py-4">
+    <div className="flex items-center justify-center gap-1 py-3 mb-4">
       {steps.map((step, index) => {
         const stepNum = index + 1;
         const isActive = stepNum === currentStep;
@@ -20,22 +21,24 @@ export default function StepProgress({ currentStep }) {
           <React.Fragment key={index}>
             <div className="flex flex-col items-center gap-1">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all duration-300
                   ${isComplete
-                    ? "bg-primary text-primary-foreground"
+                    ? "bg-primary text-white shadow-sm shadow-primary/30"
                     : isActive
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
+                    ? "bg-primary text-white ring-4 ring-primary/15"
                     : "bg-muted text-muted-foreground"
                   }`}
               >
-                {isComplete ? <Check className="h-4 w-4" /> : stepNum}
+                {isComplete ? <Check className="h-3.5 w-3.5" /> : stepNum}
               </div>
-              <span className={`text-[10px] font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+              <span className={`text-[9px] font-semibold leading-none ${isActive ? "text-primary" : "text-muted-foreground"}`}>
                 {step.label}
               </span>
             </div>
             {index < steps.length - 1 && (
-              <div className={`w-8 h-0.5 rounded-full mb-4 ${stepNum < currentStep ? "bg-primary" : "bg-border"}`} />
+              <div
+                className={`w-6 h-0.5 rounded-full mb-4 transition-all duration-300 ${stepNum < currentStep ? "bg-primary" : "bg-border"}`}
+              />
             )}
           </React.Fragment>
         );

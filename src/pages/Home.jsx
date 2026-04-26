@@ -1,62 +1,70 @@
 import { Link } from "react-router-dom";
-import { Plus, FolderOpen, User } from "lucide-react";
+import { Plus, FolderOpen, User, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+
+const navItems = [
+  { to: "/dashboard", icon: FolderOpen, label: "הפרויקטים שלי", desc: "כל הבריפים במקום אחד", color: "#7C3AED" },
+  { to: "/profile", icon: User, label: "הגדרות ומיתוג", desc: "לוגו, שם, צבעי מותג", color: "#3B82F6" },
+];
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-briefi-bg flex flex-col items-center justify-center px-5" dir="rtl">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5 py-10" dir="rtl">
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-sm flex flex-col items-center text-center gap-6"
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-sm flex flex-col items-center gap-8"
       >
-        {/* Logo */}
-        <div className="w-16 h-16 rounded-2xl bg-white border border-border shadow-sm flex items-center justify-center">
-          <svg viewBox="0 0 40 40" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <line x1="10" y1="32" x2="28" y2="8" strokeLinecap="round" />
-            <path d="M28 8 L30 6 L32 8 L28 8Z" fill="currentColor" />
-            <path d="M10 32 Q14 28 20 30" strokeLinecap="round" />
-          </svg>
-        </div>
-
-        {/* Title */}
-        <div className="space-y-2">
-          <h1 className="text-2xl font-black text-briefi-navy">מה בונים היום?</h1>
-          <p className="text-sm text-briefi-secondary leading-relaxed">
-            בונים בריפים לסושיאל שלב אחרי שלב.<br />
-            בלי להתחיל מדף ריק.
-          </p>
+        {/* Logo mark */}
+        <div className="flex flex-col items-center gap-3">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+            style={{ background: "linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%)" }}
+          >
+            <Sparkles className="w-6 h-6 text-white" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-black text-foreground">מה בונים היום?</h1>
+            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+              בריפים לסושיאל, שלב אחרי שלב.
+            </p>
+          </div>
         </div>
 
         {/* Primary CTA */}
-        <div className="w-full space-y-3">
+        <div className="w-full">
           <Link to="/new-project" className="block">
-            <button className="w-full h-12 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2 shadow-md shadow-primary/20 transition-all active:scale-95"
-              style={{ background: "linear-gradient(135deg, #6C35FF 0%, #249BFF 100%)" }}>
+            <button className="briefi-btn-primary w-full text-base">
               <Plus className="h-4 w-4" />
               בריף חדש
             </button>
           </Link>
-
-          <Link to="/dashboard" className="block">
-            <button className="w-full h-11 rounded-2xl text-sm font-semibold text-briefi-navy bg-white border border-border flex items-center justify-center gap-2 transition-all active:scale-95 hover:border-primary/30">
-              <FolderOpen className="h-4 w-4 text-briefi-secondary" />
-              הפרויקטים שלי
-            </button>
-          </Link>
         </div>
 
-        {/* Microcopy */}
-        <p className="text-xs text-briefi-muted">
-          הבריפים, הלקוחות והייצואים שלך שמורים במקום אחד.
-        </p>
+        {/* Nav cards */}
+        <div className="w-full space-y-2.5">
+          {navItems.map((item) => (
+            <Link to={item.to} key={item.to} className="block">
+              <div className="flex items-center gap-3.5 bg-white rounded-2xl border border-border/60 px-4 py-3.5 hover:border-primary/25 hover:shadow-sm transition-all group">
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${item.color}15` }}
+                >
+                  <item.icon className="w-4 h-4" style={{ color: item.color }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-foreground">{item.label}</p>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
 
-        {/* Profile link */}
-        <Link to="/profile" className="flex items-center gap-1.5 text-xs text-briefi-muted hover:text-briefi-secondary transition-colors">
-          <User className="h-3.5 w-3.5" />
-          הגדרות פרופיל
-        </Link>
+        <p className="text-xs text-muted-foreground text-center">
+          הבריפים והלקוחות שמורים אוטומטית ✓
+        </p>
       </motion.div>
     </div>
   );

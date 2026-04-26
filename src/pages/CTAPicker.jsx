@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { ArrowRight } from "lucide-react";
 import LoadingState from "@/components/briefi/LoadingState";
 import ErrorState from "@/components/briefi/ErrorState";
+import StepProgress from "@/components/shared/StepProgress";
 
 const ctaTypeColors = {
   "ישיר": { bg: "rgba(255,122,47,0.08)", border: "rgba(255,122,47,0.3)", text: "#FF7A2F" },
@@ -146,23 +147,26 @@ export default function CTAPicker() {
 
   return (
     <div className="min-h-screen bg-briefi-bg" dir="rtl">
-      <div className="bg-white border-b border-border px-5 pt-safe pt-4 pb-3">
+      <div className="briefi-header">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
-            <ArrowRight className="w-5 h-5 text-briefi-secondary" />
+          <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+            <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
           <div>
-            <h1 className="text-xl font-black text-briefi-navy">איך הסרטון נגמר?</h1>
-            <p className="text-xs text-briefi-muted">בחרו קריאה לפעולה שמתאימה למטרה.</p>
+            <h1 className="text-base font-black text-foreground">איך הסרטון נגמר?</h1>
+            <p className="text-xs text-muted-foreground">בחרו קריאה לפעולה שמתאימה למטרה.</p>
           </div>
+        </div>
+        <div className="max-w-lg mx-auto mt-2">
+          <StepProgress currentStep={5} />
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-5 py-5 space-y-4">
-        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-3 space-y-1">
-          <p className="text-xs font-bold text-primary">ההוק שבחרתם</p>
-          <p className="text-sm font-bold text-briefi-navy">"{selectedHook?.hook_text}"</p>
-          <p className="text-xs text-briefi-muted mt-1">{selectedBody?.body_title}</p>
+      <div className="briefi-page-container space-y-4">
+        <div className="bg-primary/6 border border-primary/15 rounded-2xl px-4 py-3 space-y-0.5">
+          <p className="text-[11px] font-bold text-primary">ההוק שבחרתם</p>
+          <p className="text-sm font-bold text-foreground">"{selectedHook?.hook_text}"</p>
+          {selectedBody?.body_title && <p className="text-xs text-muted-foreground">{selectedBody.body_title}</p>}
         </div>
 
         <div className="space-y-3">
@@ -170,9 +174,8 @@ export default function CTAPicker() {
             const style = ctaTypeColors[cta.cta_type] || ctaTypeColors["ישיר"];
             return (
               <div
-                key={idx}
-                className="bg-white rounded-2xl border overflow-hidden"
-                style={{ borderColor: style.border }}
+              key={idx}
+              className="bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden"
               >
                 <div className="p-4 space-y-3">
                   <div className="flex items-center gap-2">
@@ -189,10 +192,9 @@ export default function CTAPicker() {
 
                   <button
                     onClick={() => handleSelect(cta)}
-                    className="w-full h-12 rounded-xl font-bold text-sm text-white transition-all active:scale-95"
-                    style={{ background: `linear-gradient(135deg, ${style.text} 0%, #8B3DFF 100%)` }}
+                    className="briefi-btn-primary w-full"
                   >
-                    בחרו CTA ✓
+                    בחרו את ה-CTA הזה
                   </button>
                 </div>
               </div>

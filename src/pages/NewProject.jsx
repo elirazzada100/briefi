@@ -41,102 +41,94 @@ export default function NewProject() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
         <LoadingState message="יוצרים את הפרויקט..." />
       </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className="py-5"
-      dir="rtl"
-    >
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-black text-briefi-navy leading-tight mb-1">
-          ספרו לנו על העסק
-        </h1>
-        <p className="text-sm text-briefi-secondary leading-relaxed">
-          אפשר לכתוב מבולגן. Briefi יסדר את זה לבריף ברור.
-        </p>
-      </div>
-
-      <div className="space-y-5">
-        {/* Client name */}
-        <div className="space-y-1.5">
-          <label className="block text-sm font-bold text-briefi-navy">שם הלקוח</label>
-          <input
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            placeholder="לדוגמה: בר שכונתי"
-            dir="rtl"
-            className="w-full h-12 rounded-full border border-border bg-white px-5 text-sm text-briefi-navy placeholder:text-briefi-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-          />
-        </div>
-
-        {/* Goal chips */}
-        <div className="space-y-1.5">
-          <label className="block text-sm font-bold text-briefi-navy">מה המטרה?</label>
-          <div className="flex flex-wrap gap-2">
-            {goals.map((goal) => (
-              <button
-                key={goal}
-                onClick={() => setMainGoal(goal)}
-                className={`h-9 px-3.5 rounded-full text-[13px] font-semibold border transition-all whitespace-nowrap
-                  ${mainGoal === goal
-                    ? "bg-primary text-white border-primary shadow-sm"
-                    : "bg-white border-border text-briefi-navy hover:border-primary/40"
-                  }`}
-              >
-                {goal}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Notes textarea */}
-        <div className="space-y-1.5">
-          <label className="block text-sm font-bold text-briefi-navy">מה אתם יודעים על העסק?</label>
-          <textarea
-            value={rawNotes}
-            onChange={(e) => setRawNotes(e.target.value)}
-            placeholder="הדביקו כאן הערות מפגישת הלקוח, הודעות וואטסאפ, רעיונות, כל מה שיש..."
-            dir="rtl"
-            rows={6}
-            className="w-full rounded-3xl border border-border bg-white px-5 py-4 text-sm text-briefi-navy placeholder:text-briefi-muted leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none"
-          />
-          <p className="text-[12px] text-briefi-muted">
-            אפשר לכתוב חופשי. לא צריך בריף מסודר.
-          </p>
-        </div>
-
-        {/* CTA */}
-        <button
-          onClick={handleSubmit}
-          disabled={!canSubmit}
-          className={`w-full h-13 rounded-full text-[15px] font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]
-            ${canSubmit
-              ? "shadow-md shadow-primary/20 active:shadow-sm"
-              : "opacity-50 cursor-not-allowed"
-            }`}
-          style={canSubmit ? { background: "linear-gradient(135deg, #6C35FF 0%, #249BFF 100%)" } : { background: "#9AA1AD" }}
-        >
-          <Sparkles className="h-4 w-4" />
-          נתחו לי את העסק
-        </button>
-
+    <div className="min-h-screen bg-background py-6 px-4" dir="rtl">
+      <div className="max-w-md mx-auto">
+        {/* Back */}
         <button
           onClick={() => navigate(-1)}
-          className="w-full text-center text-sm text-briefi-muted font-medium flex items-center justify-center gap-1 py-1"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground mb-5 hover:text-foreground transition-colors"
         >
           <ArrowRight className="h-4 w-4" />
           חזרה
         </button>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="bg-white rounded-3xl border border-border/60 shadow-sm p-6 space-y-5"
+        >
+          {/* Header */}
+          <div>
+            <h1 className="text-xl font-black text-foreground leading-tight">ספרו לנו על העסק</h1>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              כמה מילים יעזרו לנו לבנות בריף מדויק יותר.
+            </p>
+          </div>
+
+          {/* Client name */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-foreground/70 tracking-wide uppercase">שם הלקוח / העסק</label>
+            <input
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              placeholder="לדוגמה: בר שכונתי"
+              dir="rtl"
+              className="briefi-input"
+            />
+          </div>
+
+          {/* Goal */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-foreground/70 tracking-wide uppercase">מה המטרה?</label>
+            <div className="flex flex-wrap gap-2">
+              {goals.map((goal) => (
+                <button
+                  key={goal}
+                  type="button"
+                  onClick={() => setMainGoal(goal)}
+                  className={`briefi-chip ${mainGoal === goal ? "briefi-chip-active" : "briefi-chip-inactive"}`}
+                >
+                  {goal}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-foreground/70 tracking-wide uppercase">מה אתם יודעים על העסק?</label>
+            <textarea
+              value={rawNotes}
+              onChange={(e) => setRawNotes(e.target.value)}
+              placeholder="הדביקו הערות מהפגישה, הודעות ווטסאפ, רעיונות חופשיים, כל מה שיש..."
+              dir="rtl"
+              rows={5}
+              className="briefi-textarea"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              אפשר לכתוב חופשי. לא צריך בריף מסודר.
+            </p>
+          </div>
+
+          {/* CTA */}
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="briefi-btn-primary w-full"
+          >
+            <Sparkles className="h-4 w-4" />
+            נתחו לי את העסק
+          </button>
+        </motion.div>
       </div>
-    </motion.div>
+    </div>
   );
 }

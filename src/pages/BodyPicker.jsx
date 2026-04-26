@@ -1,20 +1,27 @@
 import { useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowRight, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, RefreshCw, Sparkles } from "lucide-react";
 import LoadingState from "@/components/briefi/LoadingState";
 import ErrorState from "@/components/briefi/ErrorState";
+import StepProgress from "@/components/shared/StepProgress";
 
 const REWRITE_ACTIONS = ["פשוט יותר", "מצחיק יותר", "יותר לקוח-מאשר", "יותר טרנדי"];
 
+const formatLabels = {
+  "voiceover": "ווייסאובר",
+  "person_to_camera": "דיבור למצלמה",
+  "dialogue": "דיאלוג",
+  "text_only": "טקסט בלבד",
+};
 
 export default function BodyPicker() {
   const { projectId } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
   const [bodyOptions, setBodyOptions] = useState(state?.bodyOptions || []);
-  const [category, setCategory] = useState(state?.category || "");
-  const [selectedHook, setSelectedHook] = useState(state?.selectedHook || {});
+  const [category] = useState(state?.category || "");
+  const [selectedHook] = useState(state?.selectedHook || {});
   const [selectedConcept] = useState(state?.selectedConcept || {});
   const [expandedIdx, setExpandedIdx] = useState(null);
   const [rewritingIdx, setRewritingIdx] = useState(null);
@@ -24,10 +31,7 @@ export default function BodyPicker() {
   const handleSelect = async (body) => {
     setGenerating(true);
     setError(false);
-
     const proj = await base44.entities.Project.filter({ id: projectId }).then(r => r[0]);
-
-    // Track user choice
     await base44.entities.UserChoice.create({
       project_id: projectId,
       choice_type: "body",
@@ -35,7 +39,6 @@ export default function BodyPicker() {
       rejected_values: bodyOptions.filter(b => b !== body),
       selected_category: category,
     });
-
     const response = await base44.functions.invoke("briefiAI", {
       action: "generateCTAOptions",
       project_id: projectId,
@@ -46,7 +49,6 @@ export default function BodyPicker() {
       selected_hook: selectedHook,
       selected_body: body,
     });
-
     setGenerating(false);
     navigate(`/project/${projectId}/cta`, {
       state: { ctas: response.data?.ctas || [], category, selectedHook, selectedBody: body, selectedConcept }
@@ -57,7 +59,6 @@ export default function BodyPicker() {
     setRewritingIdx(idx);
     const proj = await base44.entities.Project.filter({ id: projectId }).then(r => r[0]);
     const body = bodyOptions[idx];
-
     const response = await base44.functions.invoke("briefiAI", {
       action: "rewriteOption",
       project_id: projectId,
@@ -66,64 +67,78 @@ export default function BodyPicker() {
       business_context: proj?.raw_notes || "",
       selected_category: category,
     });
-
     const updated = [...bodyOptions];
     updated[idx] = { ...body, concept_summary: response.data?.rewritten_text || body.concept_summary };
     setBodyOptions(updated);
     setRewritingIdx(null);
   };
 
-  if (generating) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><LoadingState message="מייצרים CTA מתאים..." /></div>;
-  if (error) return <div className="min-h-screen bg-briefi-bg flex items-center justify-center" dir="rtl"><ErrorState onRetry={() => setError(false)} /></div>;
+  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="מייצרים CTA מתאים..." /></div>;
+  if (error) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><ErrorState onRetry={() => setError(false)} /></div>;
 
   return (
-    <div className="min-h-screen bg-briefi-bg" dir="rtl">
-      <div className="bg-white border-b border-border px-5 pt-safe pt-4 pb-3">
+    <div className="min-h-screen bg-background" dir="rtl">
+      <div className="briefi-header">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
-            <ArrowRight className="w-5 h-5 text-briefi-secondary" />
+          <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+            <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
-          <div>
-            <h1 className="text-xl font-black text-briefi-navy">עכשיו בונים את הסרטון</h1>
-            <p className="text-xs text-briefi-muted">בחרו מבנה שיתאים להוק וללקוח.</p>
-          </div>
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+            {category}
+          </span>
+        </div>
+        <div className="max-w-lg mx-auto mt-2">
+          <StepProgress currentStep={4} />
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-5 py-5 space-y-5">
-        {/* Selected Hook Preview */}
-        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-3">
-          <p className="text-xs font-bold text-primary mb-1">ההוק שבחרתם</p>
-          <p className="text-sm font-bold text-briefi-navy">"{selectedHook?.hook_text}"</p>
+      <div className="briefi-page-container space-y-4">
+        <div>
+          <h1 className="text-xl font-black text-foreground">בחרו מבנה לסרטון</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">בחרו מבנה שיתאים להוק וללקוח.</p>
         </div>
 
-        <div className="space-y-4">
+        {/* Hook preview */}
+        <div className="bg-primary/6 border border-primary/15 rounded-2xl px-4 py-3">
+          <p className="text-[11px] font-bold text-primary mb-1">ההוק שבחרתם</p>
+          <p className="text-sm font-bold text-foreground">"{selectedHook?.hook_text}"</p>
+        </div>
+
+        <div className="space-y-3">
           {bodyOptions.map((body, idx) => {
             const isExpanded = expandedIdx === idx;
             const isRewriting = rewritingIdx === idx;
+            const fmtLabel = formatLabels[body.script_format];
 
             return (
-              <div key={idx} className="bg-white rounded-2xl border border-border overflow-hidden">
+              <div key={idx} className="bg-white rounded-2xl border border-border/60 overflow-hidden shadow-sm transition-all hover:shadow-md">
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-black text-briefi-navy text-base">{body.body_title}</h3>
-                    <button onClick={() => setExpandedIdx(isExpanded ? null : idx)} className="text-briefi-muted hover:text-briefi-navy transition-colors">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-black text-foreground text-sm">{body.body_title}</h3>
+                      {fmtLabel && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                          {fmtLabel}
+                        </span>
+                      )}
+                    </div>
+                    <button onClick={() => setExpandedIdx(isExpanded ? null : idx)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
                       {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
                   </div>
 
-                  <p className="text-sm text-briefi-secondary">{body.concept_summary}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{body.concept_summary}</p>
 
                   {isExpanded && (
                     <div className="space-y-3 pt-2 border-t border-muted animate-fade-in">
                       {body.shot_flow?.length > 0 && (
                         <div>
-                          <p className="text-xs font-bold text-briefi-muted mb-2">זרימת הצילומים</p>
+                          <p className="text-[11px] font-bold text-muted-foreground mb-2 uppercase tracking-wide">זרימת הצילומים</p>
                           <div className="space-y-1.5">
                             {body.shot_flow.map((shot, i) => (
-                              <div key={i} className="flex items-start gap-2">
-                                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                                <p className="text-sm text-briefi-secondary">{shot}</p>
+                              <div key={i} className="flex items-start gap-2.5">
+                                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                                <p className="text-sm text-muted-foreground">{shot}</p>
                               </div>
                             ))}
                           </div>
@@ -131,36 +146,41 @@ export default function BodyPicker() {
                       )}
                       {body.text_overlays?.length > 0 && (
                         <div>
-                          <p className="text-xs font-bold text-briefi-muted mb-2">טקסטים למסך</p>
+                          <p className="text-[11px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wide">טקסטים למסך</p>
                           <div className="space-y-1">
                             {body.text_overlays.map((text, i) => (
-                              <p key={i} className="text-sm text-briefi-navy font-medium bg-muted/50 rounded-lg px-3 py-1.5">"{text}"</p>
+                              <p key={i} className="text-sm text-foreground font-medium bg-muted/50 rounded-xl px-3 py-1.5">"{text}"</p>
                             ))}
                           </div>
                         </div>
                       )}
                       {body.production_notes && (
                         <div>
-                          <p className="text-xs font-bold text-briefi-muted mb-1">הערות צילום</p>
-                          <p className="text-sm text-briefi-secondary">{body.production_notes}</p>
+                          <p className="text-[11px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">הערות צילום</p>
+                          <p className="text-sm text-muted-foreground">{body.production_notes}</p>
                         </div>
                       )}
                       {body.why_this_structure_works && (
                         <div>
-                          <p className="text-xs font-bold text-briefi-muted mb-1">למה המבנה הזה עובד</p>
-                          <p className="text-sm text-briefi-secondary">{body.why_this_structure_works}</p>
+                          <p className="text-[11px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">למה המבנה הזה עובד</p>
+                          <p className="text-sm text-muted-foreground">{body.why_this_structure_works}</p>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {!isRewriting && (
+                  {isRewriting ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      כותבים מחדש...
+                    </div>
+                  ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {REWRITE_ACTIONS.map(action => (
                         <button
                           key={action}
                           onClick={() => handleRewrite(idx, action)}
-                          className="text-xs px-2.5 py-1 rounded-lg bg-muted text-briefi-secondary hover:bg-primary/10 hover:text-primary transition-colors font-medium"
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-muted text-muted-foreground hover:bg-primary/8 hover:text-primary transition-colors font-medium"
                         >
                           {action}
                         </button>
@@ -168,20 +188,13 @@ export default function BodyPicker() {
                     </div>
                   )}
 
-                  {isRewriting && (
-                    <div className="flex items-center gap-2 text-xs text-briefi-muted">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      כותבים מחדש...
-                    </div>
-                  )}
-
                   <button
                     onClick={() => handleSelect(body)}
                     disabled={isRewriting}
-                    className="w-full h-12 rounded-xl font-bold text-sm text-white transition-all active:scale-95 disabled:opacity-50"
-                    style={{ background: "linear-gradient(135deg, #1E8BFF 0%, #8B3DFF 100%)" }}
+                    className="briefi-btn-primary w-full"
                   >
-                    בחרו את המבנה הזה ✓
+                    <Sparkles className="w-4 h-4" />
+                    בחרו את המבנה הזה
                   </button>
                 </div>
               </div>
