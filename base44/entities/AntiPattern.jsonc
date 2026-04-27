@@ -1,0 +1,34 @@
+{
+  "name": "AntiPattern",
+  "type": "object",
+  "properties": {
+    "industry": {
+      "type": "string",
+      "description": "\u05ea\u05e2\u05e9\u05d9\u05d9\u05d4"
+    },
+    "bad_pattern": {
+      "type": "string",
+      "description": "\u05ea\u05d1\u05e0\u05d9\u05ea \u05e8\u05e2\u05d4"
+    },
+    "why_bad": {
+      "type": "string",
+      "description": "\u05dc\u05de\u05d4 \u05d6\u05d4 \u05e8\u05e2"
+    },
+    "better_direction": {
+      "type": "string",
+      "description": "\u05db\u05d9\u05d5\u05d5\u05df \u05d8\u05d5\u05d1 \u05d9\u05d5\u05ea\u05e8"
+    },
+    "source_batch": {
+      "type": "string",
+      "description": "\u05de\u05e7\u05d5\u05e8"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "bad_pattern",
+    "why_bad"
+  ]
+}

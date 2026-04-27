@@ -1,0 +1,37 @@
+{
+  "name": "VisualProof",
+  "type": "object",
+  "properties": {
+    "industry": {
+      "type": "string",
+      "description": "\u05ea\u05e2\u05e9\u05d9\u05d9\u05d4"
+    },
+    "visual_detail": {
+      "type": "string",
+      "description": "\u05e4\u05e8\u05d8 \u05d5\u05d9\u05d6\u05d5\u05d0\u05dc\u05d9"
+    },
+    "why_it_matters": {
+      "type": "string",
+      "description": "\u05dc\u05de\u05d4 \u05d6\u05d4 \u05d7\u05e9\u05d5\u05d1"
+    },
+    "best_for": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05d4\u05db\u05d9 \u05de\u05ea\u05d0\u05d9\u05dd \u05dc"
+    },
+    "source_batch": {
+      "type": "string",
+      "description": "\u05de\u05e7\u05d5\u05e8"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "visual_detail",
+    "why_it_matters"
+  ]
+}

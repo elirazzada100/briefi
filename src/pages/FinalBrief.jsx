@@ -18,13 +18,19 @@ const scriptFormatLabels = {
   "text_only": "טקסט בלבד",
 };
 
-const SPECIFIC_FEEDBACK_OPTIONS = [
-  "ההוק ארוך מדי",
-  "הטקסט לא מדבר טבעי",
-  "לא ברור מה לצלם",
-  "יותר מכירתי",
-  "יותר מצחיק",
-  "יותר לקוח-מאשר",
+const FEEDBACK_TAGS = [
+  "מעולה",
+  "סבבה",
+  "לא מספיק ברור",
+  "מוזר / לא ישראלי",
+  "תיאורטי מדי",
+  "לא פרקטי לצילום",
+  "לא מצחיק",
+  "לא מתאים לעסק",
+  "הוק חלש",
+  "גוף הסרטון לא ברור",
+  "אין פאנץ׳",
+  "אין מספיק מה לצלם",
 ];
 
 function EditableField({ label, value, onSave, prominent = false, hint = null }) {
@@ -86,6 +92,8 @@ export default function FinalBrief() {
   // Feedback state
   const [mainFeedback, setMainFeedback] = useState(null);
   const [specificFeedback, setSpecificFeedback] = useState([]);
+  const [freeTextNegative, setFreeTextNegative] = useState("");
+  const [freeTextPositive, setFreeTextPositive] = useState("");
   const [feedbackSaved, setFeedbackSaved] = useState(false);
   const [improving, setImproving] = useState(false);
 
@@ -117,29 +125,33 @@ export default function FinalBrief() {
     );
   };
 
-  const handleSaveFeedback = async (main) => {
-    setMainFeedback(main);
-    await base44.entities.UserFeedback.create({
+  const handleSaveFeedback = async () => {
+    if (!mainFeedback && specificFeedback.length === 0 && !freeTextNegative && !freeTextPositive) return;
+    await base44.entities.UserBriefFeedback.create({
       project_id: projectId,
       video_brief_id: briefId,
-      main_feedback: main,
-      specific_feedback: specificFeedback,
-      triggered_rewrite: false,
+      rating_label: mainFeedback,
+      selected_feedback_tags: specificFeedback,
+      free_text_negative: freeTextNegative,
+      free_text_positive: freeTextPositive,
+      category: brief?.category || "",
     });
     setFeedbackSaved(true);
   };
 
   const handleImproveWithFeedback = async () => {
-    if (!mainFeedback && specificFeedback.length === 0) return;
+    if (!mainFeedback && specificFeedback.length === 0 && !freeTextNegative) return;
     setImproving(true);
 
     // Save feedback with rewrite flag
-    await base44.entities.UserFeedback.create({
+    await base44.entities.UserBriefFeedback.create({
       project_id: projectId,
       video_brief_id: briefId,
-      main_feedback: mainFeedback,
-      specific_feedback: specificFeedback,
-      triggered_rewrite: true,
+      rating_label: mainFeedback,
+      selected_feedback_tags: specificFeedback,
+      free_text_negative: freeTextNegative,
+      free_text_positive: freeTextPositive,
+      category: brief?.category || "",
     });
 
     const response = await base44.functions.invoke("briefiAI", {
@@ -292,56 +304,82 @@ export default function FinalBrief() {
 
         {/* Feedback Section */}
         <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
-          <p className="text-xs font-bold text-muted-foreground">מה דעתכם על הבריף?</p>
-
-          {/* Main feedback */}
-          {!feedbackSaved ? (
-            <div className="flex gap-2">
-              {["אהבתי", "חלש", "לא מספיק ישראלי"].map(opt => (
-                <button
-                  key={opt}
-                  onClick={() => handleSaveFeedback(opt)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
-                    mainFeedback === opt
-                      ? "bg-primary text-white border-primary"
-                      : "bg-muted/30 text-muted-foreground border-border hover:border-primary/30"
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="text-xs text-green-600 font-bold">תודה על הפידבק ✓</div>
-          )}
-
-          {/* Specific feedback */}
-          <div className="flex flex-wrap gap-1.5">
-            {SPECIFIC_FEEDBACK_OPTIONS.map(opt => (
-              <button
-                key={opt}
-                onClick={() => toggleSpecificFeedback(opt)}
-                className={`text-xs px-2.5 py-1 rounded-lg border transition-all font-medium ${
-                  specificFeedback.includes(opt)
-                    ? "bg-primary/10 text-primary border-primary/30"
-                    : "bg-muted/30 text-muted-foreground border-border hover:border-primary/20"
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
+          <div>
+            <p className="text-sm font-black text-foreground">איך יצא הבריף?</p>
+            <p className="text-xs text-muted-foreground mt-0.5">סמנו מה עבד ומה לא. זה באמת מלמד את בריפי.</p>
           </div>
 
-          {/* Rewrite with feedback */}
-          {(mainFeedback || specificFeedback.length > 0) && (
-            <button
-              onClick={handleImproveWithFeedback}
-              className="w-full h-10 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all active:scale-95"
-              style={{ background: "linear-gradient(135deg, #23C98B 0%, #249BFF 100%)" }}
-            >
-              <RefreshCw className="w-4 h-4" />
-              שפרו את הבריף לפי הפידבק
-            </button>
+          {feedbackSaved ? (
+            <div className="text-xs text-green-600 font-bold">תודה. בריפי ילמד מזה ✓</div>
+          ) : (
+            <>
+              {/* Feedback tags */}
+              <div className="flex flex-wrap gap-1.5">
+                {FEEDBACK_TAGS.map(opt => (
+                  <button
+                    key={opt}
+                    onClick={() => {
+                      if (opt === "מעולה" || opt === "סבבה") {
+                        setMainFeedback(mainFeedback === opt ? null : opt);
+                      } else {
+                        toggleSpecificFeedback(opt);
+                      }
+                    }}
+                    className={`text-xs px-2.5 py-1 rounded-lg border transition-all font-medium ${
+                      (mainFeedback === opt || specificFeedback.includes(opt))
+                        ? "bg-primary/10 text-primary border-primary/30"
+                        : "bg-muted/30 text-muted-foreground border-border hover:border-primary/20"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+
+              {/* Free text */}
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground mb-1">מה לא עבד?</p>
+                  <textarea
+                    value={freeTextNegative}
+                    onChange={e => setFreeTextNegative(e.target.value)}
+                    placeholder="למשל: אין דמות, לא ברור מה לצלם, זה נשמע אמריקאי, ההוק חלש..."
+                    rows={2}
+                    className="w-full p-2.5 rounded-xl border border-border bg-muted/20 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground mb-1">מה כן עבד?</p>
+                  <textarea
+                    value={freeTextPositive}
+                    onChange={e => setFreeTextPositive(e.target.value)}
+                    placeholder="למשל: משפט טוב, סיטואציה טובה, הוק חזק, רעיון שאפשר לצלם..."
+                    rows={2}
+                    className="w-full p-2.5 rounded-xl border border-border bg-muted/20 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveFeedback}
+                  className="flex-1 h-9 rounded-xl font-bold text-xs text-foreground border border-border bg-muted/30 hover:bg-muted/60 transition-all"
+                >
+                  שלחו ביקורת
+                </button>
+                {(specificFeedback.length > 0 || freeTextNegative) && (
+                  <button
+                    onClick={handleImproveWithFeedback}
+                    className="flex-1 h-9 rounded-xl font-bold text-xs text-white flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                    style={{ background: "linear-gradient(135deg, #23C98B 0%, #249BFF 100%)" }}
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    שפרו לפי הפידבק
+                  </button>
+                )}
+              </div>
+            </>
           )}
         </div>
 

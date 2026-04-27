@@ -156,9 +156,93 @@ const EVENTS_INDUSTRIES = ["events", "weddings", "nightlife", "dj", "event_venue
 function buildIntelligenceContext({
   voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns,
   voiceSamples, briefExamples, goodExamples, badExamples,
+  situationPatterns, behaviorPatterns, spokenLines, sceneStructures, punchlinePatterns, visualProofs, antiPatterns,
   category, industry, mainGoal
 }) {
   let ctx = "";
+
+  // SITUATION PATTERNS — industry + category match (max 5), most relevant for scene generation
+  const relevantSituations = (situationPatterns || []).filter(s =>
+    s.is_active && (s.industry === industry || s.industry === "food_general" || s.industry === "all") &&
+    (!s.category_fit?.length || s.category_fit.includes(category))
+  ).slice(0, 5);
+  if (relevantSituations.length) {
+    ctx += "\n\n--- SITUATION PATTERNS (use these as scene inspiration — adapt to this business) ---\n";
+    relevantSituations.forEach(s => {
+      ctx += `• [${s.situation_name}] ${s.situation_description}\n  Example: "${s.example_scene}"\n  Why it works: ${s.why_it_works}\n`;
+    });
+  }
+
+  // BEHAVIOR PATTERNS — industry match (max 4)
+  const relevantBehaviors = (behaviorPatterns || []).filter(b =>
+    b.is_active && (b.industry === industry || b.industry === "food_general" || b.industry === "all")
+  ).slice(0, 4);
+  if (relevantBehaviors.length) {
+    ctx += "\n\n--- BEHAVIOR PATTERNS (real human behaviors to build scenes around) ---\n";
+    relevantBehaviors.forEach(b => {
+      ctx += `• [${b.behavior_name}] ${b.behavior_description}\n  Use in video: ${b.how_to_use_in_video}\n  Example line: "${b.example_line}"\n`;
+    });
+  }
+
+  // SPOKEN LINES — industry + line_type match (max 8 customer/seller/friend, 3 CTA)
+  const customerLines = (spokenLines || []).filter(s =>
+    s.is_active && (s.industry === industry || s.industry === "food_general") && s.line_type !== "CTA"
+  ).slice(0, 8);
+  const ctaLines = (spokenLines || []).filter(s =>
+    s.is_active && (s.industry === industry || s.industry === "food_general") && s.line_type === "CTA"
+  ).slice(0, 3);
+  const allSpokenLines = [...customerLines, ...ctaLines];
+  if (allSpokenLines.length) {
+    ctx += "\n\n--- REAL SPOKEN HEBREW LINES (actual dialogue to use or adapt) ---\n";
+    allSpokenLines.forEach(l => {
+      ctx += `• [${l.line_type}] "${l.line_text}" — ${l.context}\n`;
+    });
+  }
+
+  // SCENE STRUCTURES — industry + category match (max 4)
+  const relevantStructures = (sceneStructures || []).filter(s =>
+    s.is_active && (s.industry === industry || s.industry === "food_general" || s.industry === "all") &&
+    (!s.best_for_categories?.length || s.best_for_categories.includes(category))
+  ).slice(0, 4);
+  if (relevantStructures.length) {
+    ctx += "\n\n--- SCENE STRUCTURES (proven structures to build scenes around) ---\n";
+    relevantStructures.forEach(s => {
+      ctx += `• [${s.structure_name}] ${(s.steps || []).join(" → ")}\n  Example: "${s.example_original_scene}"\n`;
+    });
+  }
+
+  // PUNCHLINE PATTERNS — industry match (max 4)
+  const relevantPunchlines = (punchlinePatterns || []).filter(p =>
+    p.is_active && (p.industry === industry || p.industry === "food_general")
+  ).slice(0, 4);
+  if (relevantPunchlines.length) {
+    ctx += "\n\n--- PUNCHLINE MECHANISMS (how to end the scene with impact) ---\n";
+    relevantPunchlines.forEach(p => {
+      ctx += `• [${p.mechanism_name}] ${p.how_it_works}\n  Example: "${p.example}"\n`;
+    });
+  }
+
+  // VISUAL PROOFS — industry match (max 5)
+  const relevantVisuals = (visualProofs || []).filter(v =>
+    v.is_active && (v.industry === industry || v.industry === "food_general")
+  ).slice(0, 5);
+  if (relevantVisuals.length) {
+    ctx += "\n\n--- VISUAL PROOFS (concrete visuals that prove the concept without words) ---\n";
+    relevantVisuals.forEach(v => {
+      ctx += `• ${v.visual_detail} — ${v.why_it_matters}\n`;
+    });
+  }
+
+  // ANTI-PATTERNS — industry + global (max 5)
+  const relevantAntiPatterns = (antiPatterns || []).filter(a =>
+    a.is_active && (a.industry === industry || a.industry === "food_general" || a.industry === "all")
+  ).slice(0, 5);
+  if (relevantAntiPatterns.length) {
+    ctx += "\n\n--- ANTI-PATTERNS (do NOT do these) ---\n";
+    relevantAntiPatterns.forEach(a => {
+      ctx += `• [AVOID] "${a.bad_pattern}" — Instead: ${a.better_direction}\n`;
+    });
+  }
 
   // VOICE RULES: always load global high-priority + category-specific
   const highPriorityGlobal = (voiceRules || []).filter(r =>
@@ -445,7 +529,7 @@ Deno.serve(async (req) => {
   if (payload.business_context) payload.business_context = sanitizeText(payload.business_context, 1000);
 
   // Load all intelligence tables in parallel
-  const [voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns, voiceSamples, briefExamples, goodExamples, badExamples] = await Promise.all([
+  const [voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns, voiceSamples, briefExamples, goodExamples, badExamples, situationPatterns, behaviorPatterns, spokenLines, sceneStructures, punchlinePatterns, visualProofs, antiPatterns] = await Promise.all([
     base44.asServiceRole.entities.VoiceRule.list(),
     base44.asServiceRole.entities.HookPattern.list(),
     base44.asServiceRole.entities.CaptionPattern.list(),
@@ -456,6 +540,13 @@ Deno.serve(async (req) => {
     base44.asServiceRole.entities.BriefExample.list(),
     base44.asServiceRole.entities.GoodExample.list(),
     base44.asServiceRole.entities.BadExample.list(),
+    base44.asServiceRole.entities.SituationPattern.list(),
+    base44.asServiceRole.entities.BehaviorPattern.list(),
+    base44.asServiceRole.entities.SpokenLine.list(),
+    base44.asServiceRole.entities.SceneStructure.list(),
+    base44.asServiceRole.entities.PunchlinePattern.list(),
+    base44.asServiceRole.entities.VisualProof.list(),
+    base44.asServiceRole.entities.AntiPattern.list(),
   ]);
 
   const category = payload.selected_category || "";
@@ -465,6 +556,7 @@ Deno.serve(async (req) => {
   const intelligenceCtx = buildIntelligenceContext({
     voiceRules, hookPatterns, captionPatterns, ctaPatterns, scriptPatterns, trendPatterns,
     voiceSamples, briefExamples, goodExamples, badExamples,
+    situationPatterns, behaviorPatterns, spokenLines, sceneStructures, punchlinePatterns, visualProofs, antiPatterns,
     category, industry, mainGoal,
   });
 
