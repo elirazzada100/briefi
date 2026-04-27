@@ -44,20 +44,41 @@ export default function ConceptPicker() {
       rejected_values: concepts.filter(c => c !== concept),
       selected_category: category,
     });
-    const response = await base44.functions.invoke("briefiAI", {
-      action: "generateHooks",
-      project_id: projectId,
-      client_name: proj?.client_name || "",
-      main_goal: proj?.main_goal || "",
-      raw_notes: proj?.raw_notes || "",
-      creative_dna: proj?.creative_dna || {},
-      selected_category: category,
-      selected_concept: concept,
-    });
-    setGenerating(false);
-    navigate(`/project/${projectId}/hooks`, {
-      state: { hooks: response.data?.hooks || [], category, selectedConcept: concept }
-    });
+
+    if (hookBankMode) {
+      // Hook already embedded — go directly to body generation
+      const selectedHook = { hook_title: "הוק", hook_text: concept.hook_preview || "", why_it_works_short: "" };
+      const response = await base44.functions.invoke("briefiAI", {
+        action: "generateBodyOptions",
+        project_id: projectId,
+        client_name: proj?.client_name || "",
+        main_goal: proj?.main_goal || "",
+        creative_dna: proj?.creative_dna || {},
+        selected_category: category,
+        selected_concept: concept,
+        selected_hook: selectedHook,
+      });
+      setGenerating(false);
+      navigate(`/project/${projectId}/body`, {
+        state: { bodyOptions: response.data?.body_options || [], category, selectedConcept: concept, selectedHook }
+      });
+    } else {
+      // Classic mode — go to hook selection
+      const response = await base44.functions.invoke("briefiAI", {
+        action: "generateHooks",
+        project_id: projectId,
+        client_name: proj?.client_name || "",
+        main_goal: proj?.main_goal || "",
+        raw_notes: proj?.raw_notes || "",
+        creative_dna: proj?.creative_dna || {},
+        selected_category: category,
+        selected_concept: concept,
+      });
+      setGenerating(false);
+      navigate(`/project/${projectId}/hooks`, {
+        state: { hooks: response.data?.hooks || [], category, selectedConcept: concept }
+      });
+    }
   };
 
   const handleRewrite = async (idx, action) => {
@@ -78,7 +99,7 @@ export default function ConceptPicker() {
     setRewritingIdx(null);
   };
 
-  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message={hookBankMode ? "מייצרים את מבנה הסרטון..." : "מייצרים הוקים לקונספט..."} /></div>;
+  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="רגע, בונים לך כיוונים טובים..." /></div>;
   if (error) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><ErrorState onRetry={() => setError(false)} /></div>;
 
   return (

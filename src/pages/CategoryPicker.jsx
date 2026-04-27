@@ -92,7 +92,7 @@ export default function CategoryPicker() {
 
   if (guardLoading || !project || loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
-      <LoadingState message={loading ? (isHookBankSelected ? "מייצרים 20 קונספטים עם בנק ההוקים ומסננים את 4 הטובים..." : "מייצרים 4 קונספטים...") : "טוען..."} />
+      <LoadingState message={loading ? "רגע, בונים לך כיוונים טובים..." : "טוען..."} />
     </div>
   );
 
