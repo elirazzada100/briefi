@@ -2,9 +2,8 @@ import React from "react";
 import { Check } from "lucide-react";
 
 const steps = [
-  { label: "קטגוריה" },
+  { label: "סגנון" },
   { label: "קונספט" },
-  { label: "הוק" },
   { label: "מבנה" },
   { label: "CTA" },
 ];

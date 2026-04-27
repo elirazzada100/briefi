@@ -92,7 +92,7 @@ export default function BodyPicker() {
           </span>
         </div>
         <div className="mt-1">
-          <StepProgress currentStep={4} />
+          <StepProgress currentStep={3} />
         </div>
       </div>
 
@@ -102,11 +102,13 @@ export default function BodyPicker() {
           <p className="text-sm text-muted-foreground mt-0.5">מה קורה אחרי ההוק?</p>
         </div>
 
-        {/* Hook preview */}
-        <div className="rounded-2xl px-4 py-3" style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
-          <p className="text-[11px] font-bold text-primary mb-1">ההוק שבחרתם</p>
-          <p className="text-sm font-bold text-foreground">"{selectedHook?.hook_text}"</p>
-        </div>
+        {/* Concept preview */}
+        {selectedConcept?.concept_title && (
+          <div className="rounded-2xl px-4 py-3" style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
+            <p className="text-[11px] font-bold text-primary mb-1">הקונספט שבחרתם</p>
+            <p className="text-sm font-bold text-foreground">{selectedConcept.concept_title}</p>
+          </div>
+        )}
 
         <div className="space-y-3">
           {bodyOptions.map((body, idx) => {

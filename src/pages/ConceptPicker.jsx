@@ -46,8 +46,12 @@ export default function ConceptPicker() {
     });
 
     if (hookBankMode) {
-      // Hook already embedded — go directly to body generation
-      const selectedHook = { hook_title: "הוק", hook_text: concept.hook_preview || "", why_it_works_short: "" };
+      // Hook already embedded internally — go directly to body generation, hook passed internally only
+      const internalHook = {
+        hook_title: "הוק פנימי",
+        hook_text: concept._internal?.filled_hook_internal || "",
+        why_it_works_short: "",
+      };
       const response = await base44.functions.invoke("briefiAI", {
         action: "generateBodyOptions",
         project_id: projectId,
@@ -56,11 +60,11 @@ export default function ConceptPicker() {
         creative_dna: proj?.creative_dna || {},
         selected_category: category,
         selected_concept: concept,
-        selected_hook: selectedHook,
+        selected_hook: internalHook,
       });
       setGenerating(false);
       navigate(`/project/${projectId}/body`, {
-        state: { bodyOptions: response.data?.body_options || [], category, selectedConcept: concept, selectedHook }
+        state: { bodyOptions: response.data?.body_options || [], category, selectedConcept: concept, selectedHook: internalHook }
       });
     } else {
       // Classic mode — go to hook selection
@@ -117,6 +121,7 @@ export default function ConceptPicker() {
         </div>
         <div className="mt-1">
           <StepProgress currentStep={2} />
+
         </div>
       </div>
 
@@ -156,13 +161,7 @@ export default function ConceptPicker() {
                   {/* Scene description */}
                   <p className="text-sm text-foreground/80 leading-relaxed">{displayText}</p>
 
-                  {/* Hook preview */}
-                  {concept.hook_preview && (
-                    <div className="px-3 py-2 rounded-xl text-sm font-medium text-primary" style={{ background: "rgba(124,58,237,0.07)", border: "1px solid rgba(124,58,237,0.15)" }}>
-                      <span className="text-[10px] font-bold text-primary/60 block mb-0.5">הוק</span>
-                      "{concept.hook_preview}"
-                    </div>
-                  )}
+                  {/* Hook is internal only — not shown to user */}
 
                   {/* Idea tags */}
                   {(ideaTags.length > 0 || sceneLabel) && (

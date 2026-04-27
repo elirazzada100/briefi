@@ -55,14 +55,15 @@ export default function CategoryPicker() {
       const concepts = (response.data?.concepts || []).map(c => ({
         concept_title: c.concept_title,
         short_description: c.short_description,
-        hook_preview: c.filled_hook,
         idea_tags: c.idea_tags || [],
         why_it_works: c.why_it_works,
+        video_style: c.video_style || selected,
         scene_type: "talking_head",
-        full_scene_data: c.full_concept_data || {},
+        full_concept_data: c.full_concept_data || {},
         _hook_bank_mode: true,
         _generation_run_id: response.data?.generation_run_id,
-        source_hook_template_id: c.source_hook_template_id,
+        // Internal hook metadata — never shown to user
+        _internal: c._internal || {},
       }));
 
       setLoading(false);

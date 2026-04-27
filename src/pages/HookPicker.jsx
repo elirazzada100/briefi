@@ -84,7 +84,7 @@ export default function HookPicker() {
           </span>
         </div>
         <div className="mt-1">
-          <StepProgress currentStep={3} />
+          <StepProgress currentStep={2} />
         </div>
       </div>
 

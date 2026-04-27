@@ -165,14 +165,14 @@ export default function CTAPicker() {
           </div>
         </div>
         <div className="mt-1">
-          <StepProgress currentStep={5} />
+          <StepProgress currentStep={4} />
         </div>
       </div>
 
       <div className="briefi-page-container space-y-4">
         <div className="rounded-2xl px-4 py-3 space-y-0.5" style={{ background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
-          <p className="text-[11px] font-bold text-primary">ההוק שבחרתם</p>
-          <p className="text-sm font-bold text-foreground">"{selectedHook?.hook_text}"</p>
+          <p className="text-[11px] font-bold text-primary">הקונספט שבחרתם</p>
+          <p className="text-sm font-bold text-foreground">{selectedConcept?.concept_title || selectedHook?.hook_text || ""}</p>
           {selectedBody?.body_title && <p className="text-xs text-muted-foreground">{selectedBody.body_title}</p>}
         </div>
 

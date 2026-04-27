@@ -22,6 +22,7 @@ import ConceptPicker from './pages/ConceptPicker';
 import UserProfile from './pages/UserProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLearning from './pages/admin/Learning';
+import GenerationDebug from './pages/admin/GenerationDebug';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -65,6 +66,7 @@ const AuthenticatedApp = () => {
       <Route path="/project/:projectId/export" element={<ProtectedRoute><PDFExport /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
       <Route path="/admin/learning" element={<ProtectedRoute><AdminLearning /></ProtectedRoute>} />
+      <Route path="/admin/generation-debug/:generationRunId" element={<ProtectedRoute><GenerationDebug /></ProtectedRoute>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
