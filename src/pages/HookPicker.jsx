@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowRight, RefreshCw, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { ArrowRight, RefreshCw, Sparkles } from "lucide-react";
 import LoadingState from "@/components/briefi/LoadingState";
 import ErrorState from "@/components/briefi/ErrorState";
 import StepProgress from "@/components/shared/StepProgress";
@@ -26,13 +26,11 @@ export default function HookPicker() {
   const [hooks, setHooks] = useState(state?.hooks || []);
   const [category] = useState(state?.category || "");
   const [selectedConcept] = useState(state?.selectedConcept || {});
-  const [expandedIdx, setExpandedIdx] = useState(null);
   const [rewritingIdx, setRewritingIdx] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(false);
 
-  // Ownership guard — project data comes from here, no separate fetch needed
-  const { project: projectData, loading: guardLoading } = useProjectGuard(projectId);
+  const { project: projectData } = useProjectGuard(projectId);
 
   const handleSelect = async (hook) => {
     setGenerating(true);
@@ -107,41 +105,33 @@ export default function HookPicker() {
         <div className="space-y-3">
           {hooks.map((hook, idx) => {
             const risk = riskStyle[hook.risk_level] || riskStyle["בינוני"];
-            const isExpanded = expandedIdx === idx;
             const isRewriting = rewritingIdx === idx;
+            const whyText = hook.why_it_works_short || hook.why_it_works || "";
 
             return (
               <div key={idx} className="bg-white rounded-2xl border border-border/60 overflow-hidden shadow-sm transition-all hover:shadow-md">
-                <div className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: risk.bg, color: risk.color }}>
-                      {hook.risk_level}
-                    </span>
-                    <button onClick={() => setExpandedIdx(isExpanded ? null : idx)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
-                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">{hook.hook_title}</p>
-                    <p className="text-base font-black text-foreground leading-snug">"{hook.hook_text}"</p>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="space-y-2 pt-2 border-t border-muted animate-fade-in">
-                      <div>
-                        <p className="text-[11px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">למה זה עובד</p>
-                        <p className="text-sm text-muted-foreground">{hook.why_it_works}</p>
-                      </div>
-                      {hook.best_for && (
-                        <div>
-                          <p className="text-[11px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">הכי מתאים ל</p>
-                          <p className="text-sm text-muted-foreground">{hook.best_for}</p>
-                        </div>
+                <div className="p-4 space-y-2.5">
+                  {/* Risk badge */}
+                  {hook.risk_level && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: risk.bg, color: risk.color }}>
+                        {hook.risk_level}
+                      </span>
+                      {hook.hook_title && (
+                        <span className="text-[11px] text-muted-foreground font-medium">{hook.hook_title}</span>
                       )}
                     </div>
                   )}
 
+                  {/* Hook text — large and readable */}
+                  <p className="text-lg font-black text-foreground leading-snug">"{hook.hook_text}"</p>
+
+                  {/* One-liner reason */}
+                  {whyText && (
+                    <p className="text-sm text-muted-foreground leading-relaxed">{whyText}</p>
+                  )}
+
+                  {/* Rewrite actions */}
                   {isRewriting ? (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />

@@ -11,6 +11,16 @@ const riskStyle = {
   "נמוך": { bg: "#D1FAE5", color: "#059669" },
   "בינוני": { bg: "#FEF3C7", color: "#D97706" },
   "גבוה": { bg: "#FCE7F3", color: "#DB2777" },
+  "בטוח": { bg: "#D1FAE5", color: "#059669" },
+  "בטוח יחסית": { bg: "#D1FAE5", color: "#059669" },
+};
+
+const sceneTypeLabels = {
+  acted_scene: "סצנה מיוצגת",
+  talking_head: "דיבור למצלמה",
+  voiceover: "ווייסאובר",
+  text_only: "טקסט בלבד",
+  bts: "מאחורי הקלעים",
 };
 
 const REWRITE_ACTIONS = ["יותר פשוט", "יותר מצחיק", "יותר תדמיתי", "יותר לקוח-מאשר"];
@@ -62,13 +72,13 @@ export default function ConceptPicker() {
     const response = await base44.functions.invoke("briefiAI", {
       action: "rewriteOption",
       project_id: projectId,
-      original_text: concept.concept_summary,
+      original_text: concept.short_description || concept.concept_summary || "",
       rewrite_action: action,
       business_context: proj?.raw_notes || "",
       selected_category: category,
     });
     const updated = [...concepts];
-    updated[idx] = { ...concept, concept_summary: response.data?.rewritten_text || concept.concept_summary };
+    updated[idx] = { ...concept, short_description: response.data?.rewritten_text || concept.short_description };
     setConcepts(updated);
     setRewritingIdx(null);
   };
@@ -97,7 +107,7 @@ export default function ConceptPicker() {
       <div className="briefi-page-container space-y-4">
         <div>
           <h1 className="text-xl font-black text-foreground">בחרו קונספט לסרטון</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">הרעיון הכללי של הסרטון. אחרי זה ניכנס לפרטים.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">מה קורה בסרטון? בחרו רעיון ונמשיך לפרטים.</p>
         </div>
 
         <div className="space-y-3">
@@ -105,37 +115,73 @@ export default function ConceptPicker() {
             const risk = riskStyle[concept.risk_level] || riskStyle["בינוני"];
             const isExpanded = expandedIdx === idx;
             const isRewriting = rewritingIdx === idx;
+            const displayText = concept.short_description || concept.concept_summary || "";
+            const sceneLabel = sceneTypeLabels[concept.scene_type];
+            const tags = concept.tags || [];
+            const hasFullData = concept.full_scene_data && (concept.full_scene_data.what_happens || concept.full_scene_data.payoff);
 
             return (
               <div key={idx} className="bg-white rounded-2xl border border-border/60 overflow-hidden shadow-sm transition-all hover:shadow-md">
-                <div className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                <div className="p-4 space-y-2.5">
+                  {/* Title row */}
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-black text-foreground text-base leading-snug flex-1">{concept.concept_title}</h3>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       {concept.risk_level && (
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: risk.bg, color: risk.color }}>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: risk.bg, color: risk.color }}>
                           {concept.risk_level}
                         </span>
                       )}
-                      {concept.tone && (
-                        <span className="text-[11px] text-muted-foreground font-medium">{concept.tone}</span>
+                      {hasFullData && (
+                        <button onClick={() => setExpandedIdx(isExpanded ? null : idx)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
                       )}
                     </div>
-                    <button onClick={() => setExpandedIdx(isExpanded ? null : idx)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
-                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
                   </div>
 
-                  <div>
-                    <h3 className="font-black text-foreground text-base leading-snug">{concept.concept_title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{concept.concept_summary}</p>
-                  </div>
+                  {/* Scene description */}
+                  <p className="text-sm text-foreground/80 leading-relaxed">{displayText}</p>
 
-                  {isExpanded && (
+                  {/* Hook preview */}
+                  {concept.hook_preview && (
+                    <div className="px-3 py-2 rounded-xl text-sm font-medium text-primary" style={{ background: "rgba(124,58,237,0.07)", border: "1px solid rgba(124,58,237,0.15)" }}>
+                      <span className="text-[10px] font-bold text-primary/60 block mb-0.5">הוק</span>
+                      "{concept.hook_preview}"
+                    </div>
+                  )}
+
+                  {/* Tags */}
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {sceneLabel && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{sceneLabel}</span>
+                      )}
+                      {tags.map((tag, ti) => (
+                        <span key={ti} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground">{tag}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Expanded full scene data */}
+                  {isExpanded && hasFullData && (
                     <div className="space-y-2 pt-2 border-t border-muted animate-fade-in">
-                      {concept.visual_direction && (
+                      {concept.full_scene_data.what_happens && (
                         <div>
-                          <p className="text-[11px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">כיוון ויזואלי</p>
-                          <p className="text-sm text-muted-foreground">{concept.visual_direction}</p>
+                          <p className="text-[11px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">מה קורה בפועל</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed">{concept.full_scene_data.what_happens}</p>
+                        </div>
+                      )}
+                      {concept.full_scene_data.visual_tension && (
+                        <div>
+                          <p className="text-[11px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">המתח הויזואלי</p>
+                          <p className="text-sm text-muted-foreground">{concept.full_scene_data.visual_tension}</p>
+                        </div>
+                      )}
+                      {concept.full_scene_data.payoff && (
+                        <div>
+                          <p className="text-[11px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">הפאנץ׳</p>
+                          <p className="text-sm text-muted-foreground">{concept.full_scene_data.payoff}</p>
                         </div>
                       )}
                       {concept.why_it_works && (
@@ -147,6 +193,7 @@ export default function ConceptPicker() {
                     </div>
                   )}
 
+                  {/* Rewrite actions */}
                   {isRewriting ? (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />

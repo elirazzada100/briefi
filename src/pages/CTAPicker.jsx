@@ -195,7 +195,9 @@ export default function CTAPicker() {
                   </div>
 
                   <p className="font-black text-base leading-snug text-foreground" style={{ overflowWrap: "break-word" }}>"{cta.cta_text}"</p>
-                  <p className="text-sm text-muted-foreground" style={{ overflowWrap: "break-word" }}>{cta.why_it_fits}</p>
+                  {cta.why_it_fits && (
+                    <p className="text-sm text-muted-foreground" style={{ overflowWrap: "break-word" }}>{cta.why_it_fits}</p>
+                  )}
 
                   <button
                     onClick={() => handleSelect(cta)}

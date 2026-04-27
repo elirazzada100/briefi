@@ -24,6 +24,33 @@ Core product flow:
 7. Assemble a final brief
 8. Check and improve quality if needed
 
+CRITICAL — SCENE-FIRST WRITING RULE:
+Briefi does not write abstract content ideas. Briefi writes practical video scenes.
+
+For every option card (concept, hook, body, CTA), the first sentence must explain what happens on screen.
+
+FORBIDDEN opening phrases — never use these:
+- "סרטון שמציג"
+- "נציג את"
+- "נראה את"
+- "המטרה היא להראות"
+- "באמצעות הסרטון"
+- "הסרטון ימחיש"
+- "נחבר את הצופה"
+- "נעביר את המסר"
+
+REQUIRED style — always open with who does what:
+- "לקוח נכנס..."
+- "זוג יושב..."
+- "בעל העסק מנסה..."
+- "המוכר שואל..."
+- "המאמנת עוצרת את המתאמנת..."
+- "הלקוחה מגיעה עם..."
+
+Option cards are summaries — not full briefs.
+Card text must be short, punchy, and immediately understandable.
+Full script/shot details belong only in the Final Brief or expanded view.
+
 Core writing principles:
 - Start from a real situation, not a generic topic.
 - A situation is something the viewer recognizes from real life — not a marketing statement.
@@ -490,29 +517,48 @@ RULES:
 - A concept is the creative IDEA of the video — not the hook or the script yet.
 - Do not write the full script. Do not write the CTA.
 - Make each concept practical and shootable.
-- The viewer should clearly understand what happens in the video and why they would care.
-- Each concept must be understandable to a social media manager AND to a client.
-- Avoid vague or generic concepts like "show the vibe" or "present professionally".
 - Vary the 4: 1) Safe/client-friendly, 2) Social/native, 3) Funny/human, 4) Sharper/emotional.
 - Use ScriptPatterns and TrendPatterns for structural inspiration.
-- Each concept must explain what is filmed and why someone would stop scrolling.
 
-GOOD concept:
-{"concept_title":"למה יש פה תור?","concept_summary":"סרטון שמתחיל מהתור מחוץ למקום ומוביל את הצופה להבין מה גורם לאנשים לעצור דווקא פה.","why_it_works":"התור מייצר סקרנות והוכחה חברתית.","visual_direction":"פתיחה מבחוץ, תור, אנשים מחכים, הכנה מהירה מאחורי הדלפק, ביס ראשון.","tone":"סקרני, אנרגטי","risk_level":"נמוך"}
+SHORT DESCRIPTION (short_description) RULES — CRITICAL:
+- 2 to 3 short sentences MAXIMUM.
+- First sentence MUST describe what happens on screen — who, where, what action.
+- Second sentence introduces tension or twist.
+- NO sentences starting with: "סרטון שמציג", "נציג את", "נראה את", "המטרה היא להראות", "הסרטון ימחיש".
+- Max 280 Hebrew characters.
+- Write as if describing a real scene someone is watching, not a content strategy.
 
-BAD concept (do NOT do this):
-{"concept_title":"סרטון תדמית לעסק","concept_summary":"סרטון שמראה את העסק בצורה טובה.","visual_direction":"צילומים יפים."}
+GOOD short_description:
+"דייט ראשון בבר. היא מספרת לו את כל העונה הראשונה של החיים שלה, והוא מהנהן כאילו הוא איתה. בפועל, הוא לא מצליח להוריד את העיניים מההמבורגר בשולחן ליד."
+
+"לקוח נכנס לשווארמייה ונשבע שהוא לוקח משהו קטן. כל מנה שעוברת לידו שוברת אותו, עד שהוא יוצא עם לאפה עם הכל."
+
+BAD short_description (never do this):
+"סרטון שמציג את האווירה של הבר בצורה קלילה ומצחיקה."
+"נציג את היתרונות של העסק ונחבר את הצופה לערכים של המותג."
+
+CARD TAGS RULES:
+- 2-4 short Hebrew tags that describe the scene type, mood, or social dynamic.
 
 Return JSON:
 {
   "concepts": [
     {
-      "concept_title": "short punchy title in Hebrew",
-      "concept_summary": "2-3 sentences describing exactly what the viewer will see and feel",
-      "why_it_works": "1 sentence",
-      "visual_direction": "what exactly to film",
-      "tone": "tone label",
-      "risk_level": "נמוך | בינוני | גבוה"
+      "concept_title": "max 5 words, punchy Hebrew title",
+      "short_description": "2-3 sentences max. First sentence = what happens on screen. Scene-based, practical, specific.",
+      "hook_preview": "a natural 1-line hook that fits this concept (optional but preferred)",
+      "scene_type": "acted_scene | talking_head | voiceover | text_only | bts",
+      "tags": ["tag1", "tag2", "tag3"],
+      "why_it_works": "1 sentence — practical reason",
+      "risk_level": "נמוך | בינוני | גבוה",
+      "full_scene_data": {
+        "scene_summary": "what the full scene looks like",
+        "what_happens": "detailed scene walkthrough",
+        "main_characters": ["character1"],
+        "location": "specific location",
+        "visual_tension": "what creates visual tension",
+        "payoff": "how it ends / what the punchline is"
+      }
     }
   ]
 }`;
@@ -543,16 +589,28 @@ RULES:
 - Use HookPatterns for structure but adapt to this specific concept.
 - Vary: 1) Safe/client-friendly, 2) Social/native, 3) Funny/human, 4) Sharper/riskier.
 
-BAD hook (too long, explains everything): "עונה על כל השאלות שלכם לגבי המקום: למה יש תור, מה כל כך מיוחד, ולמה אנשים חוזרים."
-GOOD hooks: "מה יש בפיתה הזאת שגורם לאנשים לעמוד בתור?" / "עוד דוכן פיתה? לא בדיוק." / "אם יש תור, כנראה שיש סיבה."
+why_it_works_short RULES:
+- Max ONE sentence.
+- Must be practical — explain WHY this specific hook creates curiosity or recognition.
+- No essays. No marketing language.
+
+GOOD:
+hook_text: "אתה מקשיב לי בכלל?"
+why_it_works_short: "פותח ישר בסיטואציה מוכרת: דייט, חשד קטן, חוסר ריכוז."
+
+hook_text: "היום אני לוקח משהו קטן. רגוע."
+why_it_works_short: "כל מי שעמד בתור לשווארמה יודע שזה שקר."
+
+BAD hook (too long): "עונה על כל השאלות שלכם לגבי המקום: למה יש תור, מה כל כך מיוחד, ולמה אנשים חוזרים."
 
 Return JSON:
 {
   "hooks": [
     {
-      "hook_title": "short title",
+      "hook_title": "short title (2-4 words)",
       "hook_text": "the actual opening line — short, punchy, max 2 seconds spoken",
-      "why_it_works": "brief explanation",
+      "why_it_works_short": "max 1 sentence, practical explanation of why this hook works",
+      "why_it_works": "same as why_it_works_short (keep for compatibility)",
       "risk_level": "נמוך | בינוני | גבוה",
       "best_for": "who this works best for"
     }
@@ -580,24 +638,42 @@ ${intelligenceCtx}
 RULES:
 - Return exactly 4 options, each based on the selected concept AND hook above.
 - Each option must be realistic to shoot with a phone.
-- Give concrete, specific shots — NOT "show the vibe".
-- Include script_direction: what exactly is said or shown as text.
-- script_format must be one of: voiceover, person_to_camera, dialogue, text_only.
-- Vary: 1) Simple/low-effort, 2) Visual/cinematic, 3) Person talking to camera, 4) Text-only.
-- shot_flow must list at least 3-4 specific shots.
+- script_format must be one of: voiceover, person_to_camera, dialogue, text_only, acted_scene.
+- Vary: 1) Simple/low-effort, 2) Visual/cinematic, 3) Person talking to camera, 4) Dialogue/acted.
+
+SCENE PREVIEW (scene_preview) RULES — CRITICAL:
+- 2 to 3 short sentences MAXIMUM.
+- Must describe the actual scene: who is there, what they do, what happens.
+- Must include action or tension.
+- NO theoretical wording. NO generic marketing copy.
+- Never start with: "סרטון שמציג", "נציג את", "נראה את".
+
+GOOD scene_preview:
+"היא מדברת, הוא מהנהן, אבל העיניים שלו בורחות כל הזמן לצד. היא חושבת שהוא מסתכל על מישהי אחרת, עד שמגלים שהוא בכלל עוקב אחרי המבורגר מוגזם שעובר לידם."
+
+"הלקוח עומד בתור ומנסה להישאר חזק. פיתה, לאפה, צ׳יפס וטחינה עוברים לידו אחד אחרי השני, ובסוף הוא נשבר ומזמין הכל."
+
+PRACTICAL NOTE (practical_note):
+- One short, specific filming instruction or timing note.
+- The kind of thing a director tells the actor right before filming.
 
 Return JSON:
 {
   "body_options": [
     {
-      "body_title": "short name",
-      "script_format": "voiceover | person_to_camera | dialogue | text_only",
-      "concept_summary": "1-2 sentence description",
-      "script_direction": "what exactly is said or shown as text in this option",
-      "shot_flow": ["shot 1", "shot 2", "shot 3", "shot 4"],
-      "text_overlays": ["overlay 1", "overlay 2"],
-      "production_notes": "specific filming note",
-      "why_this_structure_works": "why this fits the hook and concept"
+      "body_title": "max 5 words, punchy name",
+      "scene_preview": "2-3 sentences. First = who/where/what action. Must include tension. Scene-based only.",
+      "script_format": "voiceover | person_to_camera | dialogue | text_only | acted_scene",
+      "practical_note": "one short filming instruction",
+      "full_body_data": {
+        "what_happens_in_practice": "detailed walkthrough of the full scene",
+        "shot_sequence": ["shot 1", "shot 2", "shot 3", "shot 4"],
+        "dialogue": ["line 1", "line 2"],
+        "text_overlays": ["overlay 1", "overlay 2"],
+        "production_notes": "detailed production notes",
+        "shooting_time_priority": "חשוב לצלם באור יום | חשוב לצלם בלילה | עדיף לצלם בזמן עומס / פעילות | עדיף לצלם כשהמקום רגוע | לא קריטי",
+        "shooting_time_reason": "one sentence practical reason"
+      }
     }
   ]
 }`;
@@ -623,13 +699,18 @@ ${intelligenceCtx}
 Use CTAPatterns. Match the main_goal. Return exactly these 4 types in order: ישיר, רך, שמירה / שיתוף, פנייה / הודעה.
 Strong clear CTAs are allowed. Do not apologize for selling.
 
+why_it_fits RULES:
+- Max ONE sentence.
+- Must explain why THIS CTA fits THIS video — not generic.
+- Practical, not strategic.
+
 Return JSON:
 {
   "ctas": [
     {
       "cta_type": "ישיר | רך | שמירה / שיתוף | פנייה / הודעה",
       "cta_text": "the actual CTA text in Hebrew",
-      "why_it_fits": "why this CTA fits"
+      "why_it_fits": "one sentence — why this specific CTA fits this specific video"
     }
   ]
 }`;
@@ -823,7 +904,7 @@ ${localServiceQualitySection}
 ${realEstateQualitySection}
 ${eventsQualitySection}
 
-UNIVERSAL QUALITY PENALTIES (Batch 10 — apply to all industries):
+UNIVERSAL QUALITY PENALTIES (apply to all industries):
 REDUCE overall_score by 1 for each of these issues found:
 - Hook is longer than 12 Hebrew words
 - Hook explains the whole video instead of creating curiosity
@@ -836,6 +917,15 @@ REDUCE overall_score by 1 for each of these issues found:
 - Copy sounds American/guru-like
 - The same idea is repeated across options
 - The business category could be swapped and the text still works
+
+ABSTRACT DESCRIPTION PENALTY — REDUCE overall_score by 2 if:
+- video_concept starts with "סרטון שמציג", "נציג את", "נראה את", "המטרה היא להראות", "הסרטון ימחיש", "נחבר את הצופה", "נעביר את המסר"
+- video_concept does not describe who does what in the first sentence
+- video_concept has no character, subject, or concrete action
+- video_concept reads like strategy instead of a scene
+
+If any abstract issue is found, add to issues: "תיאור תיאורטי מדי. צריך להבין מה קורה בסרטון מהמשפט הראשון."
+Add to fix_suggestions: "כתוב את זה כסצנה מצולמת: מי מופיע, איפה הם נמצאים, מה קורה, ומה הפאנץ׳."
 
 PENALIZE THESE GENERIC PHRASES (reduce israeli_tone_score by 1 each if found):
 חוויה בלתי נשכחת, טעם של עוד, שירות מקצועי ואמין, איכות ללא פשרות, פתרון מושלם, אווירה קסומה, מגוון עשיר, לקחת את העסק לשלב הבא, למקסם תוצאות, ערך אמיתי, תוכן איכותי, שיווק מנצח, תוצאה מושלמת, יחס אישי ומקצועי
@@ -1023,11 +1113,25 @@ Business context: ${business_context || ""}
 Category: ${selected_category || ""}
 ${intelligenceCtx}
 
+REWRITE RULES:
+- Do NOT make it longer. Make it shorter if anything.
+- Do NOT make it prettier or more polished.
+- Make it clearer and more practical.
+- First sentence must describe a real scene or action — not strategy.
+- Add tension or punchline if missing.
+- Remove all strategy/marketing language.
+- Preserve natural spoken Hebrew tone.
+- Must sound like something a real person can film tomorrow.
+
+TRANSFORMATION EXAMPLE:
+BAD: "סרטון שמציג את האווירה של השווארמייה בצורה מצחיקה דרך חוויית לקוח."
+GOOD: "לקוח נכנס לשווארמייה ונשבע שהוא לוקח משהו קטן. כל מנה שעוברת לידו שוברת אותו, עד שהוא יוצא עם לאפה עם הכל."
+
 Keep it in natural Israeli Hebrew. Make it practical and usable.
 
 Return JSON:
 {
-  "rewritten_text": "the rewritten version",
+  "rewritten_text": "the rewritten version — shorter, practical, scene-based",
   "what_changed": "1 short sentence explaining what changed"
 }`;
 

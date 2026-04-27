@@ -14,6 +14,7 @@ const formatLabels = {
   "person_to_camera": "דיבור למצלמה",
   "dialogue": "דיאלוג",
   "text_only": "טקסט בלבד",
+  "acted_scene": "סצנה מיוצגת",
 };
 
 export default function BodyPicker() {
@@ -65,13 +66,13 @@ export default function BodyPicker() {
     const response = await base44.functions.invoke("briefiAI", {
       action: "rewriteOption",
       project_id: projectId,
-      original_text: body.concept_summary,
+      original_text: body.scene_preview || body.concept_summary || "",
       rewrite_action: action,
       business_context: proj?.raw_notes || "",
       selected_category: category,
     });
     const updated = [...bodyOptions];
-    updated[idx] = { ...body, concept_summary: response.data?.rewritten_text || body.concept_summary };
+    updated[idx] = { ...body, scene_preview: response.data?.rewritten_text || body.scene_preview };
     setBodyOptions(updated);
     setRewritingIdx(null);
   };
@@ -98,7 +99,7 @@ export default function BodyPicker() {
       <div className="briefi-page-container space-y-4">
         <div>
           <h1 className="text-xl font-black text-foreground">בחרו מבנה לסרטון</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">בחרו מבנה שיתאים להוק וללקוח.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">מה קורה אחרי ההוק?</p>
         </div>
 
         {/* Hook preview */}
@@ -112,12 +113,15 @@ export default function BodyPicker() {
             const isExpanded = expandedIdx === idx;
             const isRewriting = rewritingIdx === idx;
             const fmtLabel = formatLabels[body.script_format];
+            const displayText = body.scene_preview || body.concept_summary || "";
+            const hasFullData = body.full_body_data && (body.full_body_data.shot_sequence?.length || body.full_body_data.what_happens_in_practice);
 
             return (
               <div key={idx} className="bg-white rounded-2xl border border-border/60 overflow-hidden shadow-sm transition-all hover:shadow-md">
-                <div className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                <div className="p-4 space-y-2.5">
+                  {/* Title + format + expand */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap flex-1">
                       <h3 className="font-black text-foreground text-sm">{body.body_title}</h3>
                       {fmtLabel && (
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
@@ -125,20 +129,37 @@ export default function BodyPicker() {
                         </span>
                       )}
                     </div>
-                    <button onClick={() => setExpandedIdx(isExpanded ? null : idx)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
-                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
+                    {hasFullData && (
+                      <button onClick={() => setExpandedIdx(isExpanded ? null : idx)} className="text-muted-foreground hover:text-foreground transition-colors p-1 flex-shrink-0">
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                    )}
                   </div>
 
-                  <p className="text-sm text-muted-foreground leading-relaxed">{body.concept_summary}</p>
+                  {/* Scene preview */}
+                  <p className="text-sm text-foreground/80 leading-relaxed">{displayText}</p>
 
-                  {isExpanded && (
+                  {/* Practical note */}
+                  {body.practical_note && (
+                    <div className="px-3 py-2 rounded-xl" style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                      <p className="text-xs text-amber-700 font-medium">{body.practical_note}</p>
+                    </div>
+                  )}
+
+                  {/* Expanded full scene data */}
+                  {isExpanded && hasFullData && (
                     <div className="space-y-3 pt-2 border-t border-muted animate-fade-in">
-                      {body.shot_flow?.length > 0 && (
+                      {body.full_body_data.what_happens_in_practice && (
                         <div>
-                          <p className="text-[11px] font-bold text-muted-foreground mb-2 uppercase tracking-wide">זרימת הצילומים</p>
+                          <p className="text-[11px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">מה קורה בפועל</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed">{body.full_body_data.what_happens_in_practice}</p>
+                        </div>
+                      )}
+                      {body.full_body_data.shot_sequence?.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-bold text-muted-foreground mb-2 uppercase tracking-wide">רצף שוטים</p>
                           <div className="space-y-1.5">
-                            {body.shot_flow.map((shot, i) => (
+                            {body.full_body_data.shot_sequence.map((shot, i) => (
                               <div key={i} className="flex items-start gap-2.5">
                                 <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
                                 <p className="text-sm text-muted-foreground">{shot}</p>
@@ -147,31 +168,36 @@ export default function BodyPicker() {
                           </div>
                         </div>
                       )}
-                      {body.text_overlays?.length > 0 && (
+                      {body.full_body_data.dialogue?.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wide">דיאלוג</p>
+                          <div className="space-y-1">
+                            {body.full_body_data.dialogue.map((line, i) => (
+                              <p key={i} className="text-sm text-foreground font-medium bg-muted/50 rounded-xl px-3 py-1.5">"{line}"</p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {body.full_body_data.text_overlays?.length > 0 && (
                         <div>
                           <p className="text-[11px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wide">טקסטים למסך</p>
                           <div className="space-y-1">
-                            {body.text_overlays.map((text, i) => (
+                            {body.full_body_data.text_overlays.map((text, i) => (
                               <p key={i} className="text-sm text-foreground font-medium bg-muted/50 rounded-xl px-3 py-1.5">"{text}"</p>
                             ))}
                           </div>
                         </div>
                       )}
-                      {body.production_notes && (
+                      {body.full_body_data.production_notes && (
                         <div>
                           <p className="text-[11px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">הערות צילום</p>
-                          <p className="text-sm text-muted-foreground">{body.production_notes}</p>
-                        </div>
-                      )}
-                      {body.why_this_structure_works && (
-                        <div>
-                          <p className="text-[11px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">למה המבנה הזה עובד</p>
-                          <p className="text-sm text-muted-foreground">{body.why_this_structure_works}</p>
+                          <p className="text-sm text-muted-foreground">{body.full_body_data.production_notes}</p>
                         </div>
                       )}
                     </div>
                   )}
 
+                  {/* Rewrite actions */}
                   {isRewriting ? (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
