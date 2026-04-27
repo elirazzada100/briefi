@@ -5,11 +5,7 @@ import { ArrowRight, Pencil, Check, X, FileText, Plus, RefreshCw, ThumbsUp, Thum
 import LoadingState from "@/components/briefi/LoadingState";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
 
-const riskColors = {
-  "נמוך": "text-green-600 bg-green-50 border-green-200",
-  "בינוני": "text-yellow-600 bg-yellow-50 border-yellow-200",
-  "גבוה": "text-red-500 bg-red-50 border-red-200",
-};
+// risk removed
 
 const scriptFormatLabels = {
   "voiceover": "ווייסאובר",
@@ -183,7 +179,6 @@ export default function FinalBrief() {
   if (improving) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="משפרים לפי הפידבק..." /></div>;
 
   const fb = brief?.final_brief || {};
-  const riskClass = riskColors[fb.client_risk_level] || riskColors["בינוני"];
   const scriptLabel = scriptFormatLabels[fb.script_format] || fb.script_format || "";
 
   return (
@@ -196,11 +191,6 @@ export default function FinalBrief() {
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-base font-black text-foreground">הבריף מוכן</h1>
-              {fb.client_risk_level && (
-                <span className={`text-xs px-2 py-0.5 rounded-full border font-bold ${riskClass}`}>
-                  {fb.client_risk_level}
-                </span>
-              )}
               {wasImproved && (
                 <span className="text-xs px-2 py-0.5 rounded-full border font-bold text-green-600 bg-green-50 border-green-200">
                   ✓ בדיקת איכות בוצעה

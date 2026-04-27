@@ -7,15 +7,7 @@ import ErrorState from "@/components/briefi/ErrorState";
 import StepProgress from "@/components/shared/StepProgress";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
 
-const riskStyle = {
-  "נמוך": { bg: "#D1FAE5", color: "#059669" },
-  "בינוני": { bg: "#FEF3C7", color: "#D97706" },
-  "גבוה": { bg: "#FCE7F3", color: "#DB2777" },
-  "בטוח ללקוח": { bg: "#D1FAE5", color: "#059669" },
-  "סושיאלי": { bg: "#DBEAFE", color: "#2563EB" },
-  "מצחיק / אנושי": { bg: "#FEF3C7", color: "#D97706" },
-  "חד יותר": { bg: "#FCE7F3", color: "#DB2777" },
-};
+// risk removed — idea_tags used instead
 
 const REWRITE_ACTIONS = ["יותר קצר", "יותר ישראלי", "פחות קרינג׳", "יותר מצחיק"];
 
@@ -104,23 +96,15 @@ export default function HookPicker() {
 
         <div className="space-y-3">
           {hooks.map((hook, idx) => {
-            const risk = riskStyle[hook.risk_level] || riskStyle["בינוני"];
             const isRewriting = rewritingIdx === idx;
             const whyText = hook.why_it_works_short || hook.why_it_works || "";
 
             return (
               <div key={idx} className="bg-white rounded-2xl border border-border/60 overflow-hidden shadow-sm transition-all hover:shadow-md">
                 <div className="p-4 space-y-2.5">
-                  {/* Risk badge */}
-                  {hook.risk_level && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: risk.bg, color: risk.color }}>
-                        {hook.risk_level}
-                      </span>
-                      {hook.hook_title && (
-                        <span className="text-[11px] text-muted-foreground font-medium">{hook.hook_title}</span>
-                      )}
-                    </div>
+                  {/* Hook title (no risk badge) */}
+                  {hook.hook_title && (
+                    <p className="text-[11px] text-muted-foreground font-semibold">{hook.hook_title}</p>
                   )}
 
                   {/* Hook text — large and readable */}

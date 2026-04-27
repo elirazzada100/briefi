@@ -7,13 +7,7 @@ import ErrorState from "@/components/briefi/ErrorState";
 import StepProgress from "@/components/shared/StepProgress";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
 
-const riskStyle = {
-  "נמוך": { bg: "#D1FAE5", color: "#059669" },
-  "בינוני": { bg: "#FEF3C7", color: "#D97706" },
-  "גבוה": { bg: "#FCE7F3", color: "#DB2777" },
-  "בטוח": { bg: "#D1FAE5", color: "#059669" },
-  "בטוח יחסית": { bg: "#D1FAE5", color: "#059669" },
-};
+// risk removed — idea_tags used instead
 
 const sceneTypeLabels = {
   acted_scene: "סצנה מיוצגת",
@@ -112,12 +106,11 @@ export default function ConceptPicker() {
 
         <div className="space-y-3">
           {concepts.map((concept, idx) => {
-            const risk = riskStyle[concept.risk_level] || riskStyle["בינוני"];
             const isExpanded = expandedIdx === idx;
             const isRewriting = rewritingIdx === idx;
             const displayText = concept.short_description || concept.concept_summary || "";
             const sceneLabel = sceneTypeLabels[concept.scene_type];
-            const tags = concept.tags || [];
+            const ideaTags = concept.idea_tags || concept.tags || [];
             const hasFullData = concept.full_scene_data && (concept.full_scene_data.what_happens || concept.full_scene_data.payoff);
 
             return (
@@ -126,18 +119,11 @@ export default function ConceptPicker() {
                   {/* Title row */}
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-black text-foreground text-base leading-snug flex-1">{concept.concept_title}</h3>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      {concept.risk_level && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: risk.bg, color: risk.color }}>
-                          {concept.risk_level}
-                        </span>
-                      )}
-                      {hasFullData && (
-                        <button onClick={() => setExpandedIdx(isExpanded ? null : idx)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </button>
-                      )}
-                    </div>
+                    {hasFullData && (
+                      <button onClick={() => setExpandedIdx(isExpanded ? null : idx)} className="text-muted-foreground hover:text-foreground transition-colors p-1 flex-shrink-0">
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                    )}
                   </div>
 
                   {/* Scene description */}
@@ -151,14 +137,14 @@ export default function ConceptPicker() {
                     </div>
                   )}
 
-                  {/* Tags */}
-                  {tags.length > 0 && (
+                  {/* Idea tags */}
+                  {(ideaTags.length > 0 || sceneLabel) && (
                     <div className="flex flex-wrap gap-1.5">
                       {sceneLabel && (
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{sceneLabel}</span>
                       )}
-                      {tags.map((tag, ti) => (
-                        <span key={ti} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground">{tag}</span>
+                      {ideaTags.map((tag, ti) => (
+                        <span key={ti} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/8 text-primary border border-primary/15">{tag}</span>
                       ))}
                     </div>
                   )}

@@ -58,7 +58,6 @@ Core writing principles:
 - WEAK: "אוכל טעים באווירה טובה" | STRONG: "החבר שאמר רק ביס ואז גמר לכם חצי מנה"
 - Write in practical Israeli Hebrew. Clear over clever. Specific over pretty.
 - Shootable over conceptual. Spoken rhythm over polished copy.
-- Client-safe, but not dead.
 - One idea per Reel.
 - The hook must create a small laugh, small discomfort, or "wait, that's me".
 - Every final brief must include actual script_text.
@@ -72,11 +71,19 @@ Core writing principles:
 - Use Content Intelligence rows (VoiceRules, HookPatterns, ScriptPatterns, etc.) as style and structure guidance only.
 - Do not copy examples directly. Generate original content for the user's specific business, goal, concept, and category.
 
-When generating 4 options, make them meaningfully different:
-1. Safe/client-friendly
-2. Social/native
-3. More human/funny
-4. Sharper/riskier
+INTERNAL CREATIVE STANDARD — high_energy_only:
+Every idea must be what was previously called "גבוה" — but do NOT label it or mention risk levels.
+All 4 options must be bold, specific, pitchable, and strong. No filler. No safe generic options.
+A high-energy idea must include: a specific person or group, a real situation, a clear behavior, tension or contradiction or temptation, a visual payoff, a hook that feels spoken not written by a brand, a reason someone would send it to a friend, and a reason it can be filmed tomorrow.
+If an idea does not meet this bar, rewrite it before returning it.
+Do NOT generate: "סרטון שמציג את האווירה", "לקוחות נהנים", "נראה את מגוון", "חוויה ישראלית", "נציג את", "נראה את".
+
+When generating 4 options, make all 4 strong:
+1. Scene-based / acted
+2. Social / native behavior
+3. Funny / human observation
+4. Sharper / unexpected angle
+All 4 must be worth pitching. No filler option.
 
 Return valid JSON only. No markdown, no code blocks, no explanations.`;
 
@@ -638,34 +645,34 @@ Category: ${selected_category}
 Creative DNA: ${JSON.stringify(creative_dna)}
 ${intelligenceCtx}
 
-RULES:
-- Return exactly 4 concepts, each meaningfully different.
+RULES — high_energy_only:
+- Return exactly 4 concepts. ALL 4 must be strong, bold, and pitchable. No filler option.
 - Hebrew only.
-- A concept is the creative IDEA of the video — not the hook or the script yet.
-- Do not write the full script. Do not write the CTA.
-- Make each concept practical and shootable.
-- Vary the 4: 1) Safe/client-friendly, 2) Social/native, 3) Funny/human, 4) Sharper/emotional.
+- Every concept must include: a specific person or group, a location, a real behavior, tension/contradiction/temptation, a visual payoff, and a reason someone would send it to a friend.
+- Do NOT generate: "סרטון שמציג", "נראה את", "נציג את", "לקוחות נהנים", "אווירה", "מגוון", "חוויה", or any safe/vague concept.
+- If an idea feels too safe or generic, rewrite it before returning it.
 - Use ScriptPatterns and TrendPatterns for structural inspiration.
+- Make the 4 options vary in approach (scene/dialog/behavior observation/unexpected angle) but ALL must be strong.
 
 SHORT DESCRIPTION (short_description) RULES — CRITICAL:
 - 2 to 3 short sentences MAXIMUM.
 - First sentence MUST describe what happens on screen — who, where, what action.
 - Second sentence introduces tension or twist.
-- NO sentences starting with: "סרטון שמציג", "נציג את", "נראה את", "המטרה היא להראות", "הסרטון ימחיש".
 - Max 280 Hebrew characters.
-- Write as if describing a real scene someone is watching, not a content strategy.
+- Write as if describing a real scene someone is watching.
 
 GOOD short_description:
 "דייט ראשון בבר. היא מספרת לו את כל העונה הראשונה של החיים שלה, והוא מהנהן כאילו הוא איתה. בפועל, הוא לא מצליח להוריד את העיניים מההמבורגר בשולחן ליד."
-
 "לקוח נכנס לשווארמייה ונשבע שהוא לוקח משהו קטן. כל מנה שעוברת לידו שוברת אותו, עד שהוא יוצא עם לאפה עם הכל."
 
-BAD short_description (never do this):
-"סרטון שמציג את האווירה של הבר בצורה קלילה ומצחיקה."
-"נציג את היתרונות של העסק ונחבר את הצופה לערכים של המותג."
+BAD (reject automatically):
+"סרטון שמציג את האווירה בצורה קלילה."
+"נציג את היתרונות של העסק."
+"לקוחות נהנים מהמנות."
 
-CARD TAGS RULES:
-- 2-4 short Hebrew tags that describe the scene type, mood, or social dynamic.
+IDEA TAGS RULES:
+- 2-4 short Hebrew energy/flavor tags. Examples: מצחיק, חד, ישראלי, זכור, ויראלי, סצנתי, מכירתי, קל לצילום, שווה שליחה, התנהגות אמיתית.
+- Do NOT use: נמוך, בינוני, גבוה, or any risk labels.
 
 Return JSON:
 {
@@ -673,11 +680,10 @@ Return JSON:
     {
       "concept_title": "max 5 words, punchy Hebrew title",
       "short_description": "2-3 sentences max. First sentence = what happens on screen. Scene-based, practical, specific.",
-      "hook_preview": "a natural 1-line hook that fits this concept (optional but preferred)",
+      "hook_preview": "a natural 1-line hook that fits this concept",
       "scene_type": "acted_scene | talking_head | voiceover | text_only | bts",
-      "tags": ["tag1", "tag2", "tag3"],
+      "idea_tags": ["מצחיק", "ישראלי", "שווה שליחה"],
       "why_it_works": "1 sentence — practical reason",
-      "risk_level": "נמוך | בינוני | גבוה",
       "full_scene_data": {
         "scene_summary": "what the full scene looks like",
         "what_happens": "detailed scene walkthrough",
@@ -707,14 +713,15 @@ Selected concept: ${JSON.stringify(selected_concept)}
 Creative DNA: ${JSON.stringify(creative_dna)}
 ${intelligenceCtx}
 
-RULES:
-- Return exactly 4 hooks.
+RULES — high_energy_only:
+- Return exactly 4 hooks. ALL 4 must be strong. No safe filler.
 - Hebrew only.
 - Hooks are ONLY for the selected concept above. Do NOT write generic hooks for the whole business.
 - A hook is the opening line — max 1-2 short sentences that make someone stop scrolling in the first 2 seconds.
 - Do NOT write explanatory hooks that summarize the whole video.
+- Every hook must feel spoken, human, and natural — not written by a brand.
 - Use HookPatterns for structure but adapt to this specific concept.
-- Vary: 1) Safe/client-friendly, 2) Social/native, 3) Funny/human, 4) Sharper/riskier.
+- Vary in approach (provocative / behavioral / confessional / situational) but ALL must be strong and usable.
 
 why_it_works_short RULES:
 - Max ONE sentence.
@@ -738,7 +745,6 @@ Return JSON:
       "hook_text": "the actual opening line — short, punchy, max 2 seconds spoken",
       "why_it_works_short": "max 1 sentence, practical explanation of why this hook works",
       "why_it_works": "same as why_it_works_short (keep for compatibility)",
-      "risk_level": "נמוך | בינוני | גבוה",
       "best_for": "who this works best for"
     }
   ]
@@ -762,11 +768,12 @@ Selected concept: ${JSON.stringify(selected_concept)}
 Selected hook: ${JSON.stringify(selected_hook)}
 ${intelligenceCtx}
 
-RULES:
-- Return exactly 4 options, each based on the selected concept AND hook above.
+RULES — high_energy_only:
+- Return exactly 4 options, each based on the selected concept AND hook above. ALL 4 must be strong and shootable.
 - Each option must be realistic to shoot with a phone.
 - script_format must be one of: voiceover, person_to_camera, dialogue, text_only, acted_scene.
-- Vary: 1) Simple/low-effort, 2) Visual/cinematic, 3) Person talking to camera, 4) Dialogue/acted.
+- Vary formats but all must have strong scene clarity, real behavior, and a visual payoff.
+- Do NOT generate vague body descriptions ("show the atmosphere", "present the products"). Each body must describe a real scene with people and actions.
 
 SCENE PREVIEW (scene_preview) RULES — CRITICAL:
 - 2 to 3 short sentences MAXIMUM.
@@ -893,7 +900,7 @@ Return JSON:
   "cta": "the CTA text",
   "caption_suggestion": "social caption in Hebrew",
   "production_notes": "specific practical filming notes — location, lighting, pace, tone",
-  "client_risk_level": "נמוך | בינוני | גבוה",
+  "idea_tags": ["מצחיק", "ישראלי", "קל לצילום"],
   "shooting_time_priority": "חשוב לצלם באור יום | חשוב לצלם בלילה | עדיף לצלם בזמן עומס / פעילות | עדיף לצלם כשהמקום רגוע | לא קריטי",
   "shooting_time_reason": "one short practical sentence explaining why"
 }`;
@@ -1061,6 +1068,17 @@ SHOOTING TIME CHECK:
 - Does the brief include shooting_time_priority? If missing or vague, set needs_rewrite = true.
 - Does shooting_time_reason make practical sense for the concept and industry?
 
+HIGH ENERGY SCORING (high_energy_score out of 100):
+- specific human situation: +20
+- real Israeli behavior: +20
+- tension or contradiction or temptation: +20
+- visual payoff: +15
+- spoken natural hook: +10
+- shareability (would someone send this?): +10
+- filmable tomorrow: +5
+If high_energy_score < 80, set needs_rewrite = true.
+Fail immediately (needs_rewrite=true, reduce overall by 3) if: no person, no action, no tension, starts with generic marketing language, could fit any business.
+
 POSITIVE SCORING BONUS:
 Add +0.5 to overall_score for each found:
 - Starts from a real situation or specific behavior
@@ -1093,6 +1111,7 @@ Return JSON:
   "israeli_tone_score": 0,
   "client_safe_score": 0,
   "shootability_score": 0,
+  "high_energy_score": 0,
   "issues": ["issue 1", "issue 2"],
   "fix_suggestions": ["fix 1", "fix 2"],
   "needs_rewrite": true
