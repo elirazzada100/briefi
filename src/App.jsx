@@ -21,6 +21,7 @@ import PDFExport from './pages/PDFExport';
 import ConceptPicker from './pages/ConceptPicker';
 import UserProfile from './pages/UserProfile';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminLearning from './pages/admin/Learning';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -63,6 +64,7 @@ const AuthenticatedApp = () => {
       <Route path="/project/:projectId/brief-pack" element={<ProtectedRoute><BriefPack /></ProtectedRoute>} />
       <Route path="/project/:projectId/export" element={<ProtectedRoute><PDFExport /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+      <Route path="/admin/learning" element={<ProtectedRoute><AdminLearning /></ProtectedRoute>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
