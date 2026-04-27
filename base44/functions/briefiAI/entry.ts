@@ -569,19 +569,54 @@ Deno.serve(async (req) => {
   // ── generateCreativeDNA ────────────────────────────────────────────────────
   if (action === "generateCreativeDNA") {
     const { project_id, client_name, main_goal, raw_notes } = payload;
-    const prompt = `Analyze this Israeli business and generate Creative DNA for social media content.
+    const prompt = `You are analyzing a small Israeli business for a social media manager.
+
+Your job is NOT to criticize the business.
+Your job is to find the strongest social angles and make the user want to continue building briefs.
+
+Write short, positive, practical analysis cards that feel like:
+"כאן יש הזדמנות."
+"כך אפשר להפוך את העסק הזה למעניין."
+"זה מה שאנשים יאהבו."
+
+RULES:
+- Israeli Hebrew only.
+- Every card must be 2–3 sentences maximum. No long paragraphs.
+- Do NOT start with negative framing ("מה לא עובד", "למה זה בעייתי", "מה חסר", "המקום לא...").
+- Do NOT use: סרטון שמציג, נציג את, נראה את, חוויה, אותנטי, ערך, מקצועיות, איכות, אסטרטגיה.
+- Do NOT write like a consultant deck or marketing brochure.
+- Use human, encouraging, practical Israeli Hebrew.
+- Prefer phrasing like: "אנחנו יכולים להפוך את...", "לעסק יש פה יתרון...", "הכיוון החזק הוא...", "זה נותן לנו דרך טובה ל...", "במקום להסביר, נראה...", "אנשים צריכים להרגיש ש..."
+- When referring to a person in a scene, write "מישהו", "לקוח", "עובר אורח", "חבר", "זוג" — NOT standalone "מי".
+- Every card must answer: "מה אפשר להפוך את העסק הזה לכיוונו ברשת?"
+
+Card titles MUST be one of:
+1. "הכיוון הכי חזק"
+2. "מה מוכרים פה באמת"
+3. "למה זה יכול לעבוד"
+4. "איך נגרום לאנשים לעצור"
+5. "הזווית של בריפי"
 
 Client: ${client_name}
 Goal: ${main_goal}
 Notes: ${raw_notes}
 ${intelligenceCtx}
 
-Return JSON:
+Return exactly 4–5 cards. Return valid JSON only:
 {
-  "main_angle": "The core strategic angle for content",
-  "audience_truth": "What the audience actually feels or needs",
-  "what_is_interesting": "What is genuinely interesting about this business",
-  "what_to_avoid": "What to avoid in content for this business",
+  "business_analysis_cards": [
+    {
+      "title": "הכיוון הכי חזק",
+      "summary": "2–3 sentences max. Positive, practical, opportunity-framing. No negative opening.",
+      "positive_angle": "one sentence: the core opportunity for this business on social",
+      "content_opportunity": "one sentence: what kind of content this enables",
+      "tags": ["tag1", "tag2", "tag3"]
+    }
+  ],
+  "main_angle": "core strategic angle in one sentence",
+  "audience_truth": "what the audience feels or needs — 1 sentence",
+  "what_is_interesting": "what is genuinely interesting here — 1 sentence",
+  "what_to_avoid": "one short practical note on what NOT to do in content",
   "recommended_content_directions": ["direction1", "direction2", "direction3"]
 }`;
 
