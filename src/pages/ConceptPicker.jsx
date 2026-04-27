@@ -25,6 +25,7 @@ export default function ConceptPicker() {
   const navigate = useNavigate();
   const [concepts, setConcepts] = useState(state?.concepts || []);
   const [category] = useState(state?.category || "");
+  const [hookBankMode] = useState(state?.hookBankMode || false);
   const [expandedIdx, setExpandedIdx] = useState(null);
   const [rewritingIdx, setRewritingIdx] = useState(null);
   const [generating, setGenerating] = useState(false);
@@ -77,7 +78,7 @@ export default function ConceptPicker() {
     setRewritingIdx(null);
   };
 
-  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="מייצרים הוקים לקונספט..." /></div>;
+  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message={hookBankMode ? "מייצרים את מבנה הסרטון..." : "מייצרים הוקים לקונספט..."} /></div>;
   if (error) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><ErrorState onRetry={() => setError(false)} /></div>;
 
   return (
@@ -101,7 +102,12 @@ export default function ConceptPicker() {
       <div className="briefi-page-container space-y-4">
         <div>
           <h1 className="text-xl font-black text-foreground">בחרו קונספט לסרטון</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">מה קורה בסרטון? בחרו רעיון ונמשיך לפרטים.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {hookBankMode
+              ? "כל קונספט כולל הוק מוכן. בחרו ונמשיך ישירות למבנה הסרטון."
+              : "מה קורה בסרטון? בחרו רעיון ונמשיך לפרטים."
+            }
+          </p>
         </div>
 
         <div className="space-y-3">
@@ -205,7 +211,7 @@ export default function ConceptPicker() {
                     className="briefi-btn-primary w-full"
                   >
                     <Sparkles className="w-4 h-4" />
-                    בחרו את הקונספט הזה
+                    {hookBankMode ? "בחרו את הרעיון הזה" : "בחרו את הקונספט הזה"}
                   </button>
                 </div>
               </div>

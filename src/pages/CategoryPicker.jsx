@@ -7,6 +7,11 @@ import StepProgress from "@/components/shared/StepProgress";
 import LoadingState from "@/components/shared/LoadingState";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
 
+const HOOK_BANK_INTERNAL_STYLES = [
+  "תדמית", "סרטון אווירה", "סרטון הכרות", "מכירתי", "כאב / פתרון",
+  "אדם מדבר למצלמה", "חינוכי", "השוואה", "מיתוס / ניפוץ", "הוכחה / סמכות", "יום בחיי"
+];
+
 const categories = [
   { id: "מצחיק", label: "מצחיק", emoji: "😂", color: "#F59E0B", bg: "#FEF3C7", desc: "קלילות, תשומת לב, שיתופים" },
   { id: "תדמית", label: "תדמית", emoji: "💎", color: "#7C3AED", bg: "#EDE9FE", desc: "אמון, מקצועיות, בהירות" },
@@ -29,24 +34,65 @@ export default function CategoryPicker() {
     if (!selected || !project) return;
     setLoading(true);
 
-    const response = await base44.functions.invoke("briefiAI", {
-      action: "generateVideoConcepts",
-      project_id: projectId,
-      client_name: project.client_name,
-      main_goal: project.main_goal,
-      raw_notes: project.raw_notes,
-      creative_dna: project.creative_dna || {},
-      selected_category: selected,
-    });
+    const isHookBankStyle = HOOK_BANK_INTERNAL_STYLES.includes(selected);
 
-    const concepts = response.data?.concepts || [];
-    setLoading(false);
-    navigate(`/project/${projectId}/concepts`, { state: { concepts, category: selected } });
+    if (isHookBankStyle) {
+      // Hook-bank driven mode: skip manual hook selection
+      const existingBriefs = await base44.entities.VideoBrief.filter({ project_id: projectId });
+      const existingCategories = existingBriefs.map(b => b.category).filter(Boolean);
+
+      const response = await base44.functions.invoke("generateConceptsFromHookBank", {
+        project_id: projectId,
+        client_name: project.client_name,
+        main_goal: project.main_goal,
+        raw_notes: project.raw_notes,
+        industry: project.industry || "general",
+        creative_dna: project.creative_dna || {},
+        selected_video_style: selected,
+        existing_categories: existingCategories,
+      });
+
+      const concepts = (response.data?.concepts || []).map(c => ({
+        concept_title: c.concept_title,
+        short_description: c.short_description,
+        hook_preview: c.filled_hook,
+        idea_tags: c.idea_tags || [],
+        why_it_works: c.why_it_works,
+        scene_type: "talking_head",
+        full_scene_data: c.full_concept_data || {},
+        _hook_bank_mode: true,
+        _generation_run_id: response.data?.generation_run_id,
+        source_hook_template_id: c.source_hook_template_id,
+      }));
+
+      setLoading(false);
+      navigate(`/project/${projectId}/concepts`, {
+        state: { concepts, category: selected, hookBankMode: true }
+      });
+    } else {
+      // Classic mode: generate concepts, then user picks hook
+      const response = await base44.functions.invoke("briefiAI", {
+        action: "generateVideoConcepts",
+        project_id: projectId,
+        client_name: project.client_name,
+        main_goal: project.main_goal,
+        raw_notes: project.raw_notes,
+        creative_dna: project.creative_dna || {},
+        selected_category: selected,
+      });
+
+      const concepts = response.data?.concepts || [];
+      setLoading(false);
+      navigate(`/project/${projectId}/concepts`, { state: { concepts, category: selected, hookBankMode: false } });
+    }
   };
+
+  const selectedCat = categories.find(c => c.id === selected);
+  const isHookBankSelected = selected && HOOK_BANK_INTERNAL_STYLES.includes(selected);
 
   if (guardLoading || !project || loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
-      <LoadingState message={loading ? "מייצרים 4 קונספטים..." : "טוען..."} />
+      <LoadingState message={loading ? (isHookBankSelected ? "מייצרים 20 קונספטים עם בנק ההוקים ומסננים את 4 הטובים..." : "מייצרים 4 קונספטים...") : "טוען..."} />
     </div>
   );
 
@@ -100,7 +146,12 @@ export default function CategoryPicker() {
                   {cat.emoji}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-foreground text-sm">{cat.label}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-bold text-foreground text-sm">{cat.label}</p>
+                    {cat.hookBank && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary leading-none">⚡ AI הוק</span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">{cat.desc}</p>
                 </div>
                 {isSelected && (
