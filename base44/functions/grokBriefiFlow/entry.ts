@@ -117,18 +117,33 @@ JSON schema:
   ]
 }`;
 
-// Opening lines generated from hook bank templates OR from Grok
-const OPENING_GEN_FROM_TEMPLATES_SYSTEM = `You are Briefi Opening Line Generator for Israeli social media.
+// Opening lines generated from hook bank templates — EXACT template usage
+const OPENING_GEN_FROM_TEMPLATES_SYSTEM = `You are Briefi Hook Translator and Matcher for Israeli social media.
 
-You are given hook templates from Briefi's hook bank.
-Your job is to adapt each template into a real opening line for this specific business and concept.
+You receive a selected video concept, business notes, and a list of real hook templates from LockedHookTemplates.
 
-Rules:
-- Adapt each template — do NOT copy it literally.
-- Write in natural, spoken Israeli Hebrew.
-- Each line must feel real and human — not corporate, not American.
-- Maximum 2 seconds when spoken aloud.
-- The line must make someone stop scrolling immediately.
+Your job:
+Choose 4 hook templates that fit the selected concept and turn them into Hebrew opening lines.
+
+CRITICAL RULES — DO NOT VIOLATE:
+1. You are NOT writing new hooks.
+2. You are NOT improving the hooks.
+3. You are NOT using the hook bank as inspiration.
+4. You MUST use the templates exactly — preserving wording, structure, order, tension.
+
+If a template is in English:
+Translate it into Hebrew while preserving the EXACT structure, order, tension, and placeholders.
+Do NOT rewrite creatively. Do NOT improve. Do NOT change the meaning.
+Do NOT add emojis, "בואו", "אל תפספסו", "חדש אצלנו", or any marketing language.
+Do NOT shorten unless Hebrew grammar requires a tiny adjustment.
+
+If a template has placeholders like (insert X):
+Fill ONLY the placeholders using the selected concept and business context.
+Do NOT rewrite the template skeleton around the placeholders.
+Do NOT add new claims or extra sentences.
+
+Each output MUST be traceable to one source_hook_template_id.
+Use the id field provided in the template list.
 
 ${FORBIDDEN_PHRASES}
 
@@ -138,14 +153,15 @@ JSON schema:
 {
   "opening_options": [
     {
-      "opening_line": "the actual opening line in Hebrew",
-      "why_it_fits": "one short sentence — why this fits the concept and business",
-      "mechanic_tag": "optional short mechanic label e.g. 'שאלה', 'ניפוץ ציפיות', 'הצהרה חזקה'",
+      "opening_line": "the final Hebrew opening line with placeholders filled",
+      "why_it_fits": "one short sentence — why this template fits the concept",
+      "mechanic_tag": "short mechanic label e.g. 'שאלה', 'ניפוץ ציפיות', 'הצהרה חזקה', 'השוואה', 'סיפור'",
       "source_type": "hook_bank",
-      "source_hook_template_id": "",
-      "original_hook_template": "",
-      "hebrew_hook_template": "",
-      "filled_hook": ""
+      "source_hook_template_id": "the id from the template",
+      "original_template": "the original English template text",
+      "hebrew_template": "literal Hebrew translation of the template structure",
+      "filled_opening_line": "same as opening_line — the filled final version",
+      "filled_slots": {}
     }
   ]
 }`;
@@ -322,13 +338,15 @@ Do NOT start any description with: "סרטון שמציג", "נציג את", "נ
       let openingResult;
 
       if (relevantHooks.length >= 4) {
-        // Use hook bank: pick 4 and adapt them
-        const selected = relevantHooks.sort(() => Math.random() - 0.5).slice(0, 4);
-        const templatesForPrompt = selected.map((h, i) => ({
+        // Use hook bank: pick random 8 candidates, let Grok choose 4 best fits
+        const candidates = relevantHooks.sort(() => Math.random() - 0.5).slice(0, Math.min(8, relevantHooks.length));
+        const templatesForPrompt = candidates.map((h) => ({
           id: h.id,
-          hebrew_template: h.hebrew_template || h.original_template,
-          original_template: h.original_template,
+          source_category: h.source_category || "",
+          original_template: h.original_template || "",
+          hebrew_template: h.hebrew_template || h.original_template || "",
           hook_mechanic: h.hook_mechanic || "",
+          placeholder_slots: h.placeholder_slots || [],
         }));
 
         const userPrompt = `Business:
@@ -341,22 +359,42 @@ Video style: ${videoStyle}
 Selected concept:
 Title: ${selectedConcept.concept_title || selectedConcept.concept_name || ""}
 Description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
+Why it works: ${selectedConcept.why_it_works || ""}
 
-Hook templates to adapt (one per option — fill placeholders with real business details):
+Business analysis: ${businessAnalysis ? JSON.stringify(businessAnalysis).slice(0, 500) : ""}
+
+Available hook templates (choose the 4 that best fit this concept):
 ${JSON.stringify(templatesForPrompt, null, 2)}
 
-Adapt each template into a real, natural opening line for this specific business and concept.
-Return exactly ${templatesForPrompt.length} options. Include the source_hook_template_id from the template id.`;
+INSTRUCTIONS:
+1. Select exactly 4 templates from the list above that fit this concept best.
+2. Translate the template into Hebrew while PRESERVING the exact structure, order, and tension.
+3. Fill the (insert X) placeholders with specific details from the business and concept.
+4. Do NOT rewrite the template skeleton. Do NOT add extra sentences.
+5. Return the id of the template you selected as source_hook_template_id.
+6. Return exactly 4 options — each using a DIFFERENT template id.`;
 
-        const { parsed, provider } = await callWithFallback(OPENING_GEN_FROM_TEMPLATES_SYSTEM, userPrompt, 0.8);
-        const options = (parsed.opening_options || []).slice(0, 4);
-        // Inject correct source ids
-        options.forEach((opt, i) => {
-          opt.source_type = "hook_bank";
-          opt.source_hook_template_id = selected[i]?.id || "";
-          opt.original_hook_template = selected[i]?.original_template || "";
-          opt.hebrew_hook_template = selected[i]?.hebrew_template || "";
+        const { parsed, provider } = await callWithFallback(OPENING_GEN_FROM_TEMPLATES_SYSTEM, userPrompt, 0.75);
+        const rawOptions = (parsed.opening_options || []).slice(0, 4);
+        
+        // Enforce correct metadata from actual template data
+        const templateMap = {};
+        candidates.forEach(h => { templateMap[h.id] = h; });
+        
+        const options = rawOptions.map((opt) => {
+          const templateId = opt.source_hook_template_id;
+          const matchedTemplate = templateMap[templateId];
+          return {
+            ...opt,
+            source_type: "hook_bank",
+            source_hook_template_id: templateId || "",
+            original_template: matchedTemplate?.original_template || opt.original_template || "",
+            hebrew_template: matchedTemplate?.hebrew_template || opt.hebrew_template || "",
+            filled_opening_line: opt.filled_opening_line || opt.opening_line || "",
+            opening_line: opt.opening_line || opt.filled_opening_line || "",
+          };
         });
+        
         openingResult = { opening_options: options, source: "hook_bank", provider_log: { provider_used: provider } };
       } else {
         // Not enough hooks in bank — use Grok to generate original opening lines

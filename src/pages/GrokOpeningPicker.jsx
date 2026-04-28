@@ -67,7 +67,7 @@ export default function GrokOpeningPicker() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="רגע, בונים לך כיוונים טובים..." />
+        <LoadingState message="בוחרים פתיחות מתוך בנק ההוקים..." />
       </div>
     );
   }
