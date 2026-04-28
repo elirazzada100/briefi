@@ -1,0 +1,79 @@
+{
+  "name": "ConceptBank",
+  "type": "object",
+  "properties": {
+    "category_id": {
+      "type": "string",
+      "description": "\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d9\u05ea \u05d4\u05e2\u05e1\u05e7"
+    },
+    "concept_name": {
+      "type": "string",
+      "description": "\u05e9\u05dd \u05d4\u05e7\u05d5\u05e0\u05e1\u05e4\u05d8"
+    },
+    "core_situation": {
+      "type": "string",
+      "description": "\u05d4\u05e1\u05d9\u05d8\u05d5\u05d0\u05e6\u05d9\u05d4 \u05d4\u05d1\u05e1\u05d9\u05e1\u05d9\u05ea"
+    },
+    "natural_opening_line": {
+      "type": "string",
+      "description": "\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d8\u05d1\u05e2\u05d9\u05ea"
+    },
+    "human_tension": {
+      "type": "string",
+      "description": "\u05d4\u05de\u05ea\u05d7 \u05d4\u05d0\u05e0\u05d5\u05e9\u05d9"
+    },
+    "scene_logic": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05dc\u05d5\u05d2\u05d9\u05e7\u05ea \u05d4\u05e1\u05e6\u05e0\u05d4"
+    },
+    "punchline": {
+      "type": "string",
+      "description": "\u05d4\u05e4\u05d0\u05e0\u05e6\u05f3\u05dc\u05d9\u05d9\u05df"
+    },
+    "visual_proofs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05d4\u05d5\u05db\u05d7\u05d5\u05ea \u05d5\u05d9\u05d6\u05d5\u05d0\u05dc\u05d9\u05d5\u05ea"
+    },
+    "best_for": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05de\u05ea\u05d0\u05d9\u05dd \u05dc"
+    },
+    "tone_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05ea\u05d2\u05d9\u05d5\u05ea \u05d8\u05d5\u05df"
+    },
+    "cta_options": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05d0\u05d5\u05e4\u05e6\u05d9\u05d5\u05ea CTA"
+    },
+    "risk_notes": {
+      "type": "string",
+      "description": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05e1\u05d9\u05db\u05d5\u05df"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "\u05e4\u05e2\u05d9\u05dc"
+    }
+  },
+  "required": [
+    "category_id",
+    "concept_name",
+    "core_situation"
+  ]
+}

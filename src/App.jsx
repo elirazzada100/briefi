@@ -27,6 +27,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminLearning from './pages/admin/Learning';
 import GenerationDebug from './pages/admin/GenerationDebug';
 import AdminTrendPatterns from './pages/admin/TrendPatterns';
+import GrokConceptPicker from './pages/GrokConceptPicker';
 import Settings from './pages/Settings';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
@@ -76,6 +77,7 @@ const AuthenticatedApp = () => {
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/new-project" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
       <Route path="/project/:projectId/creative-dna" element={<ProtectedRoute><CreativeDNA /></ProtectedRoute>} />
+      <Route path="/project/:projectId/grok-concepts" element={<ProtectedRoute><GrokConceptPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/category" element={<ProtectedRoute><CategoryPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/concepts" element={<ProtectedRoute><ConceptPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/hooks" element={<ProtectedRoute><HookPicker /></ProtectedRoute>} />
