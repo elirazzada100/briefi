@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
-import BriefiStepper from "@/components/briefi/BriefiStepper";
 
+// Only 5 user-facing styles. Order: מצחיק, תדמית, סרטון הכרות, מכירתי, טרנדי
+// Removed from UI: סרטון אווירה, כאב / פתרון, חינוכי, השוואה, מיתוס / ניפוץ
+// (those remain as internal AI routing mechanics only)
 const VIDEO_STYLES = [
   {
     id: "מצחיק",
@@ -22,14 +24,6 @@ const VIDEO_STYLES = [
     bg: "#EDE9FE",
   },
   {
-    id: "סרטון אווירה",
-    emoji: "🌿",
-    label: "סרטון אווירה",
-    desc: "וייב של מקום, אנשים, תנועה, רגעים קטנים.",
-    color: "#10B981",
-    bg: "#D1FAE5",
-  },
-  {
     id: "סרטון הכרות",
     emoji: "👋",
     label: "סרטון הכרות",
@@ -46,44 +40,12 @@ const VIDEO_STYLES = [
     bg: "#FFEDD5",
   },
   {
-    id: "כאב / פתרון",
-    emoji: "💡",
-    label: "כאב / פתרון",
-    desc: "בעיה שהלקוח מכיר, ואז פתרון ברור דרך העסק.",
-    color: "#EC4899",
-    bg: "#FCE7F3",
-  },
-  {
     id: "טרנדי",
     emoji: "🔥",
     label: "טרנדי",
     desc: "בריפי בוחרת פטרן טרנדי ומתאימה אותו לעסק.",
     color: "#14B8A6",
     bg: "#CCFBF1",
-  },
-  {
-    id: "חינוכי",
-    emoji: "📚",
-    label: "חינוכי",
-    desc: "טיפ, הסבר, טעות נפוצה או משהו שאנשים לא יודעים.",
-    color: "#6366F1",
-    bg: "#EEF2FF",
-  },
-  {
-    id: "השוואה",
-    emoji: "⚖️",
-    label: "השוואה",
-    desc: "לפני/אחרי, זול/יקר, רגיל/מוגזם, מה חשבתם מול מה קורה בפועל.",
-    color: "#0EA5E9",
-    bg: "#E0F2FE",
-  },
-  {
-    id: "מיתוס / ניפוץ",
-    emoji: "💥",
-    label: "מיתוס / ניפוץ",
-    desc: "משפט שאנשים מאמינים בו, ואז שוברים אותו.",
-    color: "#EF4444",
-    bg: "#FEE2E2",
   },
 ];
 
@@ -93,7 +55,6 @@ export default function VideoStylePicker() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(null);
 
-  // Pass along business data from previous steps
   const business = state?.business;
   const businessAnalysis = state?.businessAnalysis;
 
@@ -119,9 +80,7 @@ export default function VideoStylePicker() {
             <p className="text-xs font-bold text-foreground">בחרו סגנון סרטון</p>
           </div>
         </div>
-        <div className="mt-2">
-          <BriefiStepper currentStep={3} />
-        </div>
+        {/* No stepper here — stepper starts from concept selection */}
       </div>
 
       <div className="briefi-page-container space-y-4">

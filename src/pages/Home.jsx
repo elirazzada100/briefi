@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/lib/AuthContext";
 
 const navItems = [
-  { to: "/dashboard", icon: FolderOpen, label: "הפרויקטים שלי", desc: "כל הבריפים במקום אחד", color: "#7C3AED" },
+  { to: "/dashboard", icon: FolderOpen, label: "הלקוחות שלי", desc: "כל הבריפים במקום אחד", color: "#7C3AED" },
   { to: "/profile", icon: User, label: "הגדרות ומיתוג", desc: "לוגו, שם, צבעי מותג", color: "#3B82F6" },
 ];
 
@@ -12,7 +12,7 @@ export default function Home() {
   const { isAuthenticated, logout } = useAuth();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5 py-10" dir="rtl">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-between px-5 py-10" dir="rtl">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -40,7 +40,7 @@ export default function Home() {
           <Link to="/new-project" className="block">
             <button className="briefi-btn-primary w-full text-base">
               <Plus className="h-4 w-4" />
-              בריף חדש
+              + לקוח חדש
             </button>
           </Link>
         </div>
@@ -64,10 +64,17 @@ export default function Home() {
             </Link>
           ))}
         </div>
+      </motion.div>
 
-        <p className="text-xs text-muted-foreground text-center">
-          הבריפים והלקוחות שמורים אוטומטית ✓
-        </p>
+      {/* Bottom area: settings, logout, disclaimer — in that order */}
+      <div className="w-full max-w-sm flex flex-col items-center gap-3 pt-4">
+        <Link
+          to="/settings"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors mx-auto"
+        >
+          <Settings className="w-3 h-3" />
+          הגדרות
+        </Link>
 
         {isAuthenticated && (
           <button
@@ -79,20 +86,10 @@ export default function Home() {
           </button>
         )}
 
-        {/* Disclaimer */}
-        <p className="text-[11px] text-muted-foreground/70 text-center">
+        <p className="text-[11px] text-muted-foreground/50 text-center">
           בריפי יכול לטעות לפעמים.
         </p>
-
-        {/* Settings link */}
-        <Link
-          to="/settings"
-          className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors mx-auto"
-        >
-          <Settings className="w-3 h-3" />
-          הגדרות
-        </Link>
-      </motion.div>
+      </div>
     </div>
   );
 }

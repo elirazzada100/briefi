@@ -1,7 +1,9 @@
-// Steps: 1=עסק, 2=ניתוח, 3=סגנון, 4=קונספט, 5=מבנה, 6=CTA, 7=בריף
-const STEPS = ["עסק", "ניתוח", "סגנון", "קונספט", "מבנה", "CTA", "בריף"];
+// Steps shown only from concept selection onward:
+// 1=קונספט, 2=פתיחה, 3=CTA, 4=סרטון
+const STEPS = ["קונספט", "פתיחה", "CTA", "סרטון"];
 
 export default function BriefiStepper({ currentStep }) {
+  // currentStep: 1=קונספט, 2=פתיחה, 3=CTA, 4=סרטון
   return (
     <div className="flex items-center gap-0 overflow-x-auto no-scrollbar">
       {STEPS.map((label, i) => {

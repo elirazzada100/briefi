@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ArrowRight, Pencil, Check, X, FileText, Plus, RefreshCw } from "lucide-react";
+import { ArrowRight, Pencil, Check, X, Plus, RefreshCw } from "lucide-react";
 import BriefiStepper from "@/components/briefi/BriefiStepper";
 import LoadingState from "@/components/briefi/LoadingState";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
@@ -14,11 +14,12 @@ const scriptFormatLabels = {
   acted_scene: "סצנה מיוצגת",
 };
 
-const FEEDBACK_TAGS = [
-  "מעולה", "סבבה", "לא מספיק ברור", "מוזר / לא ישראלי",
-  "תיאורטי מדי", "לא פרקטי לצילום", "לא מצחיק",
-  "לא מתאים לעסק", "הוק חלש", "גוף הסרטון לא ברור",
-  "אין פאנץ׳", "אין מספיק מה לצלם",
+const SMILEY_OPTIONS = [
+  { score: 5, emoji: "😍", label: "מעולה" },
+  { score: 4, emoji: "🙂", label: "טוב" },
+  { score: 3, emoji: "😐", label: "סביר" },
+  { score: 2, emoji: "🙁", label: "לא מספיק" },
+  { score: 1, emoji: "😞", label: "לא טוב" },
 ];
 
 function EditableField({ label, value, onSave, prominent = false, hint = null }) {
@@ -46,7 +47,7 @@ function EditableField({ label, value, onSave, prominent = false, hint = null })
             onChange={e => setVal(e.target.value)}
             autoFocus
             rows={prominent ? 6 : 3}
-            className="w-full p-3 rounded-xl border border-primary/30 bg-primary/5 text-briefi-navy text-sm font-medium focus:outline-none resize-none"
+            className="w-full p-3 rounded-xl border border-primary/30 bg-primary/5 text-foreground text-sm font-medium focus:outline-none resize-none"
           />
           <div className="flex gap-2">
             <button onClick={handleSave} className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold">
@@ -72,11 +73,10 @@ export default function FinalBrief() {
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  // Support both the new Grok flow state and legacy state
   const briefId = state?.briefId;
   const finalBriefFromState = state?.finalBrief;
   const selectedConcept = state?.selectedConcept;
-  const selectedBody = state?.selectedBody;
+  const selectedOpening = state?.selectedOpening || state?.selectedBody;
   const selectedCTA = state?.selectedCTA;
   const selectedVideoStyle = state?.selectedVideoStyle;
 
@@ -84,10 +84,9 @@ export default function FinalBrief() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const [mainFeedback, setMainFeedback] = useState(null);
-  const [specificFeedback, setSpecificFeedback] = useState([]);
-  const [freeTextNegative, setFreeTextNegative] = useState("");
-  const [freeTextPositive, setFreeTextPositive] = useState("");
+  // Smiley feedback
+  const [feedbackScore, setFeedbackScore] = useState(null);
+  const [feedbackFreeText, setFeedbackFreeText] = useState("");
   const [feedbackSaved, setFeedbackSaved] = useState(false);
   const [improving, setImproving] = useState(false);
 
@@ -95,31 +94,29 @@ export default function FinalBrief() {
 
   useEffect(() => {
     if (finalBriefFromState) {
-      // New Grok flow: brief data came from navigation state
       setBrief({ adapted_brief: finalBriefFromState, id: briefId });
     } else if (briefId) {
-      // Legacy flow: load from DB
-      base44.entities.VideoBrief.filter({ id: briefId }).then(r => setBrief(r[0]));
+      base44.entities.VideoBrief.filter({ id: briefId }).then(r => {
+        if (r[0]) setBrief(r[0]);
+      });
     }
   }, [briefId, finalBriefFromState]);
 
-  // Guard: if no brief data at all, go back
+  // Guard
   useEffect(() => {
     if (!loading && !briefId && !finalBriefFromState) {
       navigate(`/project/${projectId}/grok-concepts`);
     }
   }, [loading, briefId, finalBriefFromState]);
 
-  // ── Resolve display fields from all possible sources ────────────────────────
   const resolveField = (field) => {
     const adapted = brief?.adapted_brief || {};
     const legacy = brief?.final_brief || {};
-
     const mapping = {
-      brief_title: adapted.brief_title || legacy.brief_title || brief?.brief_title || selectedConcept?.concept_name || "",
-      video_concept: adapted.video_concept || legacy.video_concept || brief?.video_concept || selectedConcept?.core_situation || "",
-      hook: adapted.hook || legacy.hook || brief?.hook || selectedConcept?.natural_opening_line || "",
-      script_text: adapted.script_text || legacy.script_text || brief?.script_text || (selectedBody?.spoken_lines || []).join("\n") || "",
+      brief_title: adapted.brief_title || legacy.brief_title || brief?.brief_title || "",
+      video_concept: adapted.video_concept || legacy.video_concept || brief?.video_concept || selectedConcept?.short_description || "",
+      hook: adapted.hook || legacy.hook || brief?.hook || selectedOpening?.opening_line || "",
+      script_text: adapted.script_text || legacy.script_text || brief?.script_text || "",
       shot_structure: adapted.shot_structure || legacy.shot_structure || brief?.shot_structure || [],
       cta: adapted.cta || legacy.cta || brief?.cta || selectedCTA?.cta_text || "",
       caption_suggestion: adapted.caption_suggestion || legacy.caption_suggestion || brief?.caption_suggestion || "",
@@ -150,37 +147,33 @@ export default function FinalBrief() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const toggleSpecificFeedback = (item) => {
-    setSpecificFeedback(prev =>
-      prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]
-    );
-  };
-
   const handleSaveFeedback = async () => {
-    if (!mainFeedback && specificFeedback.length === 0 && !freeTextNegative && !freeTextPositive) return;
+    if (!feedbackScore) return;
+    const label = SMILEY_OPTIONS.find(s => s.score === feedbackScore)?.label || "";
     await base44.entities.UserBriefFeedback.create({
       project_id: projectId,
       video_brief_id: briefId,
-      rating_label: mainFeedback,
-      selected_feedback_tags: specificFeedback,
-      free_text_negative: freeTextNegative,
-      free_text_positive: freeTextPositive,
-      category: resolveField("category") || "",
+      rating_label: label,
+      video_feedback_score: feedbackScore,
+      video_feedback_label: label,
+      free_text_negative: feedbackFreeText,
+      video_feedback_created_at: new Date().toISOString(),
     });
     setFeedbackSaved(true);
   };
 
   const handleImproveWithFeedback = async () => {
-    if (!mainFeedback && specificFeedback.length === 0 && !freeTextNegative) return;
+    if (!feedbackFreeText) return;
     setImproving(true);
-
+    const label = SMILEY_OPTIONS.find(s => s.score === feedbackScore)?.label || "";
     await base44.entities.UserBriefFeedback.create({
       project_id: projectId,
       video_brief_id: briefId,
-      rating_label: mainFeedback,
-      selected_feedback_tags: specificFeedback,
-      free_text_negative: freeTextNegative,
-      free_text_positive: freeTextPositive,
+      rating_label: label,
+      video_feedback_score: feedbackScore,
+      video_feedback_label: label,
+      free_text_negative: feedbackFreeText,
+      video_feedback_created_at: new Date().toISOString(),
     });
 
     const response = await base44.functions.invoke("briefiAI", {
@@ -188,13 +181,12 @@ export default function FinalBrief() {
       project_id: projectId,
       video_brief_id: briefId,
       original_brief: brief?.adapted_brief || brief?.final_brief,
-      quality_check: { issues: specificFeedback, fix_suggestions: [] },
+      quality_check: { issues: [feedbackFreeText], fix_suggestions: [] },
       client_name: project?.client_name || "",
       main_goal: project?.main_goal || "",
-      selected_category: resolveField("category") || "",
       selected_concept: selectedConcept || {},
       creative_dna: project?.creative_dna || {},
-      feedback_tags: [mainFeedback, ...specificFeedback].filter(Boolean),
+      feedback_tags: [label].filter(Boolean),
     });
 
     const improved = response.data?.final_brief;
@@ -205,15 +197,15 @@ export default function FinalBrief() {
       }
     }
     setImproving(false);
-    setMainFeedback(null);
-    setSpecificFeedback([]);
+    setFeedbackScore(null);
+    setFeedbackFreeText("");
     setFeedbackSaved(false);
   };
 
   if (loading || !brief) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="טוען את הבריף..." />
+        <LoadingState message="טוען את הסרטון..." />
       </div>
     );
   }
@@ -239,11 +231,12 @@ export default function FinalBrief() {
             <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="flex-1">
-            <h1 className="text-base font-black text-foreground">הבריף מוכן ✓</h1>
+            <h1 className="text-base font-black text-foreground">הסרטון מוכן ✓</h1>
+            {selectedVideoStyle && <p className="text-[10px] text-muted-foreground">{selectedVideoStyle}</p>}
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={7} />
+          <BriefiStepper currentStep={4} />
         </div>
       </div>
 
@@ -253,24 +246,24 @@ export default function FinalBrief() {
           {/* 1. שם הסרטון */}
           <EditableField label="שם הסרטון" value={resolveField("brief_title")} onSave={v => updateBriefField("brief_title", v)} />
 
-          {/* 2. קונספט */}
+          {/* 2. רעיון הסרטון */}
           <div className="border-t border-muted pt-4">
-            <EditableField label="קונספט לסרטון" value={resolveField("video_concept")} onSave={v => updateBriefField("video_concept", v)} />
+            <EditableField label="רעיון הסרטון" value={resolveField("video_concept")} onSave={v => updateBriefField("video_concept", v)} />
           </div>
 
-          {/* 3. הוק */}
+          {/* 3. פתיחה */}
           <div className="border-t border-muted pt-4">
-            <EditableField label="הוק / פתיחה" value={resolveField("hook")} onSave={v => updateBriefField("hook", v)} />
+            <EditableField label="פתיחה / משפט ראשון" value={resolveField("hook")} onSave={v => updateBriefField("hook", v)} />
           </div>
 
-          {/* 4. טקסט / ווייסאובר — prominent */}
+          {/* 4. מה אומרים — prominent */}
           <div className="border-t border-muted pt-4">
             <div className="rounded-2xl p-4 space-y-2" style={{ background: "rgba(124,58,237,0.05)" }}>
               {scriptLabel && (
                 <span className="inline-block text-xs text-primary font-bold px-2.5 py-1 rounded-full" style={{ background: "rgba(124,58,237,0.10)" }}>{scriptLabel}</span>
               )}
               <EditableField
-                label="טקסט / ווייסאובר"
+                label="מה אומרים / ווייסאובר / דיאלוג"
                 value={resolveField("script_text")}
                 onSave={v => updateBriefField("script_text", v)}
                 prominent
@@ -279,10 +272,10 @@ export default function FinalBrief() {
             </div>
           </div>
 
-          {/* 5. מבנה צילום */}
+          {/* 5. רצף שוטים */}
           {shotStructure?.length > 0 && (
             <div className="border-t border-muted pt-4 space-y-2">
-              <p className="text-xs font-bold text-muted-foreground">מבנה צילום</p>
+              <p className="text-xs font-bold text-muted-foreground">רצף שוטים</p>
               {shotStructure.map((step, i) => (
                 <div key={i} className="flex items-start gap-3 bg-muted/30 rounded-xl p-3">
                   <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{step.step || i + 1}</div>
@@ -307,14 +300,14 @@ export default function FinalBrief() {
             </div>
           )}
 
-          {/* 7. קריאה לפעולה */}
+          {/* 7. CTA */}
           <div className="border-t border-muted pt-4">
             <EditableField label="קריאה לפעולה" value={resolveField("cta")} onSave={v => updateBriefField("cta", v)} />
           </div>
 
-          {/* 8. קפישן */}
+          {/* 8. תיאור הסרטון (was קפישן) */}
           <div className="border-t border-muted pt-4">
-            <EditableField label="קפישן" value={resolveField("caption_suggestion")} onSave={v => updateBriefField("caption_suggestion", v)} />
+            <EditableField label="תיאור הסרטון" value={resolveField("caption_suggestion")} onSave={v => updateBriefField("caption_suggestion", v)} />
           </div>
 
           {/* 9. מה חייבים לצלם */}
@@ -327,10 +320,10 @@ export default function FinalBrief() {
             </div>
           )}
 
-          {/* 10. הערות לצילום */}
+          {/* 10. הערות צילום */}
           {resolveField("production_notes") && (
             <div className="border-t border-muted pt-4">
-              <EditableField label="הערות לצילום" value={resolveField("production_notes")} onSave={v => updateBriefField("production_notes", v)} />
+              <EditableField label="הערות צילום" value={resolveField("production_notes")} onSave={v => updateBriefField("production_notes", v)} />
             </div>
           )}
 
@@ -342,68 +335,53 @@ export default function FinalBrief() {
           )}
         </div>
 
-        {/* Feedback Section */}
+        {/* Smiley Feedback */}
         <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
           <div>
-            <p className="text-sm font-black text-foreground">איך יצא הבריף?</p>
-            <p className="text-xs text-muted-foreground mt-0.5">סמנו מה עבד ומה לא. זה באמת מלמד את בריפי.</p>
+            <p className="text-sm font-black text-foreground">איך יצא הסרטון?</p>
+            <p className="text-xs text-muted-foreground mt-0.5">זה עוזר לבריפי ללמוד ולהשתפר.</p>
           </div>
 
           {feedbackSaved ? (
             <div className="text-xs text-green-600 font-bold">תודה. בריפי ילמד מזה ✓</div>
           ) : (
             <>
-              <div className="flex flex-wrap gap-1.5">
-                {FEEDBACK_TAGS.map(opt => (
+              <div className="flex justify-between gap-1">
+                {SMILEY_OPTIONS.map((opt) => (
                   <button
-                    key={opt}
-                    onClick={() => {
-                      if (opt === "מעולה" || opt === "סבבה") {
-                        setMainFeedback(mainFeedback === opt ? null : opt);
-                      } else {
-                        toggleSpecificFeedback(opt);
-                      }
-                    }}
-                    className={`text-xs px-2.5 py-1 rounded-lg border transition-all font-medium ${
-                      (mainFeedback === opt || specificFeedback.includes(opt))
-                        ? "bg-primary/10 text-primary border-primary/30"
-                        : "bg-muted/30 text-muted-foreground border-border hover:border-primary/20"
+                    key={opt.score}
+                    onClick={() => setFeedbackScore(feedbackScore === opt.score ? null : opt.score)}
+                    className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl border-2 transition-all ${
+                      feedbackScore === opt.score
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-white hover:border-primary/30"
                     }`}
                   >
-                    {opt}
+                    <span className="text-xl">{opt.emoji}</span>
+                    <span className="text-[9px] font-semibold text-muted-foreground leading-none">{opt.label}</span>
                   </button>
                 ))}
               </div>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-xs font-bold text-muted-foreground mb-1">מה לא עבד?</p>
-                  <textarea
-                    value={freeTextNegative}
-                    onChange={e => setFreeTextNegative(e.target.value)}
-                    placeholder="למשל: הוק חלש, לא ברור מה לצלם..."
-                    rows={2}
-                    className="w-full p-2.5 rounded-xl border border-border bg-muted/20 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                  />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-muted-foreground mb-1">מה כן עבד?</p>
-                  <textarea
-                    value={freeTextPositive}
-                    onChange={e => setFreeTextPositive(e.target.value)}
-                    placeholder="למשל: סיטואציה טובה, הוק חזק..."
-                    rows={2}
-                    className="w-full p-2.5 rounded-xl border border-border bg-muted/20 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                  />
-                </div>
+
+              <div>
+                <textarea
+                  value={feedbackFreeText}
+                  onChange={e => setFeedbackFreeText(e.target.value)}
+                  placeholder="משהו הרגיש לא מדויק? כתבו לנו."
+                  rows={2}
+                  className="w-full p-2.5 rounded-xl border border-border bg-muted/20 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                />
               </div>
+
               <div className="flex gap-2">
                 <button
                   onClick={handleSaveFeedback}
-                  className="flex-1 h-9 rounded-xl font-bold text-xs text-foreground border border-border bg-muted/30 hover:bg-muted/60 transition-all"
+                  disabled={!feedbackScore}
+                  className="flex-1 h-9 rounded-xl font-bold text-xs text-foreground border border-border bg-muted/30 hover:bg-muted/60 transition-all disabled:opacity-40"
                 >
                   שלחו ביקורת
                 </button>
-                {(specificFeedback.length > 0 || freeTextNegative) && (
+                {feedbackFreeText && (
                   <button
                     onClick={handleImproveWithFeedback}
                     className="flex-1 h-9 rounded-xl font-bold text-xs text-white flex items-center justify-center gap-1.5 transition-all active:scale-95"
@@ -424,7 +402,7 @@ export default function FinalBrief() {
             onClick={handleSave}
             className={`briefi-btn-primary w-full ${saved ? "!bg-green-500 !shadow-green-200" : ""}`}
           >
-            {saved ? "✓ הבריף נשמר!" : saving ? "שומר..." : "שמור בריף"}
+            {saved ? "✓ הסרטון נשמר!" : saving ? "שומר..." : "שמרו סרטון זה"}
           </button>
           <button
             onClick={() => navigate(`/project/${projectId}/video-style`)}
@@ -437,8 +415,7 @@ export default function FinalBrief() {
             onClick={() => navigate(`/project/${projectId}/brief-pack`)}
             className="briefi-btn-ghost w-full"
           >
-            <FileText className="w-4 h-4" />
-            למסך הבריפים
+            לחבילת הסרטונים בבריף
           </button>
         </div>
       </div>

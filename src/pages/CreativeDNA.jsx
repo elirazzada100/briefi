@@ -5,7 +5,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Pencil, Check, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
-import BriefiStepper from "@/components/briefi/BriefiStepper";
 import LoadingState from "@/components/shared/LoadingState";
 import ErrorState from "@/components/shared/ErrorState";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
@@ -193,9 +192,7 @@ export default function CreativeDNA() {
             <p className="text-xs font-bold text-foreground">{project?.client_name}</p>
           </div>
         </div>
-        <div className="mt-2">
-          <BriefiStepper currentStep={2} />
-        </div>
+        {/* No stepper — stepper starts from concept selection only */}
       </div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}

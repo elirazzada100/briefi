@@ -6,7 +6,6 @@ const XAI_BASE_URL = Deno.env.get("XAI_BASE_URL") || "https://api.x.ai/v1";
 const XAI_MODEL = Deno.env.get("XAI_MODEL") || "grok-3";
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const OPENAI_FAST_MODEL = Deno.env.get("OPENAI_FAST_MODEL") || "gpt-4o-mini";
-const OPENAI_STRATEGY_MODEL = Deno.env.get("OPENAI_STRATEGY_MODEL") || "gpt-4o";
 
 const FORBIDDEN_PHRASES = `
 Forbidden phrases (NEVER use these):
@@ -23,6 +22,8 @@ Forbidden phrases (NEVER use these):
 - "סרטון שמציג"
 - "נציג את"
 - "נראה את"
+- "קריאייטיב" (as a job title / person — use "הצלם", "מנהל הסושיאל", "מי שמצלם", "היוצר", "בעל העסק" instead)
+- "כשהקריאייטיב מצלם" → use "כשהצלם מצלם" or "כשמצלמים"
 `;
 
 // ── Grok caller ────────────────────────────────────────────────────────────────
@@ -91,10 +92,12 @@ async function callWithFallback(systemPrompt, userPrompt, temperature = 0.7) {
   }
 }
 
-// ── STEP: Generate concept options (Grok, used when ConceptBank < 4) ─────────
+// ── SYSTEM PROMPTS ─────────────────────────────────────────────────────────────
+
 const CONCEPT_GEN_SYSTEM = `You are Briefi Concept Generator for Israeli social media.
 
-Generate exactly 4 video concept options for the given business.
+Generate exactly 4 video concept options for the given business and video style.
+All concepts must match the requested video style exactly.
 All concepts must be bold, specific, and immediately shootable with a phone.
 Write in natural Israeli Hebrew.
 
@@ -106,26 +109,26 @@ JSON schema:
 {
   "concepts": [
     {
-      "concept_name": "short punchy name 2-5 words",
-      "core_situation": "2-3 sentences describing the scene — who, where, what happens",
-      "natural_opening_line": "the opening spoken line, max 2 seconds",
-      "human_tension": "what creates tension or contradiction",
-      "scene_logic": ["step 1", "step 2", "step 3"],
-      "punchline": "how it ends",
-      "visual_proofs": ["visual 1", "visual 2"],
-      "tone_tags": ["tag1", "tag2"],
-      "cta_options": ["cta 1", "cta 2"],
-      "best_for": ["goal or context"]
+      "concept_title": "short punchy title 2-5 words",
+      "short_description": "2-3 sentences: what happens on screen, who is there, what is the tension",
+      "why_it_works": "one sentence practical reason",
+      "idea_tags": ["tag1", "tag2", "tag3"]
     }
   ]
 }`;
 
-// ── STEP: Generate body/script options ────────────────────────────────────────
-const BODY_GEN_SYSTEM = `You are Briefi Body/Script Generator for Israeli social media.
+// Opening lines generated from hook bank templates OR from Grok
+const OPENING_GEN_FROM_TEMPLATES_SYSTEM = `You are Briefi Opening Line Generator for Israeli social media.
 
-Generate exactly 4 body/script structure options for this video concept.
-Each option must be practical and shootable tomorrow with a phone.
-Write in natural Israeli Hebrew.
+You are given hook templates from Briefi's hook bank.
+Your job is to adapt each template into a real opening line for this specific business and concept.
+
+Rules:
+- Adapt each template — do NOT copy it literally.
+- Write in natural, spoken Israeli Hebrew.
+- Each line must feel real and human — not corporate, not American.
+- Maximum 2 seconds when spoken aloud.
+- The line must make someone stop scrolling immediately.
 
 ${FORBIDDEN_PHRASES}
 
@@ -133,22 +136,51 @@ Return ONLY valid JSON. No markdown. No explanation.
 
 JSON schema:
 {
-  "body_options": [
+  "opening_options": [
     {
-      "body_title": "short option name 2-4 words",
-      "scene_preview": "2-3 sentences: who is there, what happens, what the tension is",
-      "script_format": "person_to_camera | voiceover | dialogue | text_only | acted_scene",
-      "spoken_lines": ["line 1", "line 2", "line 3"],
-      "on_screen_text": ["text 1", "text 2"],
-      "shot_sequence": ["shot 1 description", "shot 2 description", "shot 3 description", "shot 4 description"],
-      "visual_shots_needed": ["shot type 1", "shot type 2"],
-      "practical_note": "one short filming instruction",
-      "why_this_works": "one sentence"
+      "opening_line": "the actual opening line in Hebrew",
+      "why_it_fits": "one short sentence — why this fits the concept and business",
+      "mechanic_tag": "optional short mechanic label e.g. 'שאלה', 'ניפוץ ציפיות', 'הצהרה חזקה'",
+      "source_type": "hook_bank",
+      "source_hook_template_id": "",
+      "original_hook_template": "",
+      "hebrew_hook_template": "",
+      "filled_hook": ""
     }
   ]
 }`;
 
-// ── STEP: Generate CTA options ────────────────────────────────────────────────
+const OPENING_GEN_GROK_SYSTEM = `You are Briefi Opening Line Generator for Israeli social media.
+
+Generate exactly 4 original opening lines for this video concept and business.
+
+Rules:
+- Each line is the very first sentence of the video — it must grab attention immediately.
+- Write in natural, spoken Israeli Hebrew.
+- Maximum 2 seconds when spoken aloud.
+- Match the video style.
+- Each line must use a different emotional mechanic (e.g. shock, question, contradiction, humor, bold claim).
+
+${FORBIDDEN_PHRASES}
+
+Return ONLY valid JSON. No markdown. No explanation.
+
+JSON schema:
+{
+  "opening_options": [
+    {
+      "opening_line": "the actual opening line in Hebrew",
+      "why_it_fits": "one short sentence",
+      "mechanic_tag": "short label e.g. 'שאלה', 'ניפוץ ציפיות', 'הצהרה חזקה', 'הומור', 'הפתעה'",
+      "source_type": "grok_generated",
+      "source_hook_template_id": null,
+      "original_hook_template": null,
+      "hebrew_hook_template": null,
+      "filled_hook": null
+    }
+  ]
+}`;
+
 const CTA_GEN_SYSTEM = `You are Briefi CTA Generator for Israeli social media.
 
 Generate exactly 4 CTA options.
@@ -177,10 +209,9 @@ JSON schema:
   ]
 }`;
 
-// ── STEP: Assemble final brief ─────────────────────────────────────────────────
 const FINAL_BRIEF_SYSTEM = `You are Briefi Final Brief Assembler for Israeli social media.
 
-Assemble a complete, client-ready shooting brief from the selected concept, body/script, and CTA.
+Assemble a complete, client-ready shooting brief from the selected concept, opening line, and CTA.
 Write in natural Israeli Hebrew.
 The brief must be shootable tomorrow with a phone.
 
@@ -192,7 +223,7 @@ JSON schema:
 {
   "brief_title": "short title",
   "video_concept": "1-2 sentence concept in Hebrew",
-  "hook": "exact opening line, max 2 seconds spoken",
+  "hook": "exact opening line — use the selected opening line",
   "script_format": "person_to_camera | voiceover | dialogue | text_only",
   "script_text": "the full spoken script or text-led script — complete natural Hebrew",
   "shot_structure": [
@@ -200,7 +231,7 @@ JSON schema:
   ],
   "text_overlays": ["overlay 1", "overlay 2"],
   "cta": "the CTA text",
-  "caption_suggestion": "social caption in Hebrew",
+  "video_description": "social caption in Hebrew — תיאור הסרטון",
   "visual_must_haves": ["must-have visual 1", "must-have visual 2"],
   "production_notes": "specific practical filming notes",
   "why_it_works": "why this concept works for this business"
@@ -215,7 +246,7 @@ Deno.serve(async (req) => {
     if (!XAI_API_KEY) return Response.json({ error: "XAI_API_KEY is not set" }, { status: 500 });
 
     const body = await req.json();
-    const { action, project_id, business, selectedConcept, selectedBody, selectedCTA, category_id, selectedVideoStyle } = body;
+    const { action, project_id, business, selectedConcept, selectedOpening, selectedBody, selectedCTA, selectedVideoStyle, businessAnalysis } = body;
 
     // ── generateConcepts ────────────────────────────────────────────────────────
     if (action === "generateConcepts") {
@@ -226,7 +257,6 @@ Deno.serve(async (req) => {
       const videoStyle = selectedVideoStyle || "מצחיק";
       let contextRows = "";
 
-      // For טרנדי: load TrendPatterns as structural context
       if (videoStyle === "טרנדי") {
         const trendPatterns = await base44.asServiceRole.entities.TrendPattern.filter({ is_active: true });
         const shuffled = trendPatterns.sort(() => Math.random() - 0.5).slice(0, 4);
@@ -236,40 +266,7 @@ Deno.serve(async (req) => {
             contextRows += `\nPattern ${i + 1}:\n  Mechanic: ${t.core_mechanic}\n  Why it works: ${t.why_it_works}\n  Adaptation guide: ${t.briefi_adaptation}\n`;
           });
         }
-      } else if (category_id) {
-        // Use ConceptBank as structural inspiration (not sole source)
-        const bankConcepts = await base44.asServiceRole.entities.ConceptBank.filter({ category_id, is_active: true });
-        const bankSample = bankConcepts.sort(() => Math.random() - 0.5).slice(0, 2);
-        if (bankSample.length > 0) {
-          contextRows = "\n\nCONCEPT INSPIRATIONS (use as structural reference only, generate original content):\n";
-          bankSample.forEach(c => {
-            contextRows += `- ${c.concept_name}: ${c.core_situation}\n`;
-          });
-        }
       }
-
-      const conceptSystemPrompt = `You are Briefi Concept Generator for Israeli social media.
-
-Generate exactly 4 video concept options for the given business and video style.
-All concepts must match the requested video style exactly.
-All concepts must be bold, specific, and immediately shootable with a phone.
-Write in natural Israeli Hebrew.
-
-${FORBIDDEN_PHRASES}
-
-Return ONLY valid JSON. No markdown. No explanation.
-
-JSON schema:
-{
-  "concepts": [
-    {
-      "concept_title": "short punchy title 2-5 words",
-      "short_description": "2-3 sentences: what happens on screen, who is there, what is the tension",
-      "why_it_works": "one sentence practical reason",
-      "idea_tags": ["tag1", "tag2", "tag3"]
-    }
-  ]
-}`;
 
       const userPrompt = `Business:
 Name: ${business.business_name}
@@ -280,24 +277,17 @@ Requested video style: ${videoStyle}
 
 Style guide:
 - מצחיק: skit, funny situation, punchline, something people forward
-- תדמית: personality, attitude, trust-building without sounding corporate
-- סרטון אווירה: vibe, place, movement, small moments
+- תדמית: personality, attitude, trust-building without sounding corporate (includes atmosphere/vibe)
 - סרטון הכרות: who is behind the business, no speech, no "nice to meet you"
-- מכירתי: sell without sounding like an ad
-- כאב / פתרון: real customer pain the business solves
+- מכירתי: sell without sounding like an ad (includes pain/solution angles)
 - טרנדי: use the provided trend patterns below
-- חינוכי: tip, explanation, common mistake, or something people don't know
-- השוואה: before/after, cheap/expensive, expected vs reality
-- מיתוס / ניפוץ: break a belief people hold about this business/industry
 ${contextRows}
 
 Generate 4 strong, original video concepts in the "${videoStyle}" style for this specific business.
 Each concept must clearly reflect the "${videoStyle}" style from the first sentence.
 Do NOT start any description with: "סרטון שמציג", "נציג את", "נראה את", "לקוחות נהנים".`;
 
-      const { parsed, provider } = await callWithFallback(conceptSystemPrompt, userPrompt, 0.85);
-
-      // Ensure we always have exactly 4
+      const { parsed, provider } = await callWithFallback(CONCEPT_GEN_SYSTEM, userPrompt, 0.85);
       const concepts = (parsed.concepts || []).slice(0, 4);
 
       return Response.json({
@@ -307,38 +297,110 @@ Do NOT start any description with: "סרטון שמציג", "נציג את", "נ
       });
     }
 
-    // ── generateBodyOptions ─────────────────────────────────────────────────────
-    if (action === "generateBodyOptions") {
+    // ── generateOpeningOptions ──────────────────────────────────────────────────
+    if (action === "generateOpeningOptions") {
       if (!business || !selectedConcept) {
         return Response.json({ error: "business and selectedConcept required" }, { status: 400 });
       }
 
-      const userPrompt = `Business:
+      const videoStyle = selectedVideoStyle || "מצחיק";
+
+      // Check if LockedHookTemplates has enough relevant hooks
+      let hookTemplates = [];
+      try {
+        hookTemplates = await base44.asServiceRole.entities.LockedHookTemplates.filter({ is_active: true });
+      } catch (e) {
+        hookTemplates = [];
+      }
+
+      const relevantHooks = hookTemplates.filter(h => {
+        const bestFor = h.best_for_categories || [];
+        const toneTags = h.tone_tags || [];
+        return bestFor.includes(videoStyle) || toneTags.some(t => t === videoStyle) || bestFor.length === 0;
+      });
+
+      let openingResult;
+
+      if (relevantHooks.length >= 4) {
+        // Use hook bank: pick 4 and adapt them
+        const selected = relevantHooks.sort(() => Math.random() - 0.5).slice(0, 4);
+        const templatesForPrompt = selected.map((h, i) => ({
+          id: h.id,
+          hebrew_template: h.hebrew_template || h.original_template,
+          original_template: h.original_template,
+          hook_mechanic: h.hook_mechanic || "",
+        }));
+
+        const userPrompt = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
-Category: ${category_id || ""}
 Goal: ${business.main_goal}
 
+Video style: ${videoStyle}
+
 Selected concept:
-${JSON.stringify(selectedConcept, null, 2)}
+Title: ${selectedConcept.concept_title || selectedConcept.concept_name || ""}
+Description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
 
-Generate 4 different body/script structure options for this specific concept. 
-Each option should interpret the concept differently (e.g. dialogue vs voiceover vs text-only).
-All must be practical and shootable.`;
+Hook templates to adapt (one per option — fill placeholders with real business details):
+${JSON.stringify(templatesForPrompt, null, 2)}
 
-      const { parsed, provider } = await callWithFallback(BODY_GEN_SYSTEM, userPrompt, 0.75);
+Adapt each template into a real, natural opening line for this specific business and concept.
+Return exactly ${templatesForPrompt.length} options. Include the source_hook_template_id from the template id.`;
 
-      return Response.json({
-        body_options: parsed.body_options || [],
-        provider_log: { provider_used: provider, step_name: "body", success: true },
-      });
+        const { parsed, provider } = await callWithFallback(OPENING_GEN_FROM_TEMPLATES_SYSTEM, userPrompt, 0.8);
+        const options = (parsed.opening_options || []).slice(0, 4);
+        // Inject correct source ids
+        options.forEach((opt, i) => {
+          opt.source_type = "hook_bank";
+          opt.source_hook_template_id = selected[i]?.id || "";
+          opt.original_hook_template = selected[i]?.original_template || "";
+          opt.hebrew_hook_template = selected[i]?.hebrew_template || "";
+        });
+        openingResult = { opening_options: options, source: "hook_bank", provider_log: { provider_used: provider } };
+      } else {
+        // Not enough hooks in bank — use Grok to generate original opening lines
+        console.log(`LockedHookTemplates has ${relevantHooks.length} relevant hooks — using Grok to generate opening lines`);
+
+        const userPrompt = `Business:
+Name: ${business.business_name}
+Description: ${business.business_description}
+Goal: ${business.main_goal}
+
+Video style: ${videoStyle}
+
+Selected concept:
+Title: ${selectedConcept.concept_title || selectedConcept.concept_name || ""}
+Description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
+Why it works: ${selectedConcept.why_it_works || ""}
+
+Generate 4 original opening lines that match this concept and business.
+Each must use a different emotional mechanic.
+source_type must be "grok_generated" for all.
+Do NOT create fake source_hook_template_id values.`;
+
+        const { parsed, provider } = await callWithFallback(OPENING_GEN_GROK_SYSTEM, userPrompt, 0.85);
+        const options = (parsed.opening_options || []).slice(0, 4).map(opt => ({
+          ...opt,
+          source_type: "grok_generated",
+          source_hook_template_id: null,
+          original_hook_template: null,
+          hebrew_hook_template: null,
+          filled_hook: null,
+        }));
+        openingResult = { opening_options: options, source: "grok_generated", provider_log: { provider_used: provider } };
+      }
+
+      return Response.json(openingResult);
     }
 
     // ── generateCTAOptions ──────────────────────────────────────────────────────
     if (action === "generateCTAOptions") {
-      if (!business || !selectedConcept || !selectedBody) {
-        return Response.json({ error: "business, selectedConcept, and selectedBody required" }, { status: 400 });
+      if (!business || !selectedConcept) {
+        return Response.json({ error: "business and selectedConcept required" }, { status: 400 });
       }
+
+      const opening = selectedOpening || selectedBody;
 
       const userPrompt = `Business:
 Name: ${business.business_name}
@@ -348,11 +410,11 @@ Goal: ${business.main_goal}
 Selected concept:
 ${JSON.stringify(selectedConcept, null, 2)}
 
-Selected body/script:
-${JSON.stringify(selectedBody, null, 2)}
+Selected opening line:
+${opening ? JSON.stringify(opening, null, 2) : "(not provided)"}
 
 Generate 4 CTA options that are natural, specific to this video, and feel Israeli.
-Match the tone of the body/script selected.`;
+Match the tone of the concept and opening line.`;
 
       const { parsed, provider } = await callWithFallback(CTA_GEN_SYSTEM, userPrompt, 0.7);
 
@@ -364,31 +426,41 @@ Match the tone of the body/script selected.`;
 
     // ── assembleFinalBrief ──────────────────────────────────────────────────────
     if (action === "assembleFinalBrief") {
-      if (!business || !selectedConcept || !selectedBody || !selectedCTA) {
-        return Response.json({ error: "business, selectedConcept, selectedBody, selectedCTA required" }, { status: 400 });
+      if (!business || !selectedConcept || !selectedCTA) {
+        return Response.json({ error: "business, selectedConcept, selectedCTA required" }, { status: 400 });
       }
+
+      const opening = selectedOpening || selectedBody;
 
       const userPrompt = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
-Category: ${category_id || ""}
 Goal: ${business.main_goal}
+
+Video style: ${selectedVideoStyle || ""}
 
 Selected concept:
 ${JSON.stringify(selectedConcept, null, 2)}
 
-Selected body/script option:
-${JSON.stringify(selectedBody, null, 2)}
+Selected opening line:
+${opening ? JSON.stringify(opening, null, 2) : "(use concept's natural opening line)"}
 
 Selected CTA:
 ${JSON.stringify(selectedCTA, null, 2)}
 
 Assemble one complete, clean shooting brief from the selections above.
+IMPORTANT: The "hook" field must use the selected opening line exactly (or very close to it).
 Do not invent new ideas — use the selected pieces.
 Write the full script_text as complete natural spoken Hebrew.
-Make it immediately usable for filming.`;
+Make it immediately usable for filming.
+The field "video_description" is the social media caption — תיאור הסרטון.`;
 
       const { parsed, provider } = await callWithFallback(FINAL_BRIEF_SYSTEM, userPrompt, 0.6);
+
+      // Map video_description → caption_suggestion for backwards compatibility
+      if (parsed.video_description && !parsed.caption_suggestion) {
+        parsed.caption_suggestion = parsed.video_description;
+      }
 
       // Validate required fields
       const required = ["brief_title", "video_concept", "hook", "script_text", "cta"];
@@ -406,24 +478,26 @@ Make it immediately usable for filming.`;
         const existingBriefs = await base44.asServiceRole.entities.VideoBrief.filter({ project_id });
         savedBrief = await base44.asServiceRole.entities.VideoBrief.create({
           project_id,
-          category: category_id || "",
+          category: selectedVideoStyle || "",
+          video_style: selectedVideoStyle || "",
           brief_title: parsed.brief_title,
           video_concept: parsed.video_concept,
           hook: parsed.hook,
           script_text: parsed.script_text,
           shot_structure: parsed.shot_structure || [],
           cta: parsed.cta,
-          caption_suggestion: parsed.caption_suggestion || "",
+          caption_suggestion: parsed.caption_suggestion || parsed.video_description || "",
           production_notes: parsed.production_notes || "",
           visual_must_haves: parsed.visual_must_haves || [],
           risk_notes: parsed.why_it_works || "",
-          idea_tags: selectedConcept.tone_tags || [],
+          idea_tags: selectedConcept.idea_tags || selectedConcept.tone_tags || [],
           script_format: parsed.script_format || "person_to_camera",
           adapted_brief: parsed,
           status: "draft",
+          video_number: (existingBriefs.length || 0) + 1,
+          video_order: (existingBriefs.length || 0) + 1,
         });
 
-        // Update project count
         await base44.asServiceRole.entities.Project.update(project_id, {
           completed_briefs_count: (existingBriefs.length || 0) + 1,
           status: "in_progress",

@@ -29,6 +29,7 @@ import GenerationDebug from './pages/admin/GenerationDebug';
 import AdminTrendPatterns from './pages/admin/TrendPatterns';
 import GrokConceptPicker from './pages/GrokConceptPicker';
 import GrokBodyPicker from './pages/GrokBodyPicker';
+import GrokOpeningPicker from './pages/GrokOpeningPicker';
 import GrokCTAPicker from './pages/GrokCTAPicker';
 import VideoStylePicker from './pages/VideoStylePicker';
 import Settings from './pages/Settings';
@@ -83,6 +84,7 @@ const AuthenticatedApp = () => {
       <Route path="/project/:projectId/video-style" element={<ProtectedRoute><VideoStylePicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/grok-concepts" element={<ProtectedRoute><GrokConceptPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/grok-body" element={<ProtectedRoute><GrokBodyPicker /></ProtectedRoute>} />
+      <Route path="/project/:projectId/grok-opening" element={<ProtectedRoute><GrokOpeningPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/grok-cta" element={<ProtectedRoute><GrokCTAPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/category" element={<ProtectedRoute><CategoryPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/concepts" element={<ProtectedRoute><ConceptPicker /></ProtectedRoute>} />

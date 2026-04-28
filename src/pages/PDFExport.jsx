@@ -39,7 +39,8 @@ export default function PDFExport() {
         return;
       }
       setProject(p);
-      setBriefs(b.sort((a, x) => (a.video_number || 0) - (x.video_number || 0)));
+      // Sort by video_order (user-defined), fallback to video_number
+      setBriefs(b.sort((a, x) => (a.video_order ?? a.video_number ?? 0) - (x.video_order ?? x.video_number ?? 0)));
       setBranding(br);
       setPreparedBy(br?.display_name || br?.business_name || "");
       setIncludeLogo(!!br?.logo_url);
@@ -101,7 +102,8 @@ export default function PDFExport() {
     `;
 
     const briefsHTML = briefs.map((brief) => {
-      const fb = brief.final_brief || {};
+      // Use adapted_brief (Grok flow) first, fallback to final_brief (legacy)
+      const fb = brief.adapted_brief || brief.final_brief || {};
       const shotItems = fb.shot_structure || fb.video_structure || [];
       const scriptFormatLabels = { voiceover: "ווייסאובר", person_to_camera: "דיבור למצלמה", dialogue: "דיאלוג", text_only: "טקסט בלבד" };
       const scriptLabel = scriptFormatLabels[fb.script_format] || fb.script_format || "";
@@ -158,7 +160,7 @@ export default function PDFExport() {
 
           ${fb.cta ? `<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">קריאה לפעולה</div><p style="font-size:13px;color:#0B1B36;font-weight:700;margin:0;">${fb.cta}</p></div>` : ""}
 
-          ${fb.caption_suggestion ? `<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">כיתוב לפוסט</div><p style="font-size:12px;color:#5F6675;margin:0;">${fb.caption_suggestion}</p></div>` : ""}
+          ${(fb.caption_suggestion || fb.video_description) ? `<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">תיאור הסרטון</div><p style="font-size:12px;color:#5F6675;margin:0;">${fb.caption_suggestion || fb.video_description}</p></div>` : ""}
 
           ${fb.production_notes ? `<div style="background:#FFFBEB;border-right:3px solid #F8B900;padding:10px 12px;border-radius:8px;margin-bottom:10px;"><div style="font-size:10px;font-weight:800;color:#C48E00;margin-bottom:3px;">הערות צילום</div><p style="font-size:12px;color:#5F6675;margin:0;">${fb.production_notes}</p></div>` : ""}
           ${fb.shooting_time_priority ? `<div style="background:#F0FDF4;border-right:3px solid #16A34A;padding:10px 12px;border-radius:8px;"><div style="font-size:10px;font-weight:800;color:#16A34A;margin-bottom:3px;">עדיפות לצילום</div><p style="font-size:13px;font-weight:700;color:#0B1B36;margin:0 0 3px;">${fb.shooting_time_priority}</p>${fb.shooting_time_reason ? `<p style="font-size:12px;color:#5F6675;margin:0;">${fb.shooting_time_reason}</p>` : ""}</div>` : ""}
@@ -183,9 +185,10 @@ export default function PDFExport() {
       main_goal: project?.main_goal || "",
       creative_dna: project?.creative_dna || {},
       video_briefs: briefs.map(b => ({
-        video_number: b.video_number,
-        category: b.category,
-        final_brief: b.final_brief,
+        video_number: b.video_order ?? b.video_number,
+        category: b.category || b.video_style || "",
+        // Use adapted_brief (Grok flow) first, fallback to final_brief (legacy)
+        final_brief: b.adapted_brief || b.final_brief || {},
       })),
     });
 
@@ -210,7 +213,7 @@ export default function PDFExport() {
 
         ${cb.hook ? `
           <div style="background:#F3EFFF;border-right:4px solid ${color};padding:12px 14px;border-radius:10px;margin-bottom:14px;">
-            <div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">הוק מוצע</div>
+            <div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">פתיחה מוצעת</div>
             <p style="font-size:15px;font-weight:800;color:#0B1B36;margin:0;">${cb.hook}</p>
           </div>
         ` : ""}

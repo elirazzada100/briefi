@@ -2,20 +2,29 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight, Shield, FileText, Info, Cookie, Mail, Trash2,
-  Lock, Copyright, Cpu, UserCheck
+  Lock, Copyright, Cpu, UserCheck, User
 } from "lucide-react";
 import CookiePreferencesModal from "@/components/cookies/CookiePreferencesModal";
 
-const accountItems = [
+// ── Section: תמיכה ──────────────────────────────────────────────────────────
+const supportItems = [
   {
-    to: "/settings/delete-account",
-    icon: Trash2,
-    label: "מחיקת חשבון",
-    desc: "בקשה למחיקת החשבון והמידע שלכם",
-    color: "#EF4444",
+    to: "/settings/contact",
+    icon: Mail,
+    label: "יצירת קשר ותמיכה",
+    desc: "שאלות, תקלות, בקשות — כתבו לנו",
+    color: "#0EA5E9",
+  },
+  {
+    to: "/settings/about",
+    icon: Info,
+    label: "אודות בריפי",
+    desc: "למה בריפי נוצרה",
+    color: "#10B981",
   },
 ];
 
+// ── Section: משפטי ופרטיות ──────────────────────────────────────────────────
 const legalItems = [
   {
     to: "/settings/privacy",
@@ -61,22 +70,24 @@ const legalItems = [
   },
 ];
 
-const supportItems = [
+// ── Section: חשבון ──────────────────────────────────────────────────────────
+const accountItemsTop = [
   {
-    to: "/settings/contact",
-    icon: Mail,
-    label: "יצירת קשר ותמיכה",
-    desc: "שאלות, תקלות, בקשות — כתבו לנו",
-    color: "#0EA5E9",
-  },
-  {
-    to: "/settings/about",
-    icon: Info,
-    label: "אודות בריפי",
-    desc: "למה בריפי נוצרה",
-    color: "#10B981",
+    to: "/profile",
+    icon: User,
+    label: "פרטי חשבון",
+    desc: "פרופיל, מיתוג ולוגו",
+    color: "#3B82F6",
   },
 ];
+
+const deleteAccountItem = {
+  to: "/settings/delete-account",
+  icon: Trash2,
+  label: "מחיקת חשבון",
+  desc: "בקשה למחיקת החשבון והמידע שלכם",
+  color: "#EF4444",
+};
 
 function SettingsItem({ item }) {
   return (
@@ -123,13 +134,13 @@ export default function Settings() {
       </div>
 
       <div className="briefi-page-container space-y-6 pt-6">
-        {/* חשבון */}
+        {/* 1. תמיכה */}
         <div className="space-y-2">
-          <SectionTitle label="חשבון" />
-          {accountItems.map((item) => <SettingsItem key={item.to} item={item} />)}
+          <SectionTitle label="תמיכה" />
+          {supportItems.map((item) => <SettingsItem key={item.to} item={item} />)}
         </div>
 
-        {/* משפטי ופרטיות */}
+        {/* 2. משפטי ופרטיות */}
         <div className="space-y-2">
           <SectionTitle label="משפטי ופרטיות" />
           {legalItems.map((item) => <SettingsItem key={item.to} item={item} />)}
@@ -148,10 +159,12 @@ export default function Settings() {
           </button>
         </div>
 
-        {/* תמיכה */}
+        {/* 3. חשבון — פרטי חשבון, then מחיקה last */}
         <div className="space-y-2">
-          <SectionTitle label="תמיכה" />
-          {supportItems.map((item) => <SettingsItem key={item.to} item={item} />)}
+          <SectionTitle label="חשבון" />
+          {accountItemsTop.map((item) => <SettingsItem key={item.to} item={item} />)}
+          {/* מחיקת חשבון — always last */}
+          <SettingsItem item={deleteAccountItem} />
         </div>
       </div>
 

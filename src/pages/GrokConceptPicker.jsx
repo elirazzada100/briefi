@@ -71,7 +71,7 @@ export default function GrokConceptPicker() {
       main_goal: proj?.main_goal || "",
     };
 
-    navigate(`/project/${projectId}/grok-body`, {
+    navigate(`/project/${projectId}/grok-opening`, {
       state: {
         selectedConcept: concept,
         selectedVideoStyle,
@@ -104,7 +104,7 @@ export default function GrokConceptPicker() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={4} />
+          <BriefiStepper currentStep={1} />
         </div>
       </div>
 

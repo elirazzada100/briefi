@@ -63,12 +63,12 @@ export default function Dashboard() {
                 <ArrowRight className="w-4 h-4 text-muted-foreground" />
               </button>
             </Link>
-            <h1 className="text-base font-black text-foreground">הפרויקטים שלי</h1>
+            <h1 className="text-base font-black text-foreground">הלקוחות שלי</h1>
           </div>
           <Link to="/new-project">
             <button className="briefi-btn-primary h-8 px-3 text-xs">
               <Plus className="h-3.5 w-3.5" />
-              חדש
+              + לקוח חדש
             </button>
           </Link>
         </div>
@@ -114,14 +114,14 @@ export default function Dashboard() {
             <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
               <FileText className="h-5 w-5 text-muted-foreground" />
             </div>
-            <p className="text-sm font-bold text-briefi-navy mb-1">עדיין אין פרויקטים</p>
+            <p className="text-sm font-bold text-briefi-navy mb-1">עדיין אין לקוחות</p>
             <p className="text-xs text-briefi-muted mb-5">
               תתחילו מלקוח אחד, פסקה אחת, ובריף אחד ברור.
             </p>
             <Link to="/new-project">
               <button className="briefi-btn-primary mx-auto">
                 <Plus className="h-4 w-4" />
-                צרו פרויקט ראשון
+                + לקוח חדש
               </button>
             </Link>
           </motion.div>
@@ -141,7 +141,7 @@ export default function Dashboard() {
                     <div className="flex items-start justify-between gap-2">
                       <Link to={`/project/${project.id}/brief-pack`} className="flex-1 min-w-0">
                         <h3 className="font-bold text-foreground text-sm truncate">{project.client_name}</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">{done} מתוך {total} בריפים</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{done} מתוך {total} סרטונים</p>
                       </Link>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Badge className={`text-[10px] font-medium ${statusColors[project.status] || statusColors.draft}`}>

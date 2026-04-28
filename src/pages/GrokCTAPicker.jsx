@@ -18,9 +18,10 @@ export default function GrokCTAPicker() {
   const navigate = useNavigate();
 
   const selectedConcept = state?.selectedConcept;
-  const selectedBody = state?.selectedBody;
+  const selectedOpening = state?.selectedOpening;
+  // Legacy support: if selectedBody passed (old flow)
+  const selectedBody = state?.selectedBody || state?.selectedOpening;
   const selectedVideoStyle = state?.selectedVideoStyle;
-  const categoryId = state?.categoryId;
   const business = state?.business;
   const businessAnalysis = state?.businessAnalysis;
 
@@ -32,7 +33,7 @@ export default function GrokCTAPicker() {
 
   // Guard
   useEffect(() => {
-    if (!selectedConcept || !selectedBody || !business) {
+    if (!selectedConcept || !business) {
       navigate(`/project/${projectId}/grok-concepts`);
       return;
     }
@@ -47,8 +48,7 @@ export default function GrokCTAPicker() {
       action: "generateCTAOptions",
       business,
       selectedConcept,
-      selectedBody,
-      category_id: categoryId,
+      selectedOpening: selectedOpening || selectedBody,
     });
 
     if (res.data?.error) {
@@ -71,9 +71,9 @@ export default function GrokCTAPicker() {
       project_id: projectId,
       business,
       selectedConcept,
-      selectedBody,
+      selectedOpening: selectedOpening || selectedBody,
       selectedCTA: ctaOption,
-      category_id: categoryId,
+      selectedVideoStyle,
     });
 
     if (res.data?.error) {
@@ -91,10 +91,9 @@ export default function GrokCTAPicker() {
         briefId,
         finalBrief,
         selectedConcept,
-        selectedBody,
+        selectedOpening: selectedOpening || selectedBody,
         selectedCTA: ctaOption,
         selectedVideoStyle,
-        categoryId,
       },
     });
   };
@@ -102,7 +101,7 @@ export default function GrokCTAPicker() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="בונים 4 קריאות לפעולה מותאמות..." />
+        <LoadingState message="רגע, בונים לך כיוונים טובים..." />
       </div>
     );
   }
@@ -110,7 +109,7 @@ export default function GrokCTAPicker() {
   if (generatingBrief) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="מרכיבים את הבריף הסופי..." />
+        <LoadingState message="מרכיבים את הסרטון..." />
       </div>
     );
   }
@@ -123,12 +122,14 @@ export default function GrokCTAPicker() {
             <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="flex-1">
-            <p className="text-xs font-bold text-foreground truncate">{selectedBody?.body_title || "מבנה נבחר"}</p>
+            <p className="text-xs font-bold text-foreground truncate">
+              {selectedOpening?.opening_line ? `"${selectedOpening.opening_line.slice(0, 35)}..."` : "פתיחה נבחרה"}
+            </p>
             <p className="text-[10px] text-muted-foreground">בחרו קריאה לפעולה</p>
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={6} />
+          <BriefiStepper currentStep={3} />
         </div>
       </div>
 
@@ -173,7 +174,7 @@ export default function GrokCTAPicker() {
                   className="briefi-btn-primary w-full"
                 >
                   <Sparkles className="w-4 h-4" />
-                  {isSelecting ? "בונים בריף..." : "בחרו קריאה זו"}
+                  {isSelecting ? "בונים סרטון..." : "בחרו קריאה זו"}
                 </button>
               </div>
             );
