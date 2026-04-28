@@ -5,7 +5,7 @@ const STEPS = ["קונספט", "פתיחה", "CTA", "סרטון"];
 export default function BriefiStepper({ currentStep }) {
   // currentStep: 1=קונספט, 2=פתיחה, 3=CTA, 4=סרטון
   return (
-    <div className="flex items-center gap-0 overflow-x-auto no-scrollbar">
+    <div className="flex items-center justify-center gap-0 w-full">
       {STEPS.map((label, i) => {
         const stepNum = i + 1;
         const isDone = stepNum < currentStep;
@@ -14,7 +14,7 @@ export default function BriefiStepper({ currentStep }) {
           <div key={label} className="flex items-center flex-shrink-0">
             <div className="flex flex-col items-center gap-0.5">
               <div
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black transition-all ${
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black transition-all ${
                   isDone
                     ? "bg-primary text-white"
                     : isActive
@@ -34,7 +34,7 @@ export default function BriefiStepper({ currentStep }) {
             </div>
             {i < STEPS.length - 1 && (
               <div
-                className={`h-px w-4 mx-0.5 mt-[-8px] transition-all ${
+                className={`h-px w-8 mx-1 mt-[-8px] transition-all ${
                   isDone ? "bg-primary/40" : "bg-border"
                 }`}
               />

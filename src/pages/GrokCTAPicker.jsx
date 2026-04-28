@@ -118,7 +118,7 @@ export default function GrokCTAPicker() {
     <div className="min-h-screen bg-background" dir="rtl">
       <div className="briefi-header">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+          <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center cursor-pointer">
             <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="flex-1">

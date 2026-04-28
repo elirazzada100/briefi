@@ -40,7 +40,7 @@ export default function Home() {
           <Link to="/new-project" className="block">
             <button className="briefi-btn-primary w-full text-base">
               <Plus className="h-4 w-4" />
-              + לקוח חדש
+              לקוח חדש
             </button>
           </Link>
         </div>
@@ -67,10 +67,10 @@ export default function Home() {
       </motion.div>
 
       {/* Bottom area: settings, logout, disclaimer — in that order */}
-      <div className="w-full max-w-sm flex flex-col items-center gap-3 pt-4">
+      <div className="w-full max-w-sm flex flex-col items-center pt-4" style={{ gap: 0 }}>
         <Link
           to="/settings"
-          className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors mx-auto"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors mx-auto mb-3"
         >
           <Settings className="w-3 h-3" />
           הגדרות
@@ -79,7 +79,7 @@ export default function Home() {
         {isAuthenticated && (
           <button
             onClick={() => logout()}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto mb-5"
           >
             <LogOut className="w-3.5 h-3.5" />
             התנתקות
