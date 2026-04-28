@@ -69,7 +69,7 @@ export default function Home() {
       {/* Bottom area: settings, logout, disclaimer — in that order */}
       <div className="w-full max-w-sm flex flex-col items-center pt-4" style={{ gap: 0 }}>
         <Link
-          to="/settings" className="text-muted-foreground/60 mb-3 mx-auto px-1 text-xs flex items-center gap-1.5 hover:text-muted-foreground transition-colors">הגדרות
+          to="/settings" className="text-muted-foreground/60 px-1 text-xs flex items-center gap-1.5 hover:text-muted-foreground transition-colors">הגדרות
 
 
 
