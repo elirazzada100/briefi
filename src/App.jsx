@@ -26,6 +26,7 @@ import UserProfile from './pages/UserProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLearning from './pages/admin/Learning';
 import GenerationDebug from './pages/admin/GenerationDebug';
+import AdminTrendPatterns from './pages/admin/TrendPatterns';
 import Settings from './pages/Settings';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';

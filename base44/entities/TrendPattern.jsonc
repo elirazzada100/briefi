@@ -2,52 +2,69 @@
   "name": "TrendPattern",
   "type": "object",
   "properties": {
-    "trend_name": {
+    "pattern_name": {
       "type": "string",
       "description": "\u05e9\u05dd \u05d4\u05d8\u05e8\u05e0\u05d3"
     },
-    "category_fit": {
+    "core_mechanic": {
+      "type": "string",
+      "description": "\u05d4\u05de\u05e0\u05d2\u05e0\u05d5\u05df \u05d4\u05de\u05e8\u05db\u05d6\u05d9"
+    },
+    "underlying_human_behavior": {
+      "type": "string",
+      "description": "\u05d4\u05d4\u05ea\u05e0\u05d4\u05d2\u05d5\u05ea \u05d4\u05d0\u05e0\u05d5\u05e9\u05d9\u05ea \u05d4\u05d1\u05e1\u05d9\u05e1\u05d9\u05ea"
+    },
+    "why_it_works": {
+      "type": "string",
+      "description": "\u05dc\u05de\u05d4 \u05d6\u05d4 \u05e2\u05d5\u05d1\u05d3"
+    },
+    "briefi_adaptation": {
+      "type": "string",
+      "description": "\u05d0\u05d9\u05da \u05dc\u05d4\u05ea\u05d0\u05d9\u05dd \u05dc\u05d1\u05e8\u05d9\u05e4\u05d9"
+    },
+    "best_for_industries": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea \u05de\u05ea\u05d0\u05d9\u05de\u05d5\u05ea"
+      "description": "\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05de\u05ea\u05d0\u05d9\u05de\u05d5\u05ea"
     },
-    "platform": {
+    "best_for_video_styles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05e1\u05d2\u05e0\u05d5\u05e0\u05d5\u05ea \u05d5\u05d9\u05d3\u05d0\u05d5 \u05de\u05ea\u05d0\u05d9\u05de\u05d9\u05dd"
+    },
+    "example_israeli": {
+      "type": "string",
+      "description": "\u05d3\u05d5\u05d2\u05de\u05d4 \u05d9\u05e9\u05e8\u05d0\u05dc\u05d9\u05ea"
+    },
+    "example_hook": {
+      "type": "string",
+      "description": "\u05d3\u05d5\u05d2\u05de\u05ea \u05d4\u05d5\u05e7"
+    },
+    "confidence": {
+      "type": "number",
+      "description": "\u05e6\u05d9\u05d5\u05df \u05d1\u05d9\u05d8\u05d7\u05d5\u05df"
+    },
+    "source_name": {
+      "type": "string",
+      "description": "\u05e9\u05dd \u05d4\u05de\u05e7\u05d5\u05e8"
+    },
+    "source_month": {
+      "type": "string",
+      "description": "\u05d7\u05d5\u05d3\u05e9 \u05d4\u05de\u05e7\u05d5\u05e8"
+    },
+    "source_type": {
       "type": "string",
       "enum": [
-        "TikTok",
-        "Reels",
-        "Shorts",
-        "General"
+        "manual_import",
+        "auto_sync",
+        "manual_rnd"
       ],
-      "description": "\u05e4\u05dc\u05d8\u05e4\u05d5\u05e8\u05de\u05d4"
-    },
-    "structure": {
-      "type": "string",
-      "description": "\u05de\u05d1\u05e0\u05d4"
-    },
-    "how_to_adapt": {
-      "type": "string",
-      "description": "\u05d0\u05d9\u05da \u05dc\u05d4\u05ea\u05d0\u05d9\u05dd"
-    },
-    "example_hebrew": {
-      "type": "string",
-      "description": "\u05d3\u05d5\u05d2\u05de\u05d4 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea"
-    },
-    "risk_notes": {
-      "type": "string",
-      "description": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05e1\u05d9\u05db\u05d5\u05df"
-    },
-    "freshness_status": {
-      "type": "string",
-      "enum": [
-        "current",
-        "stable",
-        "outdated"
-      ],
-      "default": "stable",
-      "description": "\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9\u05d5\u05ea"
+      "default": "manual_import",
+      "description": "\u05e1\u05d5\u05d2 \u05d4\u05de\u05e7\u05d5\u05e8"
     },
     "is_active": {
       "type": "boolean",
@@ -56,7 +73,7 @@
     }
   },
   "required": [
-    "trend_name",
-    "structure"
+    "pattern_name",
+    "core_mechanic"
   ]
 }
