@@ -116,7 +116,7 @@ export default function BriefPack() {
         <div className="flex gap-2.5">
           {completedCount < 10 ? (
             <button
-              onClick={() => navigate(`/project/${projectId}/category`)}
+              onClick={() => navigate(`/project/${projectId}/video-style`)}
               className="briefi-btn-primary flex-1"
             >
               <Plus className="w-4 h-4" />
@@ -145,7 +145,7 @@ export default function BriefPack() {
               <p className="text-muted-foreground text-sm mt-1">בחרו קטגוריה ונבנה את הסרטון הראשון.</p>
             </div>
             <button
-              onClick={() => navigate(`/project/${projectId}/category`)}
+              onClick={() => navigate(`/project/${projectId}/video-style`)}
               className="briefi-btn-primary mx-auto px-8"
             >
               בנו סרטון ראשון
@@ -157,7 +157,7 @@ export default function BriefPack() {
             {briefs.map((brief) => {
               const color = categoryColors[brief.category] || "#7C3AED";
               const emoji = categoryEmojis[brief.category] || "🎬";
-              const fb = brief.final_brief || {};
+              const fb = brief.adapted_brief || brief.final_brief || {};
               return (
                 <button
                   key={brief.id}
@@ -178,9 +178,9 @@ export default function BriefPack() {
                           {brief.category}
                         </span>
                       </div>
-                      <p className="font-bold text-foreground text-sm mt-0.5">{fb.brief_title || "בריף ללא שם"}</p>
-                      {fb.hook && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2" style={{ overflowWrap: "break-word" }}>"{fb.hook}"</p>
+                      <p className="font-bold text-foreground text-sm mt-0.5">{fb.brief_title || brief.brief_title || "בריף ללא שם"}</p>
+                      {(fb.hook || brief.hook) && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2" style={{ overflowWrap: "break-word" }}>"{fb.hook || brief.hook}"</p>
                       )}
                     </div>
                   </div>

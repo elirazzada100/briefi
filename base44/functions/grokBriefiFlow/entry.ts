@@ -215,43 +215,93 @@ Deno.serve(async (req) => {
     if (!XAI_API_KEY) return Response.json({ error: "XAI_API_KEY is not set" }, { status: 500 });
 
     const body = await req.json();
-    const { action, project_id, business, selectedConcept, selectedBody, selectedCTA, category_id } = body;
+    const { action, project_id, business, selectedConcept, selectedBody, selectedCTA, category_id, selectedVideoStyle } = body;
 
     // ── generateConcepts ────────────────────────────────────────────────────────
     if (action === "generateConcepts") {
-      if (!business || !category_id) {
-        return Response.json({ error: "business and category_id required" }, { status: 400 });
+      if (!business) {
+        return Response.json({ error: "business is required" }, { status: 400 });
       }
 
-      // Try ConceptBank first
-      const bankConcepts = await base44.asServiceRole.entities.ConceptBank.filter({
-        category_id,
-        is_active: true,
-      });
+      const videoStyle = selectedVideoStyle || "מצחיק";
+      let contextRows = "";
 
-      if (bankConcepts.length >= 4) {
-        // Shuffle and pick 4
-        const shuffled = bankConcepts.sort(() => Math.random() - 0.5).slice(0, 4);
-        return Response.json({
-          concepts: shuffled,
-          source: "concept_bank",
-          provider_log: { provider_used: "concept_bank", step_name: "concept", success: true },
-        });
+      // For טרנדי: load TrendPatterns as structural context
+      if (videoStyle === "טרנדי") {
+        const trendPatterns = await base44.asServiceRole.entities.TrendPattern.filter({ is_active: true });
+        const shuffled = trendPatterns.sort(() => Math.random() - 0.5).slice(0, 4);
+        if (shuffled.length > 0) {
+          contextRows = "\n\nTREND PATTERNS TO USE (apply each to this business — do NOT copy examples, do NOT mention 'trend'):\n";
+          shuffled.forEach((t, i) => {
+            contextRows += `\nPattern ${i + 1}:\n  Mechanic: ${t.core_mechanic}\n  Why it works: ${t.why_it_works}\n  Adaptation guide: ${t.briefi_adaptation}\n`;
+          });
+        }
+      } else if (category_id) {
+        // Use ConceptBank as structural inspiration (not sole source)
+        const bankConcepts = await base44.asServiceRole.entities.ConceptBank.filter({ category_id, is_active: true });
+        const bankSample = bankConcepts.sort(() => Math.random() - 0.5).slice(0, 2);
+        if (bankSample.length > 0) {
+          contextRows = "\n\nCONCEPT INSPIRATIONS (use as structural reference only, generate original content):\n";
+          bankSample.forEach(c => {
+            contextRows += `- ${c.concept_name}: ${c.core_situation}\n`;
+          });
+        }
       }
 
-      // Not enough in bank — generate with Grok
+      const conceptSystemPrompt = `You are Briefi Concept Generator for Israeli social media.
+
+Generate exactly 4 video concept options for the given business and video style.
+All concepts must match the requested video style exactly.
+All concepts must be bold, specific, and immediately shootable with a phone.
+Write in natural Israeli Hebrew.
+
+${FORBIDDEN_PHRASES}
+
+Return ONLY valid JSON. No markdown. No explanation.
+
+JSON schema:
+{
+  "concepts": [
+    {
+      "concept_title": "short punchy title 2-5 words",
+      "short_description": "2-3 sentences: what happens on screen, who is there, what is the tension",
+      "why_it_works": "one sentence practical reason",
+      "idea_tags": ["tag1", "tag2", "tag3"]
+    }
+  ]
+}`;
+
       const userPrompt = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
-Category: ${category_id}
 Goal: ${business.main_goal}
 
-Generate 4 creative video concept options for this business. Make them varied, bold, and specific.`;
+Requested video style: ${videoStyle}
 
-      const { parsed, provider } = await callWithFallback(CONCEPT_GEN_SYSTEM, userPrompt, 0.8);
+Style guide:
+- מצחיק: skit, funny situation, punchline, something people forward
+- תדמית: personality, attitude, trust-building without sounding corporate
+- סרטון אווירה: vibe, place, movement, small moments
+- סרטון הכרות: who is behind the business, no speech, no "nice to meet you"
+- מכירתי: sell without sounding like an ad
+- כאב / פתרון: real customer pain the business solves
+- טרנדי: use the provided trend patterns below
+- חינוכי: tip, explanation, common mistake, or something people don't know
+- השוואה: before/after, cheap/expensive, expected vs reality
+- מיתוס / ניפוץ: break a belief people hold about this business/industry
+${contextRows}
+
+Generate 4 strong, original video concepts in the "${videoStyle}" style for this specific business.
+Each concept must clearly reflect the "${videoStyle}" style from the first sentence.
+Do NOT start any description with: "סרטון שמציג", "נציג את", "נראה את", "לקוחות נהנים".`;
+
+      const { parsed, provider } = await callWithFallback(conceptSystemPrompt, userPrompt, 0.85);
+
+      // Ensure we always have exactly 4
+      const concepts = (parsed.concepts || []).slice(0, 4);
 
       return Response.json({
-        concepts: parsed.concepts || [],
+        concepts,
         source: "grok_generated",
         provider_log: { provider_used: provider, step_name: "concept", success: true },
       });

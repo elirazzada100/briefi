@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Sparkles, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
 import LoadingState from "@/components/shared/LoadingState";
+import BriefiStepper from "@/components/briefi/BriefiStepper";
 
 const FORMAT_LABELS = {
   person_to_camera: "דיבור למצלמה",
@@ -18,8 +19,10 @@ export default function GrokBodyPicker() {
   const navigate = useNavigate();
 
   const selectedConcept = state?.selectedConcept;
+  const selectedVideoStyle = state?.selectedVideoStyle;
   const categoryId = state?.categoryId;
   const business = state?.business;
+  const businessAnalysis = state?.businessAnalysis;
 
   const [bodyOptions, setBodyOptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,8 +66,10 @@ export default function GrokBodyPicker() {
       state: {
         selectedConcept,
         selectedBody: bodyOption,
+        selectedVideoStyle,
         categoryId,
         business,
+        businessAnalysis,
       },
     });
   };
@@ -85,10 +90,12 @@ export default function GrokBodyPicker() {
             <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="flex-1">
-            <p className="text-xs font-bold text-foreground truncate">{selectedConcept?.concept_name || "קונספט נבחר"}</p>
+            <p className="text-xs font-bold text-foreground truncate">{selectedConcept?.concept_title || selectedConcept?.concept_name || "קונספט נבחר"}</p>
             <p className="text-[10px] text-muted-foreground">בחרו מבנה סרטון</p>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">שלב 2 מתוך 4</span>
+        </div>
+        <div className="mt-2">
+          <BriefiStepper currentStep={5} />
         </div>
       </div>
 

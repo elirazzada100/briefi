@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
 import LoadingState from "@/components/shared/LoadingState";
+import BriefiStepper from "@/components/briefi/BriefiStepper";
 
 const CTA_TYPE_COLORS = {
   "ישיר": "bg-primary/10 text-primary border-primary/20",
@@ -18,8 +19,10 @@ export default function GrokCTAPicker() {
 
   const selectedConcept = state?.selectedConcept;
   const selectedBody = state?.selectedBody;
+  const selectedVideoStyle = state?.selectedVideoStyle;
   const categoryId = state?.categoryId;
   const business = state?.business;
+  const businessAnalysis = state?.businessAnalysis;
 
   const [ctaOptions, setCtaOptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +93,7 @@ export default function GrokCTAPicker() {
         selectedConcept,
         selectedBody,
         selectedCTA: ctaOption,
+        selectedVideoStyle,
         categoryId,
       },
     });
@@ -122,7 +126,9 @@ export default function GrokCTAPicker() {
             <p className="text-xs font-bold text-foreground truncate">{selectedBody?.body_title || "מבנה נבחר"}</p>
             <p className="text-[10px] text-muted-foreground">בחרו קריאה לפעולה</p>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">שלב 3 מתוך 4</span>
+        </div>
+        <div className="mt-2">
+          <BriefiStepper currentStep={6} />
         </div>
       </div>
 

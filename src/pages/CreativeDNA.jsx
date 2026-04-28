@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Pencil, Check, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import BriefiStepper from "@/components/briefi/BriefiStepper";
 import LoadingState from "@/components/shared/LoadingState";
 import ErrorState from "@/components/shared/ErrorState";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
@@ -183,6 +184,19 @@ export default function CreativeDNA() {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
+      <div className="briefi-header">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+            <ArrowRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <div className="flex-1">
+            <p className="text-xs font-bold text-foreground">{project?.client_name}</p>
+          </div>
+        </div>
+        <div className="mt-2">
+          <BriefiStepper currentStep={2} />
+        </div>
+      </div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -210,15 +224,15 @@ export default function CreativeDNA() {
         )}
 
         <div className="space-y-2.5">
-          <button onClick={() => navigate(`/project/${projectId}/category`)} className="briefi-btn-primary w-full">
+          <button onClick={() => navigate(`/project/${projectId}/video-style`, { state: { business: { business_name: project.client_name, business_description: project.raw_notes, main_goal: project.main_goal }, businessAnalysis: dna } })} className="briefi-btn-primary w-full">
             <Sparkles className="h-4 w-4" />
-            נראה טוב, ממשיכים
+            יאללה, נבנה סרטונים
           </button>
           <button onClick={generateDNA} className="briefi-btn-secondary w-full">
             <RotateCcw className="h-4 w-4" />
             שפרו את הניתוח
           </button>
-          <button onClick={() => navigate(-1)} className="briefi-btn-ghost w-full">
+          <button onClick={() => navigate(`/project/${projectId}/new`)} className="briefi-btn-ghost w-full">
             <ArrowRight className="h-4 w-4" />
             חזרה
           </button>

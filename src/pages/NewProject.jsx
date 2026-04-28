@@ -42,7 +42,7 @@ export default function NewProject() {
       brief_video_count: briefVideoCount,
     });
 
-    navigate(`/project/${project.id}/grok-concepts`);
+    navigate(`/project/${project.id}/creative-dna`);
   };
 
   if (loading) {
@@ -169,7 +169,7 @@ export default function NewProject() {
             className="briefi-btn-primary w-full"
           >
             <Sparkles className="h-4 w-4" />
-            המשיכו לבחירת קונספט
+            המשיכו לניתוח העסק
           </button>
         </motion.div>
       </div>

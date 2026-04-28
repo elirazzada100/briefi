@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Pencil, Check, X, FileText, Plus, RefreshCw } from "lucide-react";
+import BriefiStepper from "@/components/briefi/BriefiStepper";
 import LoadingState from "@/components/briefi/LoadingState";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
 
@@ -77,6 +78,7 @@ export default function FinalBrief() {
   const selectedConcept = state?.selectedConcept;
   const selectedBody = state?.selectedBody;
   const selectedCTA = state?.selectedCTA;
+  const selectedVideoStyle = state?.selectedVideoStyle;
 
   const [brief, setBrief] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -238,8 +240,10 @@ export default function FinalBrief() {
           </button>
           <div className="flex-1">
             <h1 className="text-base font-black text-foreground">הבריף מוכן ✓</h1>
-            <p className="text-xs text-muted-foreground">שלב 4 מתוך 4</p>
           </div>
+        </div>
+        <div className="mt-2">
+          <BriefiStepper currentStep={7} />
         </div>
       </div>
 
@@ -423,7 +427,7 @@ export default function FinalBrief() {
             {saved ? "✓ הבריף נשמר!" : saving ? "שומר..." : "שמור בריף"}
           </button>
           <button
-            onClick={() => navigate(`/project/${projectId}/grok-concepts`)}
+            onClick={() => navigate(`/project/${projectId}/video-style`)}
             className="briefi-btn-secondary w-full"
           >
             <Plus className="w-4 h-4" />
