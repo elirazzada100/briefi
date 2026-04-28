@@ -30,10 +30,18 @@ import Settings from './pages/Settings';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import About from './pages/About';
+import ContactSupport from './pages/ContactSupport';
+import CopyrightPage from './pages/CopyrightPage';
+import DeleteAccount from './pages/DeleteAccount';
+import PrivacyRequest from './pages/PrivacyRequest';
+import AiUsePage from './pages/AiUsePage';
+import SecurityPage from './pages/SecurityPage';
+import FirstLoginConsent, { hasAcceptedLegal } from './components/legal/FirstLoginConsent';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
   const [consentGiven, setConsentGiven] = useState(hasConsentBeenSet());
+  const [legalAccepted, setLegalAccepted] = useState(hasAcceptedLegal());
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -58,6 +66,7 @@ const AuthenticatedApp = () => {
   return (
     <>
       {!consentGiven && <CookieConsentBanner onConsented={() => setConsentGiven(true)} />}
+      {!legalAccepted && !isLoadingAuth && !authError && <FirstLoginConsent onAccepted={() => setLegalAccepted(true)} />}
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Home />} />
@@ -81,6 +90,12 @@ const AuthenticatedApp = () => {
       <Route path="/settings/privacy" element={<PrivacyPolicy />} />
       <Route path="/settings/terms" element={<TermsOfService />} />
       <Route path="/settings/about" element={<About />} />
+      <Route path="/settings/contact" element={<ContactSupport />} />
+      <Route path="/settings/copyright" element={<CopyrightPage />} />
+      <Route path="/settings/delete-account" element={<DeleteAccount />} />
+      <Route path="/settings/privacy-request" element={<PrivacyRequest />} />
+      <Route path="/settings/ai-use" element={<AiUsePage />} />
+      <Route path="/settings/security" element={<SecurityPage />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
     </>

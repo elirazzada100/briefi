@@ -1,6 +1,6 @@
 import LegalPage, { LegalSection } from "@/components/legal/LegalPage";
 
-const LEGAL_CONTACT_EMAIL = "[הכניסו כתובת אימייל לתמיכה / פרטיות]";
+const LEGAL_CONTACT_EMAIL = "weatbriefi@gmail.com";
 const PRIVACY_LAST_UPDATED = "אפריל 2025";
 
 export default function PrivacyPolicy() {
@@ -66,15 +66,13 @@ export default function PrivacyPolicy() {
       </LegalSection>
 
       <LegalSection title="8. Cookies וטכנולוגיות דומות">
-        <p>בריפי עשויה להשתמש בקוקיז וטכנולוגיות דומות כדי להפעיל את המערכת, לשמור התחברות והעדפות, להבין שימוש במוצר ולשפר את החוויה.</p>
-        <p>קוקיז הכרחיים פועלים כדי שהמערכת תעבוד. קוקיז של אנליטיקה או שיווק יופעלו רק לפי הבחירה שלכם, ככל שהם קיימים במערכת.</p>
-        <p>אפשר לשנות את הבחירה בכל רגע דרך הגדרות הקוקיז.</p>
+        <p>בריפי עשויה להשתמש בקוקיז וטכנולוגיות דומות כדי להפעיל את המערכת, לשמור התחברות והעדפות, להבין שימוש במוצר ולשפר את החוויה. קוקיז הכרחיים פועלים כדי שהמערכת תעבוד. קוקיז של אנליטיקה או שיווק יופעלו רק לפי הבחירה שלכם, ככל שהם קיימים במערכת. אפשר לשנות את הבחירה בכל רגע דרך הגדרות הקוקיז.</p>
         <p>חסימת Cookies עשויה לפגוע בפעילות התקינה של המערכת.</p>
       </LegalSection>
 
       <LegalSection title="9. זכויות המשתמש">
         <p>בהתאם לדין החל, ייתכן שיש לכם זכויות לעיין במידע, לבקש תיקון, מחיקה, או להתנגד לשימושים מסוימים.</p>
-        <p>לבקשות בנושא פרטיות ניתן לפנות אלינו דרך פרטי הקשר שיופיעו במערכת.</p>
+        <p>לבקשות בנושא פרטיות ניתן לפנות אלינו בכתובת: <strong className="text-foreground">{LEGAL_CONTACT_EMAIL}</strong></p>
       </LegalSection>
 
       <LegalSection title="10. מידע של לקוחות צד שלישי">
@@ -91,8 +89,8 @@ export default function PrivacyPolicy() {
       </LegalSection>
 
       <LegalSection title="13. יצירת קשר">
-        <p>לשאלות בנושא פרטיות ניתן לפנות אלינו בכתובת:</p>
-        <p className="font-medium text-foreground">{LEGAL_CONTACT_EMAIL}</p>
+        <p>לשאלות בנושא פרטיות, בקשות עיון, תיקון או מחיקה של מידע, ניתן לפנות אלינו בכתובת:</p>
+        <p className="font-bold text-foreground">{LEGAL_CONTACT_EMAIL}</p>
       </LegalSection>
     </LegalPage>
   );

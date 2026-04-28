@@ -1,6 +1,6 @@
 import LegalPage, { LegalSection } from "@/components/legal/LegalPage";
 
-const LEGAL_CONTACT_EMAIL = "[הכניסו כתובת אימייל לתמיכה]";
+const LEGAL_CONTACT_EMAIL = "weatbriefi@gmail.com";
 const TERMS_LAST_UPDATED = "אפריל 2025";
 
 export default function TermsOfService() {
@@ -49,10 +49,11 @@ export default function TermsOfService() {
         <p>אתם נותנים לבריפי רישיון להשתמש במידע שהזנתם לצורך הפעלת השירות, יצירת תוצרים, שמירת פרויקטים ותמיכה טכנית.</p>
       </LegalSection>
 
-      <LegalSection title="5. זכויות בתוצרים">
+      <LegalSection title="5. זכויות יוצרים ושימוש מסחרי">
         <p>בכפוף לדין החל, אתם רשאים להשתמש בתוצרים שנוצרו בבריפי לצרכים עסקיים ושיווקיים.</p>
         <p>בריפי אינה מתחייבת שהתוצרים יהיו בלעדיים, מקוריים לחלוטין, או מתאימים לכל שימוש מסחרי ללא בדיקה.</p>
         <p>לפני פרסום, עליכם לבדוק את התוכן ולוודא שאין בו הפרת זכויות, הטעיה, לשון הרע, פגיעה בפרטיות, או בעיה משפטית אחרת.</p>
+        <p>תוצרים שנוצרו בעזרת AI לא מובטחים כייחודיים, בלעדיים או כאלה שלא דומים בשום צורה לתוכן אחר. כדאי לערוך ולבדוק לפני שימוש.</p>
       </LegalSection>
 
       <LegalSection title="6. שימוש במותגים, לוגואים ותמונות">
@@ -102,8 +103,8 @@ export default function TermsOfService() {
       </LegalSection>
 
       <LegalSection title="16. יצירת קשר">
-        <p>לשאלות לגבי תנאי השימוש ניתן לפנות אלינו בכתובת:</p>
-        <p className="font-medium text-foreground">{LEGAL_CONTACT_EMAIL}</p>
+        <p>לשאלות לגבי תנאי השימוש, החשבון, תשלומים או שימוש במערכת, ניתן לפנות אלינו בכתובת:</p>
+        <p className="font-bold text-foreground">{LEGAL_CONTACT_EMAIL}</p>
       </LegalSection>
     </LegalPage>
   );

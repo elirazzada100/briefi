@@ -157,6 +157,9 @@ export default function NewProject() {
             <p className="text-[11px] text-muted-foreground">
               אפשר לכתוב חופשי. לא צריך בריף מסודר.
             </p>
+            <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+              אל תכניסו מידע רגיש, סודי או אישי שאין לכם רשות להשתמש בו.
+            </p>
           </div>
 
           {/* CTA */}
