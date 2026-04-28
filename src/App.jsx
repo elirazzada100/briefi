@@ -87,6 +87,7 @@ const AuthenticatedApp = () => {
       <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
       <Route path="/admin/learning" element={<ProtectedRoute><AdminLearning /></ProtectedRoute>} />
       <Route path="/admin/generation-debug/:generationRunId" element={<ProtectedRoute><GenerationDebug /></ProtectedRoute>} />
+      <Route path="/admin/trend-patterns" element={<ProtectedRoute><AdminTrendPatterns /></ProtectedRoute>} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/settings/privacy" element={<PrivacyPolicy />} />
       <Route path="/settings/terms" element={<TermsOfService />} />

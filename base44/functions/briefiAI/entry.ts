@@ -347,15 +347,43 @@ function buildIntelligenceContext({
     });
   }
 
-  // TREND PATTERNS: טרנדי always, others only if category matches (max 3)
-  const matchedTrends = (trendPatterns || []).filter(t =>
-    t.is_active && (category === "טרנדי" || t.category_fit?.includes(category))
-  ).slice(0, 3);
-  if (matchedTrends.length) {
-    ctx += "\n\n--- TREND FORMATS ---\n";
-    matchedTrends.forEach(t => {
-      ctx += `• ${t.trend_name}: "${t.example_hebrew}"\n  Adapt: ${t.how_to_adapt}\n`;
-    });
+  // TREND PATTERNS: for "טרנדי" use as primary creative source (select 4 by industry+confidence fit),
+  // for other categories include a few relevant ones as optional inspiration (max 2)
+  const activeTrends = (trendPatterns || []).filter(t => t.is_active);
+  if (category === "טרנדי") {
+    // Score each trend by industry fit and confidence, pick top 4 for mandatory use
+    const scoredTrends = activeTrends.map(t => {
+      const industries = t.best_for_industries || [];
+      const industryFit = industries.includes(industry) || industries.includes("all") ? 20 : 0;
+      const confScore = (t.confidence || 0) / 5;
+      return { ...t, _score: industryFit + confScore };
+    }).sort((a, b) => b._score - a._score);
+    // Shuffle top 8 for variety, pick 4
+    const top8 = scoredTrends.slice(0, 8).sort(() => Math.random() - 0.5);
+    const selectedTrends = top8.slice(0, 4);
+    if (selectedTrends.length) {
+      ctx += "\n\n--- TREND PATTERNS (MANDATORY for טרנדי — each concept must be based on one of these 4 patterns) ---\n";
+      ctx += "CRITICAL: Generate exactly 4 concepts. Each concept must be based on a different one of the following 4 trend patterns. Adapt each pattern to this specific business. Do NOT copy examples. Do NOT mention 'טרנד' or 'TikTok'. Do NOT show pattern names to users.\n\n";
+      selectedTrends.forEach((t, i) => {
+        ctx += `TREND PATTERN ${i + 1}:\n`;
+        ctx += `  Mechanic: ${t.core_mechanic}\n`;
+        ctx += `  Human behavior: ${t.underlying_human_behavior}\n`;
+        ctx += `  Why it works: ${t.why_it_works}\n`;
+        ctx += `  How to adapt for a business: ${t.briefi_adaptation}\n`;
+        ctx += `  Example hook direction (adapt, don't copy): "${t.example_hook}"\n\n`;
+      });
+    }
+  } else {
+    // Other categories: use trends as optional inspiration only (max 2, industry-relevant)
+    const optionalTrends = activeTrends.filter(t =>
+      (t.best_for_industries || []).includes(industry) || (t.best_for_industries || []).includes("all")
+    ).sort((a, b) => (b.confidence || 0) - (a.confidence || 0)).slice(0, 2);
+    if (optionalTrends.length) {
+      ctx += "\n\n--- TREND FORMATS (optional inspiration — use only if it naturally fits the concept) ---\n";
+      optionalTrends.forEach(t => {
+        ctx += `• Mechanic: ${t.core_mechanic} — Adapt: ${t.briefi_adaptation}\n`;
+      });
+    }
   }
 
   // VOICE SAMPLES: industry match first, then global good/excellent, then category-specific
