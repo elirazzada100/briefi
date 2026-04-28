@@ -13,7 +13,7 @@ const CATEGORIES = [
   { id: "real_estate_interiors", name_he: "נדל״ן, עיצוב פנים ושיפוצים" },
   { id: "events_nightlife", name_he: "אירועים, לילה וחוויות" },
   { id: "fashion_boutiques", name_he: "אופנה, תכשיטים ובוטיקים" },
-  { id: "parenting_family", name_he: "הורות, ילדים ומשפחה" },
+  { id: "parenting_family", name_he: "הורות, ילדים, משפחה וצעצועים" },
   { id: "health_wellness", name_he: "בריאות, טיפול ו-Wellness" },
 ];
 
@@ -29,16 +29,21 @@ Only classify the business.
 Return ONLY valid JSON. No markdown. No explanations outside the JSON.
 
 Available categories:
-1. food_restaurants = מסעדנות ואוכל — Restaurants, cafés, bars, street food, bakeries, pizza, burgers, shawarma, desserts, hummus, falafel.
+1. food_restaurants = מסעדנות ואוכל — Restaurants, cafés, bars, street food, bakeries, pizza, burgers, shawarma, desserts, hummus, falafel, catering.
 2. beauty_aesthetics = יופי ואסתטיקה — Nails, hair, brows, lashes, makeup, skincare, laser, botox, aesthetic clinics, waxing, threading, dermaplaning.
 3. fitness_nutrition = פיטנס ותזונה — Personal trainers, gyms, pilates, yoga, nutrition, weight loss, body transformation, crossfit, spinning.
 4. coaches_consultants = מאמנים, יועצים ונותני ידע — Business coaches, marketing consultants, mentors, career coaches, course creators, AI consultants, life coaches.
 5. local_services = עסקים מקומיים ושירותים לבית — Plumbers, electricians, cleaners, movers, AC technicians, renovators, locksmiths, gardeners, handymen.
 6. real_estate_interiors = נדל״ן, עיצוב פנים ושיפוצים — Real estate agents, mortgage advisors, interior designers, architects, furniture, kitchens, home styling.
-7. events_nightlife = אירועים, לילה וחוויות — Event producers, DJs, clubs, weddings, photographers, birthday parties, bar mitzvahs, bachelor events, attractions, escape rooms.
-8. fashion_boutiques = אופנה, תכשיטים ובוטיקים — Fashion stores, jewelry, bags, shoes, swimwear, local designers, boutiques, accessories.
-9. parenting_family = הורות, ילדים ומשפחה — Baby products, kids activities, parenting coaches, sleep consultants, kindergartens, tutors, nannies, toys.
+7. events_nightlife = אירועים, לילה וחוויות — Event producers, DJs, clubs, weddings, photographers, birthday party VENUES/PRODUCERS, bar mitzvahs, bachelor events, escape rooms.
+8. fashion_boutiques = אופנה, תכשיטים ובוטיקים — Fashion stores, jewelry, bags, shoes, swimwear, local designers, boutiques, accessories, clothing retail.
+9. parenting_family = הורות, ילדים, משפחה וצעצועים — Baby products, kids activities, parenting coaches, sleep consultants, kindergartens, tutors, nannies, TOY STORES, toys, games, LEGO, board games, children's gifts, kids retail, children's product shops, Toys R Us type businesses, baby gear, strollers, educational toys.
 10. health_wellness = בריאות, טיפול ו-Wellness — Therapists, psychologists, physiotherapists, alternative medicine, dietitians, women's health, sleep, stress, acupuncture.
+
+IMPORTANT RULES:
+- Toy stores, games shops, children's product retailers → ALWAYS classify as parenting_family (NOT fashion_boutiques, NOT events_nightlife).
+- Birthday party SUPPLIES shops → parenting_family. Birthday party VENUES/PRODUCERS → events_nightlife.
+- Kids clothing stores → fashion_boutiques. Kids toy stores → parenting_family.
 
 Return JSON:
 {
@@ -114,7 +119,7 @@ Deno.serve(async (req) => {
       result.needs_user_confirmation = true;
     }
 
-    // Ensure category_name_he is correct (never trust model for this)
+    // Always override category_name_he from our authoritative list
     const cat = CATEGORIES.find(c => c.id === result.category_id);
     if (cat) result.category_name_he = cat.name_he;
 

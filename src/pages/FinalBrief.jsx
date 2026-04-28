@@ -102,9 +102,17 @@ export default function FinalBrief() {
   }, [briefId]);
 
   const updateBriefField = async (field, value) => {
-    const updatedFinalBrief = { ...(brief?.final_brief || {}), [field]: value };
-    setBrief(prev => ({ ...prev, final_brief: updatedFinalBrief }));
-    await base44.entities.VideoBrief.update(briefId, { final_brief: updatedFinalBrief });
+    // Update both the local state and the entity — for Grok flow we update adapted_brief, for legacy final_brief
+    const isGrokBrief = !!brief?.adapted_brief?.adapted_concept_name;
+    if (isGrokBrief) {
+      const updated = { ...(brief?.adapted_brief || {}), [field]: value };
+      setBrief(prev => ({ ...prev, adapted_brief: updated }));
+      await base44.entities.VideoBrief.update(briefId, { adapted_brief: updated });
+    } else {
+      const updated = { ...(brief?.final_brief || {}), [field]: value };
+      setBrief(prev => ({ ...prev, final_brief: updated }));
+      await base44.entities.VideoBrief.update(briefId, { final_brief: updated });
+    }
   };
 
   const handleSave = async () => {
@@ -178,7 +186,28 @@ export default function FinalBrief() {
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="טוען את הבריף..." /></div>;
   if (improving) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="משפרים לפי הפידבק..." /></div>;
 
-  const fb = brief?.final_brief || {};
+  // Support both Grok flow (top-level fields + adapted_brief) and legacy OpenAI flow (final_brief)
+  const adaptedBrief = brief?.adapted_brief || {};
+  const legacyBrief = brief?.final_brief || {};
+
+  const fb = {
+    // Prefer Grok adapted_brief fields, fall back to legacy
+    brief_title: adaptedBrief.adapted_concept_name || legacyBrief.brief_title || brief?.brief_title || "",
+    video_concept: adaptedBrief.one_sentence_concept || legacyBrief.video_concept || brief?.video_concept || "",
+    hook: adaptedBrief.opening_line || legacyBrief.hook || brief?.hook || "",
+    script_text: brief?.script_text || legacyBrief.script_text || "",
+    shot_structure: brief?.shot_structure || legacyBrief.shot_structure || [],
+    cta: adaptedBrief.cta || legacyBrief.cta || brief?.cta || "",
+    caption_suggestion: adaptedBrief.caption || legacyBrief.caption_suggestion || brief?.caption_suggestion || "",
+    production_notes: adaptedBrief.why_it_fits_this_business || legacyBrief.production_notes || brief?.production_notes || "",
+    visual_must_haves: adaptedBrief.visual_must_haves || brief?.visual_must_haves || [],
+    risk_notes: adaptedBrief.risk_notes || brief?.risk_notes || "",
+    script_format: brief?.script_format || legacyBrief.script_format || "",
+    text_overlays: legacyBrief.text_overlays || [],
+    shooting_time_priority: legacyBrief.shooting_time_priority || "",
+    shooting_time_reason: legacyBrief.shooting_time_reason || "",
+  };
+
   const scriptLabel = scriptFormatLabels[fb.script_format] || fb.script_format || "";
 
   return (
@@ -268,17 +297,36 @@ export default function FinalBrief() {
             <EditableField label="קריאה לפעולה" value={fb.cta} onSave={v => updateBriefField("cta", v)} />
           </div>
 
-          {/* 8. כיתוב לפוסט */}
+          {/* 8. קפישן */}
           <div className="border-t border-muted pt-4">
-            <EditableField label="כיתוב לפוסט" value={fb.caption_suggestion} onSave={v => updateBriefField("caption_suggestion", v)} />
+            <EditableField label="קפישן" value={fb.caption_suggestion} onSave={v => updateBriefField("caption_suggestion", v)} />
           </div>
 
-          {/* 9. הערות צילום */}
-          <div className="border-t border-muted pt-4">
-            <EditableField label="הערות צילום" value={fb.production_notes} onSave={v => updateBriefField("production_notes", v)} />
-          </div>
+          {/* 9. מה חייבים לצלם */}
+          {fb.visual_must_haves?.length > 0 && (
+            <div className="border-t border-muted pt-4 space-y-1.5">
+              <p className="text-xs font-bold text-muted-foreground">מה חייבים לצלם</p>
+              {fb.visual_must_haves.map((item, i) => (
+                <p key={i} className="text-sm text-foreground font-medium bg-muted/40 rounded-lg px-3 py-1.5">• {item}</p>
+              ))}
+            </div>
+          )}
 
-          {/* 10. עדיפות לצילום */}
+          {/* 10. למה זה מתאים לעסק */}
+          {fb.production_notes && (
+            <div className="border-t border-muted pt-4">
+              <EditableField label="למה זה מתאים לעסק" value={fb.production_notes} onSave={v => updateBriefField("production_notes", v)} />
+            </div>
+          )}
+
+          {/* 11. הערות */}
+          {fb.risk_notes && (
+            <div className="border-t border-muted pt-4">
+              <EditableField label="הערות" value={fb.risk_notes} onSave={v => updateBriefField("risk_notes", v)} />
+            </div>
+          )}
+
+          {/* 12. עדיפות לצילום (legacy) */}
           {(fb.shooting_time_priority || fb.shooting_time_reason) && (
             <div className="border-t border-muted pt-4 space-y-1.5">
               <p className="text-xs font-bold text-muted-foreground">עדיפות לצילום</p>
