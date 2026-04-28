@@ -18,35 +18,6 @@ const CATEGORIES = [
   { id: "health_wellness", label: "בריאות ו-Wellness" },
 ];
 
-const CONCEPT_REQUIRED_FIELDS = [
-  "id", "category_id", "concept_name", "core_situation",
-  "natural_opening_line", "human_tension", "scene_logic", "punchline",
-  "visual_proofs", "cta_options"
-];
-
-function validateAdaptedBrief(adapted) {
-  if (!adapted) return false;
-  if (!adapted.adapted_concept_name) return false;
-  if (!adapted.opening_line) return false;
-  if (!adapted.one_sentence_concept) return false;
-  if (!adapted.caption) return false;
-  if (!adapted.cta) return false;
-  if (!Array.isArray(adapted.shooting_brief) || adapted.shooting_brief.length < 3) return false;
-  return true;
-}
-
-function validateConcept(concept) {
-  if (!concept) return null;
-  const missing = CONCEPT_REQUIRED_FIELDS.filter(f => {
-    const val = concept[f];
-    if (val === undefined || val === null || val === "") return true;
-    if (Array.isArray(val) && val.length === 0) return true;
-    return false;
-  });
-  return missing.length === 0 ? null : missing;
-}
-
-// ── Stage: category confirmation ──────────────────────────────────────────────
 function CategoryConfirmStep({ categoryId, categoryNameHe, confidence, onConfirm, onChangeCategory }) {
   const [showPicker, setShowPicker] = useState(false);
   const [selected, setSelected] = useState(categoryId);
@@ -55,7 +26,7 @@ function CategoryConfirmStep({ categoryId, categoryNameHe, confidence, onConfirm
     return (
       <div className="space-y-3">
         <p className="text-sm font-bold text-foreground">בחרו קטגוריה ידנית:</p>
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
           {CATEGORIES.map(cat => (
             <button
               key={cat.id}
@@ -67,20 +38,15 @@ function CategoryConfirmStep({ categoryId, categoryNameHe, confidence, onConfirm
               }`}
             >
               <span className="text-sm font-medium text-foreground">{cat.label}</span>
-              {selected === cat.id && <Check className="w-4 h-4 text-primary" />}
+              {selected === cat.id && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
             </button>
           ))}
         </div>
-        <button
-          onClick={() => onChangeCategory(selected)}
-          className="briefi-btn-primary w-full"
-        >
+        <button onClick={() => onChangeCategory(selected)} className="briefi-btn-primary w-full">
           <Check className="w-4 h-4" />
           אשרו קטגוריה זו
         </button>
-        <button onClick={() => setShowPicker(false)} className="briefi-btn-ghost w-full">
-          ביטול
-        </button>
+        <button onClick={() => setShowPicker(false)} className="briefi-btn-ghost w-full">ביטול</button>
       </div>
     );
   }
@@ -89,14 +55,14 @@ function CategoryConfirmStep({ categoryId, categoryNameHe, confidence, onConfirm
     <div className="space-y-4">
       <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 space-y-2">
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">זיהינו שהעסק מתאים ל:</p>
-        <p className="text-lg font-black text-foreground">{categoryNameHe}</p>
-        {confidence < 0.85 && (
-          <p className="text-xs text-amber-600 font-medium">⚠ רמת הביטחון בסיווג: {Math.round(confidence * 100)}% — מומלץ לאשר</p>
+        <p className="text-xl font-black text-foreground">{categoryNameHe}</p>
+        {confidence && confidence < 0.85 && (
+          <p className="text-xs text-amber-600 font-medium">⚠ ביטחון: {Math.round(confidence * 100)}% — מומלץ לאשר</p>
         )}
       </div>
       <button onClick={onConfirm} className="briefi-btn-primary w-full">
         <Check className="w-4 h-4" />
-        כן, להמשיך
+        כן, זה נכון — המשיכו
       </button>
       <button onClick={() => setShowPicker(true)} className="briefi-btn-secondary w-full">
         שנה קטגוריה
@@ -105,18 +71,19 @@ function CategoryConfirmStep({ categoryId, categoryNameHe, confidence, onConfirm
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
 export default function GrokConceptPicker() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const { project, loading: guardLoading } = useProjectGuard(projectId);
 
-  // Stages: "classifying" | "confirm_category" | "concepts" | "adapting"
+  // Stages: classifying → confirm_category → loading_concepts → concepts → selecting
   const [stage, setStage] = useState("classifying");
   const [classifyResult, setClassifyResult] = useState(null);
   const [categoryId, setCategoryId] = useState("");
   const [concepts, setConcepts] = useState([]);
-  const [adaptError, setAdaptError] = useState(null);
+  const [conceptSource, setConceptSource] = useState("concept_bank");
+  const [error, setError] = useState(null);
+  const [selectingIdx, setSelectingIdx] = useState(null);
 
   useEffect(() => {
     if (project) runClassify();
@@ -124,127 +91,97 @@ export default function GrokConceptPicker() {
 
   const runClassify = async () => {
     setStage("classifying");
-    // Use stored category if already classified
+    setError(null);
+
     if (project.category_id) {
+      // Already classified — skip confirmation, load concepts
       setCategoryId(project.category_id);
-      await fetchConcepts(project.category_id);
-      setStage("concepts");
+      await loadConcepts(project.category_id);
       return;
     }
+
     const res = await base44.functions.invoke("classifyBusinessCategory", {
       businessDescription: `${project.client_name}. ${project.main_goal}. ${project.raw_notes}`,
     });
     const data = res.data;
+    if (data?.error) {
+      setError("שגיאה בסיווג העסק. נסו שוב.");
+      setStage("concepts");
+      return;
+    }
     setClassifyResult(data);
     setCategoryId(data.category_id);
     setStage("confirm_category");
   };
 
-  const fetchConcepts = async (catId) => {
-    const all = await base44.entities.ConceptBank.filter({ category_id: catId, is_active: true });
-    const shuffled = all.sort(() => Math.random() - 0.5).slice(0, 4);
-    setConcepts(shuffled);
+  const loadConcepts = async (catId) => {
+    setStage("loading_concepts");
+    setError(null);
+
+    const business = {
+      business_name: project.client_name,
+      business_description: project.raw_notes,
+      main_goal: project.main_goal,
+    };
+
+    const res = await base44.functions.invoke("grokBriefiFlow", {
+      action: "generateConcepts",
+      business,
+      category_id: catId,
+    });
+
+    if (res.data?.error) {
+      setError(res.data.error);
+      setStage("concepts");
+      return;
+    }
+
+    setConcepts(res.data?.concepts || []);
+    setConceptSource(res.data?.source || "grok_generated");
+    setStage("concepts");
   };
 
   const handleConfirmCategory = async () => {
     await base44.entities.Project.update(project.id, { category_id: categoryId });
-    await fetchConcepts(categoryId);
-    setStage("concepts");
+    await loadConcepts(categoryId);
   };
 
   const handleChangeCategory = async (newCatId) => {
     setCategoryId(newCatId);
     await base44.entities.Project.update(project.id, { category_id: newCatId });
-    await fetchConcepts(newCatId);
-    setStage("concepts");
+    await loadConcepts(newCatId);
   };
 
-  const handleSelect = async (concept) => {
-    setAdaptError(null);
+  const handleSelectConcept = async (concept, idx) => {
+    setSelectingIdx(idx);
+    setError(null);
 
-    // Validate concept has all required fields
-    const missingFields = validateConcept(concept);
-    if (missingFields) {
-      setAdaptError(`הקונספט חסר שדות: ${missingFields.join(", ")}. נסו קונספט אחר.`);
-      return;
-    }
-
-    setStage("adapting");
-
-    const business = {
-      business_name: project.client_name,
-      business_description: project.raw_notes,
-      category_id: categoryId,
-      main_goal: project.main_goal,
-    };
-
-    const res = await base44.functions.invoke("adaptConceptToBusiness", {
-      business,
-      selectedConcept: concept,
-    });
-
-    const adapted = res.data;
-
-    // Guard: adapted brief must have all required fields
-    if (!validateAdaptedBrief(adapted)) {
-      setAdaptError("משהו לא עבר טוב ביצירת הבריף. נסו לבחור קונספט שוב.");
-      setStage("concepts");
-      return;
-    }
-
-    // Save as VideoBrief — map Grok output fields explicitly
-    const shootingText = adapted.shooting_brief
-      .map((s, i) => `סצנה ${s.scene || i + 1}: ${s.shot || ""}${s.spoken_line ? `\nדיאלוג: ${s.spoken_line}` : ""}${s.on_screen_text ? `\nטקסט על מסך: ${s.on_screen_text}` : ""}${s.camera_note ? `\nהערת מצלמה: ${s.camera_note}` : ""}`)
-      .join("\n\n");
-
-    const existingBriefs = await base44.entities.VideoBrief.filter({ project_id: project.id });
-    const brief = await base44.entities.VideoBrief.create({
-      project_id: project.id,
-      category: categoryId,
-      brief_title: adapted.adapted_concept_name,
-      video_concept: adapted.one_sentence_concept,
-      hook: adapted.opening_line,
-      script_text: shootingText,
-      shot_structure: adapted.shooting_brief.map((s, i) => ({
-        step: s.scene || i + 1,
-        visual: s.shot,
-        spoken_or_overlay_text: s.spoken_line || s.on_screen_text,
-        camera_note: s.camera_note,
-      })),
-      cta: adapted.cta,
-      caption_suggestion: adapted.caption,
-      production_notes: adapted.why_it_fits_this_business,
-      visual_must_haves: adapted.visual_must_haves || [],
-      risk_notes: adapted.risk_notes || "",
-      idea_tags: concept.tone_tags || [],
-      script_format: "person_to_camera",
-      // Store adapted data for FinalBrief to read
-      adapted_brief: adapted,
-    });
-
-    await base44.entities.Project.update(project.id, {
-      completed_briefs_count: (existingBriefs.length || 0) + 1,
-      status: "in_progress",
-    });
-
-    navigate(`/project/${project.id}/final-brief`, {
-      state: { briefId: brief.id, adapted, concept }
+    // Navigate to body picker with selected concept
+    navigate(`/project/${projectId}/grok-body`, {
+      state: {
+        selectedConcept: concept,
+        categoryId,
+        business: {
+          business_name: project.client_name,
+          business_description: project.raw_notes,
+          main_goal: project.main_goal,
+        },
+      },
     });
   };
 
-  // ── Loading states ──────────────────────────────────────────────────────────
   if (guardLoading || stage === "classifying") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="מנתחים את העסק ומוצאים קטגוריה..." />
+        <LoadingState message="מנתחים את העסק..." />
       </div>
     );
   }
 
-  if (stage === "adapting") {
+  if (stage === "loading_concepts") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="מתאימים את הקונספט לעסק..." />
+        <LoadingState message="מוצאים קונספטים שמתאימים לעסק..." />
       </div>
     );
   }
@@ -260,10 +197,13 @@ export default function GrokConceptPicker() {
           </button>
           <div className="flex-1">
             <p className="text-xs font-bold text-foreground">{project?.client_name}</p>
-            {categoryId && (
+            {categoryId && stage === "concepts" && (
               <p className="text-[10px] text-muted-foreground">{categoryLabel}</p>
             )}
           </div>
+          {stage === "concepts" && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">שלב 1 מתוך 4</span>
+          )}
         </div>
       </div>
 
@@ -291,55 +231,66 @@ export default function GrokConceptPicker() {
           <>
             <div>
               <h1 className="text-xl font-black text-foreground">בחרו קונספט לסרטון</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">כל קונספט יותאם בדיוק לעסק שלכם.</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {conceptSource === "concept_bank"
+                  ? "בחרו רעיון — ואנחנו נמשיך לבנות את מבנה הסרטון."
+                  : "גרוק יצר קונספטים מותאמים לעסק. בחרו אחד להמשיך."
+                }
+              </p>
             </div>
 
-            {adaptError && (
+            {error && (
               <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl p-3">
                 <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-700 font-medium">{adaptError}</p>
+                <p className="text-sm text-red-700 font-medium">{error}</p>
               </div>
             )}
 
-            {concepts.length === 0 ? (
+            {concepts.length === 0 && !error ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground text-sm">אין קונספטים זמינים לקטגוריה הזאת עדיין.</p>
-                <p className="text-xs text-muted-foreground mt-1">הוסיפו קונספטים ל-ConceptBank דרך הניהול.</p>
-                <button
-                  onClick={() => setStage("confirm_category")}
-                  className="briefi-btn-secondary mt-4"
-                >
-                  שנה קטגוריה
+                <p className="text-muted-foreground text-sm">אין קונספטים זמינים.</p>
+                <button onClick={() => loadConcepts(categoryId)} className="briefi-btn-secondary mt-4 mx-auto">
+                  נסו שוב
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
-                {concepts.map((concept) => (
-                  <div key={concept.id} className="bg-white rounded-2xl border border-border/60 shadow-sm p-4 space-y-3">
-                    <h3 className="font-black text-foreground text-base leading-snug">{concept.concept_name}</h3>
-                    <p className="text-sm text-foreground/80 leading-relaxed">{concept.core_situation}</p>
+                {concepts.map((concept, idx) => {
+                  const name = concept.concept_name || concept.core_situation?.slice(0, 40) || `קונספט ${idx + 1}`;
+                  const situation = concept.core_situation || "";
+                  const tension = concept.human_tension || "";
+                  const tags = concept.tone_tags || concept.best_for || [];
+                  const isSelecting = selectingIdx === idx;
 
-                    {concept.human_tension && (
-                      <p className="text-xs text-muted-foreground italic">"{concept.human_tension}"</p>
-                    )}
-
-                    <div className="flex flex-wrap gap-1.5">
-                      {(concept.tone_tags || []).map(tag => (
-                        <span key={tag} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/8 text-primary border border-primary/15">{tag}</span>
-                      ))}
+                  return (
+                    <div key={idx} className="bg-white rounded-2xl border border-border/60 shadow-sm p-4 space-y-3">
+                      <h3 className="font-black text-foreground text-base leading-snug">{name}</h3>
+                      {situation && <p className="text-sm text-foreground/80 leading-relaxed">{situation}</p>}
+                      {tension && <p className="text-xs text-muted-foreground italic">"{tension}"</p>}
+                      {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {tags.map((tag, ti) => (
+                            <span key={ti} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/8 text-primary border border-primary/15">{tag}</span>
+                          ))}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => handleSelectConcept(concept, idx)}
+                        disabled={selectingIdx !== null}
+                        className="briefi-btn-primary w-full"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        {isSelecting ? "מעבד..." : "בחרו קונספט זה"}
+                      </button>
                     </div>
-
-                    <button
-                      onClick={() => handleSelect(concept)}
-                      className="briefi-btn-primary w-full"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      בנו לי בריף על הקונספט הזה
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
+
+            <button onClick={() => setStage("confirm_category")} className="briefi-btn-ghost w-full">
+              שנה קטגוריה
+            </button>
           </>
         )}
       </div>

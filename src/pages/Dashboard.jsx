@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, FileText, ChevronLeft, ArrowRight, Trash2 } from "lucide-react";
+import { Plus, FileText, ChevronLeft, ArrowRight, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
@@ -24,8 +24,9 @@ const statusColors = {
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [deleteTarget, setDeleteTarget] = useState(null); // project to confirm delete
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteSuccessName, setDeleteSuccessName] = useState(null);
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
@@ -40,10 +41,12 @@ export default function Dashboard() {
     setDeleting(true);
     const res = await base44.functions.invoke("deleteProject", { project_id: deleteTarget.id });
     setDeleting(false);
+    const targetName = deleteTarget?.client_name || "";
     setDeleteTarget(null);
     if (res.data?.success) {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast({ description: "הפרויקט נמחק" });
+      setDeleteSuccessName(targetName);
+      setTimeout(() => setDeleteSuccessName(null), 4000);
     } else {
       toast({ description: res.data?.error || "לא הצלחנו למחוק את הפרויקט. נסו שוב.", variant: "destructive" });
     }
@@ -70,6 +73,29 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Delete success banner */}
+      <AnimatePresence>
+        {deleteSuccessName && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="mx-auto max-w-[430px] px-4 pt-3"
+          >
+            <div className="flex items-center justify-between gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+              <p className="text-sm font-semibold text-green-700">"{deleteSuccessName}" נמחק בהצלחה</p>
+              <button
+                onClick={() => setDeleteSuccessName(null)}
+                className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-green-100 transition-colors flex-shrink-0"
+                aria-label="סגור"
+              >
+                <X className="w-4 h-4 text-green-600" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="briefi-page-container">
         {isLoading ? (
