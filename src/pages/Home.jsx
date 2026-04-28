@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus, FolderOpen, User, Sparkles, LogOut, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/AuthContext";
@@ -10,9 +10,21 @@ const navItems = [
 
 export default function Home() {
   const { isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-between px-5 py-10" dir="rtl">
+      {/* Top-left settings gear icon */}
+      <div className="w-full max-w-sm flex justify-end mb-2">
+        <button
+          onClick={() => navigate("/settings")}
+          className="w-10 h-10 flex items-center justify-center rounded-xl text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/60 transition-all"
+          aria-label="הגדרות"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -66,26 +78,17 @@ export default function Home() {
         </div>
       </motion.div>
 
-      {/* Bottom area: settings, logout, disclaimer — in that order */}
-      <div className="w-full max-w-sm flex flex-col items-center pt-4" style={{ gap: 0 }}>
-        <Link
-          to="/settings" className="text-muted-foreground/60 px-1 text-xs flex items-center gap-1.5 hover:text-muted-foreground transition-colors">הגדרות
-
-
-
-
-        </Link>
-
-        {isAuthenticated &&
-        <button
-          onClick={() => logout()}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto mb-5">
-          
+      {/* Bottom area: logout + disclaimer */}
+      <div className="w-full max-w-sm flex flex-col items-center pt-6">
+        {isAuthenticated && (
+          <button
+            onClick={() => logout()}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto mb-5"
+          >
             <LogOut className="w-3.5 h-3.5" />
             התנתקות
           </button>
-        }
-
+        )}
         <p className="text-[11px] text-muted-foreground/50 text-center">
           בריפי יכול לטעות לפעמים.
         </p>
