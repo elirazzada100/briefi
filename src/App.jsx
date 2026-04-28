@@ -23,6 +23,10 @@ import UserProfile from './pages/UserProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLearning from './pages/admin/Learning';
 import GenerationDebug from './pages/admin/GenerationDebug';
+import Settings from './pages/Settings';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import About from './pages/About';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -67,6 +71,10 @@ const AuthenticatedApp = () => {
       <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
       <Route path="/admin/learning" element={<ProtectedRoute><AdminLearning /></ProtectedRoute>} />
       <Route path="/admin/generation-debug/:generationRunId" element={<ProtectedRoute><GenerationDebug /></ProtectedRoute>} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/settings/privacy" element={<PrivacyPolicy />} />
+      <Route path="/settings/terms" element={<TermsOfService />} />
+      <Route path="/settings/about" element={<About />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

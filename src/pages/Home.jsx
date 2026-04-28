@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Plus, FolderOpen, User, Sparkles, LogOut } from "lucide-react";
+import { Plus, FolderOpen, User, Sparkles, LogOut, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -78,6 +78,20 @@ export default function Home() {
             התנתקות
           </button>
         )}
+
+        {/* Disclaimer */}
+        <p className="text-[11px] text-muted-foreground/70 text-center">
+          בריפי יכול לטעות לפעמים.
+        </p>
+
+        {/* Settings link */}
+        <Link
+          to="/settings"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors mx-auto"
+        >
+          <Settings className="w-3 h-3" />
+          הגדרות
+        </Link>
       </motion.div>
     </div>
   );
