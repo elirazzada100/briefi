@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Shield, FileText, Info } from "lucide-react";
+import { ArrowRight, Shield, FileText, Info, Cookie } from "lucide-react";
+import CookiePreferencesModal from "@/components/cookies/CookiePreferencesModal";
 
 const settingsItems = [
   {
@@ -27,6 +29,7 @@ const settingsItems = [
 
 export default function Settings() {
   const navigate = useNavigate();
+  const [showCookieModal, setShowCookieModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -60,7 +63,28 @@ export default function Settings() {
             </div>
           </Link>
         ))}
+
+        {/* Cookie settings */}
+        <button onClick={() => setShowCookieModal(true)} className="w-full block">
+          <div className="flex items-center gap-3.5 bg-white rounded-2xl border border-border/60 px-4 py-4 hover:border-primary/25 hover:shadow-sm transition-all text-right">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#F59E0B15" }}>
+              <Cookie className="w-4 h-4" style={{ color: "#F59E0B" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-foreground">הגדרות קוקיז</p>
+              <p className="text-xs text-muted-foreground">שינוי בחירת הקוקיז שלכם</p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-muted-foreground rotate-180 flex-shrink-0" />
+          </div>
+        </button>
       </div>
+
+      {showCookieModal && (
+        <CookiePreferencesModal
+          onClose={() => setShowCookieModal(false)}
+          onSaved={() => setShowCookieModal(false)}
+        />
+      )}
     </div>
   );
 }

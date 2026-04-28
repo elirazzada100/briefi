@@ -5,6 +5,9 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { useState } from 'react';
+import CookieConsentBanner from '@/components/cookies/CookieConsentBanner';
+import { hasConsentBeenSet } from '@/lib/cookieConsent';
 
 // Page imports
 import Home from './pages/Home';
@@ -30,6 +33,7 @@ import About from './pages/About';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const [consentGiven, setConsentGiven] = useState(hasConsentBeenSet());
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -52,6 +56,8 @@ const AuthenticatedApp = () => {
   }
 
   return (
+    <>
+      {!consentGiven && <CookieConsentBanner onConsented={() => setConsentGiven(true)} />}
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Home />} />
@@ -77,6 +83,7 @@ const AuthenticatedApp = () => {
       <Route path="/settings/about" element={<About />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </>
   );
 };
 
