@@ -321,33 +321,48 @@ Do NOT start any description with: "סרטון שמציג", "נציג את", "נ
 
       const videoStyle = selectedVideoStyle || "מצחיק";
 
-      // Check if LockedHookTemplates has enough relevant hooks
-      let hookTemplates = [];
-      try {
-        hookTemplates = await base44.asServiceRole.entities.LockedHookTemplates.filter({ is_active: true });
-      } catch (e) {
-        hookTemplates = [];
-      }
+      // ── HOOK BANK RETRIEVAL ─────────────────────────────────────────────────────
+      // Step 1: Get a candidate pool of 30 hooks filtered by style/industry
+      // All hooks in our bank have best_for_styles="all" and best_for_industries="all"
+      // so we randomize 30 from the full active+locked bank, then let Grok pick 4
 
-      const relevantHooks = hookTemplates.filter(h => {
-        const bestFor = h.best_for_categories || [];
-        const toneTags = h.tone_tags || [];
-        return bestFor.includes(videoStyle) || toneTags.some(t => t === videoStyle) || bestFor.length === 0;
-      });
+      const classifiedIndustry = businessAnalysis?.industry_name || businessAnalysis?.classified_industry || "";
+      
+      // Pull 30 random candidates from active bank using random source_order ranges
+      const totalHooks = 1000;
+      const randomOffset = Math.floor(Math.random() * (totalHooks - 30));
+      
+      let hookCandidates = [];
+      try {
+        // Get all active locked hooks, randomized via sort, limited to 30
+        const allActive = await base44.asServiceRole.entities.LockedHookTemplates.filter(
+          { is_active: true, is_locked: true },
+          "source_order",
+          1000
+        );
+        // Shuffle and pick 30
+        const shuffled = allActive.sort(() => Math.random() - 0.5);
+        hookCandidates = shuffled.slice(0, 30);
+      } catch (e) {
+        console.error("Failed to load hook bank:", e.message);
+        hookCandidates = [];
+      }
 
       let openingResult;
 
-      if (relevantHooks.length >= 4) {
-        // Use hook bank: pick random 8 candidates, let Grok choose 4 best fits
-        const candidates = relevantHooks.sort(() => Math.random() - 0.5).slice(0, Math.min(8, relevantHooks.length));
-        const templatesForPrompt = candidates.map((h) => ({
+      if (hookCandidates.length >= 4) {
+        // Use hook bank — send 30 candidates to Grok, it picks 4 best fits
+        const templatesForPrompt = hookCandidates.map((h) => ({
           id: h.id,
+          hook_id: h.hook_id || "",
+          source_order: h.source_order || 0,
           source_category: h.source_category || "",
-          original_template: h.original_template || "",
-          hebrew_template: h.hebrew_template || h.original_template || "",
+          hebrew_template: h.hebrew_template || "",
           hook_mechanic: h.hook_mechanic || "",
-          placeholder_slots: h.placeholder_slots || [],
+          placeholder_slots: h.placeholder_slots || "[]",
         }));
+
+        console.log(`Hook bank: sending ${templatesForPrompt.length} candidates to Grok`);
 
         const userPrompt = `Business:
 Name: ${business.business_name}
@@ -355,50 +370,58 @@ Description: ${business.business_description}
 Goal: ${business.main_goal}
 
 Video style: ${videoStyle}
+Industry: ${classifiedIndustry}
 
 Selected concept:
 Title: ${selectedConcept.concept_title || selectedConcept.concept_name || ""}
 Description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
 Why it works: ${selectedConcept.why_it_works || ""}
 
-Business analysis: ${businessAnalysis ? JSON.stringify(businessAnalysis).slice(0, 500) : ""}
-
-Available hook templates (choose the 4 that best fit this concept):
+Available hook templates from the bank (${templatesForPrompt.length} candidates — choose the 4 best):
 ${JSON.stringify(templatesForPrompt, null, 2)}
 
-INSTRUCTIONS:
-1. Select exactly 4 templates from the list above that fit this concept best.
-2. Translate the template into Hebrew while PRESERVING the exact structure, order, and tension.
-3. Fill the (insert X) placeholders with specific details from the business and concept.
-4. Do NOT rewrite the template skeleton. Do NOT add extra sentences.
-5. Return the id of the template you selected as source_hook_template_id.
-6. Return exactly 4 options — each using a DIFFERENT template id.`;
+CRITICAL INSTRUCTIONS:
+1. Select exactly 4 templates from the list above — no inventing new ones.
+2. The hebrew_template is already in Hebrew — do NOT translate it.
+3. Fill any (placeholder) slots using the business/concept context.
+4. Preserve the exact template wording and structure — only fill placeholders.
+5. Return the exact id field as source_hook_template_id for each selection.
+6. Each option must use a DIFFERENT template id.
+7. source_type must be "hook_bank" for every option.`;
 
         const { parsed, provider } = await callWithFallback(OPENING_GEN_FROM_TEMPLATES_SYSTEM, userPrompt, 0.75);
         const rawOptions = (parsed.opening_options || []).slice(0, 4);
-        
-        // Enforce correct metadata from actual template data
+
+        // Enforce real metadata from the actual template
         const templateMap = {};
-        candidates.forEach(h => { templateMap[h.id] = h; });
-        
+        hookCandidates.forEach(h => { templateMap[h.id] = h; });
+
         const options = rawOptions.map((opt) => {
           const templateId = opt.source_hook_template_id;
-          const matchedTemplate = templateMap[templateId];
+          const matched = templateMap[templateId];
           return {
-            ...opt,
+            opening_line: opt.opening_line || opt.filled_opening_line || "",
+            why_it_fits: opt.why_it_fits || "",
+            mechanic_tag: opt.mechanic_tag || matched?.hook_mechanic || "",
             source_type: "hook_bank",
             source_hook_template_id: templateId || "",
-            original_template: matchedTemplate?.original_template || opt.original_template || "",
-            hebrew_template: matchedTemplate?.hebrew_template || opt.hebrew_template || "",
+            hook_id: matched?.hook_id || "",
+            source_order: matched?.source_order || 0,
+            hebrew_template: matched?.hebrew_template || opt.hebrew_template || "",
             filled_opening_line: opt.filled_opening_line || opt.opening_line || "",
-            opening_line: opt.opening_line || opt.filled_opening_line || "",
+            filled_slots: opt.filled_slots || {},
           };
         });
-        
-        openingResult = { opening_options: options, source: "hook_bank", provider_log: { provider_used: provider } };
+
+        openingResult = {
+          opening_options: options,
+          source: "hook_bank",
+          candidates_count: hookCandidates.length,
+          provider_log: { provider_used: provider, step_name: "opening_from_bank", success: true },
+        };
       } else {
-        // Not enough hooks in bank — use Grok to generate original opening lines
-        console.log(`LockedHookTemplates has ${relevantHooks.length} relevant hooks — using Grok to generate opening lines`);
+        // Fallback: fewer than 4 active hooks — Grok generates
+        console.log(`Hook bank has only ${hookCandidates.length} hooks — using Grok fallback`);
 
         const userPrompt = `Business:
 Name: ${business.business_name}
@@ -412,21 +435,30 @@ Title: ${selectedConcept.concept_title || selectedConcept.concept_name || ""}
 Description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
 Why it works: ${selectedConcept.why_it_works || ""}
 
-Generate 4 original opening lines that match this concept and business.
+Generate 4 original opening lines matching this concept and business.
 Each must use a different emotional mechanic.
 source_type must be "grok_generated" for all.
-Do NOT create fake source_hook_template_id values.`;
+Do NOT invent fake hook IDs.`;
 
         const { parsed, provider } = await callWithFallback(OPENING_GEN_GROK_SYSTEM, userPrompt, 0.85);
         const options = (parsed.opening_options || []).slice(0, 4).map(opt => ({
-          ...opt,
+          opening_line: opt.opening_line || "",
+          why_it_fits: opt.why_it_fits || "",
+          mechanic_tag: opt.mechanic_tag || "",
           source_type: "grok_generated",
           source_hook_template_id: null,
-          original_hook_template: null,
-          hebrew_hook_template: null,
-          filled_hook: null,
+          hook_id: null,
+          source_order: null,
+          hebrew_template: null,
+          filled_opening_line: opt.opening_line || "",
+          filled_slots: {},
         }));
-        openingResult = { opening_options: options, source: "grok_generated", provider_log: { provider_used: provider } };
+        openingResult = {
+          opening_options: options,
+          source: "grok_generated",
+          candidates_count: hookCandidates.length,
+          provider_log: { provider_used: provider, step_name: "opening_grok_fallback", success: true },
+        };
       }
 
       return Response.json(openingResult);
