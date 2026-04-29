@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
-import LoadingState from "@/components/shared/LoadingState";
+import BriefiLoader from "@/components/shared/BriefiLoader";
 import BriefiStepper from "@/components/briefi/BriefiStepper";
 
 const CTA_TYPE_COLORS = {
@@ -98,24 +98,16 @@ export default function GrokCTAPicker() {
     });
   };
 
-  if (loading) {
+  if (loading || generatingBrief) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="רגע, בונים לך כיוונים טובים..." />
-      </div>
-    );
-  }
-
-  if (generatingBrief) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="מרכיבים את הסרטון..." />
+      <div className="bg-background flex items-center justify-center" style={{ minHeight: "100dvh" }} dir="rtl">
+        <BriefiLoader />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="bg-background" style={{ minHeight: "100dvh" }} dir="rtl">
       <div className="briefi-header">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center cursor-pointer">
@@ -133,7 +125,7 @@ export default function GrokCTAPicker() {
         </div>
       </div>
 
-      <div className="briefi-page-container space-y-4">
+      <div className="briefi-page-container space-y-3">
         <div>
           <h1 className="text-xl font-black text-foreground">בחרו קריאה לפעולה</h1>
           <p className="text-sm text-muted-foreground mt-0.5">כל קריאה מותאמת לסרטון הזה ולעסק. בחרו אחת ונסיים.</p>

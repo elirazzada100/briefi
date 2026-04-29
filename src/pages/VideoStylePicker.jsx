@@ -78,7 +78,7 @@ export default function VideoStylePicker() {
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="bg-background" style={{ minHeight: "100dvh" }} dir="rtl">
       <div className="briefi-header">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center cursor-pointer">
@@ -88,16 +88,15 @@ export default function VideoStylePicker() {
             <p className="text-xs font-bold text-foreground">בחרו סגנון סרטון</p>
           </div>
         </div>
-        {/* No stepper here — stepper starts from concept selection */}
       </div>
 
-      <div className="briefi-page-container space-y-4">
+      <div className="briefi-page-container space-y-3">
         <div>
           <h1 className="text-xl font-black text-foreground">איזה סוג סרטון?</h1>
-          <p className="text-sm text-muted-foreground mt-1">בחרו סגנון ונייצר 4 קונספטים מותאמים לעסק.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">בחרו סגנון ונייצר 4 קונספטים מותאמים לעסק.</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5">
+        <div className="grid grid-cols-1 gap-2">
           {VIDEO_STYLES.map((style, index) => {
             const isSelected = selected === style.id;
             return (
@@ -145,7 +144,7 @@ export default function VideoStylePicker() {
           })}
         </div>
 
-        <div className="space-y-2.5 pt-2">
+        <div className="space-y-2 pt-1">
           <button
             onClick={handleContinue}
             disabled={!selected}

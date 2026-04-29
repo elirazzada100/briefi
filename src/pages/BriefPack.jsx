@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Plus, Download, GripVertical, Trash2, X, FileText } from "lucide-react";
-import LoadingState from "@/components/briefi/LoadingState";
 import { AnimatePresence, motion } from "framer-motion";
 
 const styleColors = {
@@ -115,8 +114,11 @@ export default function BriefPack() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-      <LoadingState message="טוען סרטונים..." />
+    <div className="bg-background flex items-center justify-center" style={{ minHeight: "100dvh" }} dir="rtl">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-7 h-7 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-sm font-semibold text-muted-foreground">שנייה סיימנו</p>
+      </div>
     </div>
   );
 
@@ -126,7 +128,7 @@ export default function BriefPack() {
   const allDone = completedCount >= totalTarget;
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="bg-background" style={{ minHeight: "100dvh" }} dir="rtl">
       <div className="briefi-header">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate("/")} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">

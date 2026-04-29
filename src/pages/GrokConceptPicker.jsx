@@ -2,9 +2,19 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
-import LoadingState from "@/components/shared/LoadingState";
+import BriefiLoader from "@/components/shared/BriefiLoader";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
 import BriefiStepper from "@/components/briefi/BriefiStepper";
+
+// Remove leading number patterns like "57. " or "12. " and trailing dashes/spaces
+function cleanConceptTitle(title) {
+  if (!title) return title;
+  return title
+    .replace(/^\d+\.\s*/, "")   // remove leading "57. "
+    .replace(/[-–—]+$/, "")      // remove trailing dashes
+    .replace(/^[-–—]+/, "")      // remove leading dashes
+    .trim();
+}
 
 export default function GrokConceptPicker() {
   const { projectId } = useParams();
@@ -83,14 +93,14 @@ export default function GrokConceptPicker() {
 
   if (guardLoading || loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="רגע, בונים לך כיוונים טובים..." />
+      <div className="bg-background flex items-center justify-center" style={{ minHeight: "100dvh" }} dir="rtl">
+        <BriefiLoader />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="bg-background" style={{ minHeight: "100dvh" }} dir="rtl">
       <div className="briefi-header">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center cursor-pointer">
@@ -108,7 +118,7 @@ export default function GrokConceptPicker() {
         </div>
       </div>
 
-      <div className="briefi-page-container space-y-4">
+      <div className="briefi-page-container space-y-3">
         <div>
           <h1 className="text-xl font-black text-foreground">בחרו קונספט לסרטון</h1>
           <p className="text-sm text-muted-foreground mt-0.5">4 כיוונים לסרטון "{selectedVideoStyle}". בחרו אחד כדי להמשיך.</p>
@@ -125,27 +135,28 @@ export default function GrokConceptPicker() {
         )}
 
         {concepts.length === 0 && !error ? (
-          <div className="text-center py-12">
+          <div className="text-center py-8">
             <p className="text-muted-foreground text-sm">לא הצלחנו לייצר קונספטים.</p>
             <button onClick={loadConcepts} className="briefi-btn-secondary mt-4 mx-auto">נסו שוב</button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {concepts.map((concept, idx) => {
-              const name = concept.concept_title || concept.concept_name || `קונספט ${idx + 1}`;
+              const rawName = concept.concept_title || concept.concept_name || `קונספט ${idx + 1}`;
+              const name = cleanConceptTitle(rawName);
               const desc = concept.short_description || concept.core_situation || "";
-              const why = concept.why_it_works || "";
-              const tags = concept.idea_tags || concept.tone_tags || [];
+              const tags = (concept.idea_tags || concept.tone_tags || []).filter(
+                t => t && t !== concept.industry_name && t.length < 20
+              );
               const isSelecting = selectingIdx === idx;
 
               return (
-                <div key={idx} className="bg-white rounded-2xl border border-border/60 shadow-sm p-4 space-y-3">
+                <div key={idx} className="bg-white rounded-2xl border border-border/60 shadow-sm p-4 space-y-2.5">
                   <h3 className="font-black text-foreground text-base leading-snug">{name}</h3>
                   {desc && <p className="text-sm text-foreground/80 leading-relaxed">{desc}</p>}
-                  {why && <p className="text-xs text-muted-foreground italic">{why}</p>}
                   {tags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
-                      {tags.map((tag, ti) => (
+                      {tags.slice(0, 3).map((tag, ti) => (
                         <span key={ti} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/8 text-primary border border-primary/15">{tag}</span>
                       ))}
                     </div>

@@ -203,10 +203,10 @@ Generate exactly 4 original opening lines for this video concept and business.
 
 Rules:
 - Each line is the very first sentence of the video — it must grab attention immediately.
-- Write in natural, spoken Israeli Hebrew.
-- Maximum 2 seconds when spoken aloud.
-- Match the video style.
-- Each line must use a different emotional mechanic (e.g. shock, question, contradiction, humor, bold claim).
+- Write in natural, spoken Israeli Hebrew. Max 10 words per line.
+- Each line must use a DIFFERENT emotional mechanic.
+- Sound like a real Israeli person speaking — NOT a corporate ad, NOT a lecture.
+- Be specific to the concept, not generic.
 
 ${FORBIDDEN_PHRASES}
 
@@ -217,13 +217,9 @@ JSON schema:
   "opening_options": [
     {
       "opening_line": "the actual opening line in Hebrew",
-      "why_it_fits": "one short sentence",
+      "why_it_fits": "one short sentence max",
       "mechanic_tag": "short label e.g. 'שאלה', 'ניפוץ ציפיות', 'הצהרה חזקה', 'הומור', 'הפתעה'",
-      "source_type": "grok_generated",
-      "source_hook_template_id": null,
-      "original_hook_template": null,
-      "hebrew_hook_template": null,
-      "filled_hook": null
+      "source_type": "grok_generated"
     }
   ]
 }`;
@@ -259,8 +255,15 @@ JSON schema:
 const FINAL_BRIEF_SYSTEM = `You are Briefi Final Brief Assembler for Israeli social media.
 
 Assemble a complete, client-ready shooting brief from the selected concept, opening line, and CTA.
-Write in natural Israeli Hebrew.
+Write in natural Israeli Hebrew. Keep everything concise and practical.
 The brief must be shootable tomorrow with a phone.
+
+Rules:
+- shot_structure: 4-6 shots maximum.
+- text_overlays: 3-5 overlays maximum.
+- script_text: concise, natural spoken Hebrew — not too long.
+- Do NOT retrieve or regenerate concepts or hooks.
+- Use ONLY the selected inputs provided.
 
 ${FORBIDDEN_PHRASES}
 
@@ -270,35 +273,29 @@ JSON schema:
 {
   "brief_title": "short title",
   "video_concept": "1-2 sentence concept in Hebrew",
-  "hook": "exact opening line — use the selected opening line",
+  "hook": "exact opening line — use the selected opening line verbatim",
   "script_format": "person_to_camera | voiceover | dialogue | text_only",
-  "script_text": "the full spoken script or text-led script — complete natural Hebrew",
+  "script_text": "full spoken script — concise natural Hebrew",
   "shot_structure": [
     { "step": 1, "visual": "what is filmed", "spoken_or_overlay_text": "what is said or shown" }
   ],
   "text_overlays": ["overlay 1", "overlay 2"],
   "cta": "the CTA text",
-  "video_description": "social caption in Hebrew — תיאור הסרטון",
-  "visual_must_haves": ["must-have visual 1", "must-have visual 2"],
-  "production_notes": "specific practical filming notes",
-  "why_it_works": "why this concept works for this business"
+  "video_description": "social caption in Hebrew",
+  "visual_must_haves": ["must-have visual 1"],
+  "production_notes": "practical filming notes — 1-2 sentences",
+  "why_it_works": "one sentence"
 }`;
 
 const FINAL_BRIEF_LIMDI_SYSTEM = `You are Briefi Final Brief Assembler for Israeli social media — Educational style.
 
 Assemble a complete, client-ready shooting brief for an EDUCATIONAL video.
-Write in natural Israeli Hebrew.
+Write in natural Israeli Hebrew. Keep everything concise and practical.
 The brief must be shootable tomorrow with a phone.
 
-For educational (לימודי) videos, emphasize:
-- מה הצופה לומד — what the viewer learns
-- הטעות או הבלבול — the mistake or confusion being addressed
-- ההסבר הפשוט — the simple explanation
-- הדוגמה המצולמת — the filmed example
-- איך לצלם את זה ברור — how to film it clearly
-
-The video should feel useful, specific, practical — NOT a lecture, NOT salesy.
-The viewer must understand what they're about to learn from the first sentence.
+For educational (לימודי) videos: teach something practical, specific, filmable.
+The viewer must understand what they learn from the first sentence.
+NOT a lecture. NOT salesy. shot_structure: 4-6 shots. text_overlays: 3-5 max.
 
 ${FORBIDDEN_PHRASES}
 
@@ -308,18 +305,18 @@ JSON schema:
 {
   "brief_title": "short title",
   "video_concept": "1-2 sentence concept in Hebrew — what the viewer learns",
-  "hook": "exact opening line — use the selected opening line",
+  "hook": "exact opening line — use the selected opening line verbatim",
   "script_format": "person_to_camera | voiceover | dialogue | text_only",
-  "script_text": "the full spoken educational script — complete natural Hebrew, practical and clear",
+  "script_text": "spoken educational script — concise natural Hebrew",
   "shot_structure": [
     { "step": 1, "visual": "what is filmed", "spoken_or_overlay_text": "what is said or shown" }
   ],
   "text_overlays": ["key lesson overlay 1", "key lesson overlay 2"],
   "cta": "the CTA text",
-  "video_description": "social caption in Hebrew — תיאור הסרטון",
-  "visual_must_haves": ["must-have visual showing the lesson clearly"],
-  "production_notes": "specific practical filming notes for an educational video",
-  "why_it_works": "why this educational concept works for this business"
+  "video_description": "social caption in Hebrew",
+  "visual_must_haves": ["must-have visual 1"],
+  "production_notes": "practical filming notes — 1-2 sentences",
+  "why_it_works": "one sentence"
 }`;
 
 Deno.serve(async (req) => {
@@ -456,159 +453,39 @@ Do NOT start any description with: "סרטון שמציג", "נציג את", "נ
       }
 
       const videoStyle = selectedVideoStyle || "מצחיק";
-
-      // ── HOOK BANK RETRIEVAL ─────────────────────────────────────────────────────
-      // Step 1: Get a candidate pool of 30 hooks filtered by style/industry
-      // All hooks in our bank have best_for_styles="all" and best_for_industries="all"
-      // so we randomize 30 from the full active+locked bank, then let Grok pick 4
-
       const classifiedIndustry = businessAnalysis?.industry_name || businessAnalysis?.classified_industry || "";
-      
-      // Pull 30 random candidates from active bank using random source_order ranges
-      const totalHooks = 1000;
-      const randomOffset = Math.floor(Math.random() * (totalHooks - 30));
-      
-      let hookCandidates = [];
-      try {
-        // Get all active locked hooks
-        const allActive = await base44.asServiceRole.entities.LockedHookTemplates.filter(
-          { is_active: true, is_locked: true },
-          "source_order",
-          1000
-        );
 
-        // For לימודי: prefer hooks with best_for_styles matching לימודי or מכירתי or all
-        // For other styles: use all hooks
-        let pool = allActive;
-        if (videoStyle === "לימודי") {
-          const preferred = allActive.filter(h => {
-            const s = (h.best_for_styles || "").toLowerCase();
-            return s === "all" || s === "" || s.includes("לימודי") || s.includes("מכירתי");
-          });
-          pool = preferred.length >= 10 ? preferred : allActive;
-        }
-
-        // Shuffle and pick 30
-        hookCandidates = pool.sort(() => Math.random() - 0.5).slice(0, 30);
-      } catch (e) {
-        console.error("Failed to load hook bank:", e.message);
-        hookCandidates = [];
-      }
-
-      let openingResult;
-
-      if (hookCandidates.length >= 4) {
-        // Use hook bank — send 30 candidates to Grok, it picks 4 best fits
-        const templatesForPrompt = hookCandidates.map((h) => ({
-          id: h.id,
-          hook_id: h.hook_id || "",
-          source_order: h.source_order || 0,
-          source_category: h.source_category || "",
-          hebrew_template: h.hebrew_template || "",
-          hook_mechanic: h.hook_mechanic || "",
-          placeholder_slots: h.placeholder_slots || "[]",
-        }));
-
-        console.log(`Hook bank: sending ${templatesForPrompt.length} candidates to Grok`);
-
-        const userPrompt = `Business:
+      const userPrompt = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
 Goal: ${business.main_goal}
-
-Video style: ${videoStyle}
 Industry: ${classifiedIndustry}
 
-Selected concept:
-Title: ${selectedConcept.concept_title || selectedConcept.concept_name || ""}
-Description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
-Why it works: ${selectedConcept.why_it_works || ""}
-
-Available hook templates from the bank (${templatesForPrompt.length} candidates — choose the 4 best):
-${JSON.stringify(templatesForPrompt, null, 2)}
-
-CRITICAL INSTRUCTIONS:
-1. Select exactly 4 templates from the list above — no inventing new ones.
-2. The hebrew_template is already in Hebrew — do NOT translate it.
-3. Fill any (placeholder) slots using the business/concept context.
-4. Preserve the exact template wording and structure — only fill placeholders.
-5. Return the exact id field as source_hook_template_id for each selection.
-6. Each option must use a DIFFERENT template id.
-7. source_type must be "hook_bank" for every option.`;
-
-        const { parsed, provider } = await callWithFallback(OPENING_GEN_FROM_TEMPLATES_SYSTEM, userPrompt, 0.75);
-        const rawOptions = (parsed.opening_options || []).slice(0, 4);
-
-        // Enforce real metadata from the actual template
-        const templateMap = {};
-        hookCandidates.forEach(h => { templateMap[h.id] = h; });
-
-        const options = rawOptions.map((opt) => {
-          const templateId = opt.source_hook_template_id;
-          const matched = templateMap[templateId];
-          return {
-            opening_line: opt.opening_line || opt.filled_opening_line || "",
-            why_it_fits: opt.why_it_fits || "",
-            mechanic_tag: opt.mechanic_tag || matched?.hook_mechanic || "",
-            source_type: "hook_bank",
-            source_hook_template_id: templateId || "",
-            hook_id: matched?.hook_id || "",
-            source_order: matched?.source_order || 0,
-            hebrew_template: matched?.hebrew_template || opt.hebrew_template || "",
-            filled_opening_line: opt.filled_opening_line || opt.opening_line || "",
-            filled_slots: opt.filled_slots || {},
-          };
-        });
-
-        openingResult = {
-          opening_options: options,
-          source: "hook_bank",
-          candidates_count: hookCandidates.length,
-          provider_log: { provider_used: provider, step_name: "opening_from_bank", success: true },
-        };
-      } else {
-        // Fallback: fewer than 4 active hooks — Grok generates
-        console.log(`Hook bank has only ${hookCandidates.length} hooks — using Grok fallback`);
-
-        const userPrompt = `Business:
-Name: ${business.business_name}
-Description: ${business.business_description}
-Goal: ${business.main_goal}
-
 Video style: ${videoStyle}
 
 Selected concept:
 Title: ${selectedConcept.concept_title || selectedConcept.concept_name || ""}
 Description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
-Why it works: ${selectedConcept.why_it_works || ""}
 
-Generate 4 original opening lines matching this concept and business.
-Each must use a different emotional mechanic.
-source_type must be "grok_generated" for all.
-Do NOT invent fake hook IDs.`;
+Generate exactly 4 opening lines for this specific concept and business.
+Each must be the very first sentence of the video — short, spoken, Israeli Hebrew.
+Maximum 10 words per line.
+Each must use a DIFFERENT emotional mechanic.
+Do NOT explain the concept. Do NOT use generic phrases. Sound like a real Israeli person speaking.`;
 
-        const { parsed, provider } = await callWithFallback(OPENING_GEN_GROK_SYSTEM, userPrompt, 0.85);
-        const options = (parsed.opening_options || []).slice(0, 4).map(opt => ({
-          opening_line: opt.opening_line || "",
-          why_it_fits: opt.why_it_fits || "",
-          mechanic_tag: opt.mechanic_tag || "",
-          source_type: "grok_generated",
-          source_hook_template_id: null,
-          hook_id: null,
-          source_order: null,
-          hebrew_template: null,
-          filled_opening_line: opt.opening_line || "",
-          filled_slots: {},
-        }));
-        openingResult = {
-          opening_options: options,
-          source: "grok_generated",
-          candidates_count: hookCandidates.length,
-          provider_log: { provider_used: provider, step_name: "opening_grok_fallback", success: true },
-        };
-      }
+      const { parsed, provider } = await callWithFallback(OPENING_GEN_GROK_SYSTEM, userPrompt, 0.85);
+      const options = (parsed.opening_options || []).slice(0, 4).map(opt => ({
+        opening_line: opt.opening_line || "",
+        why_it_fits: opt.why_it_fits || "",
+        mechanic_tag: opt.mechanic_tag || "",
+        source_type: "grok_generated",
+      }));
 
-      return Response.json(openingResult);
+      return Response.json({
+        opening_options: options,
+        source: "grok_generated",
+        provider_log: { provider_used: provider, step_name: "opening_grok", success: true },
+      });
     }
 
     // ── generateCTAOptions ──────────────────────────────────────────────────────
@@ -648,6 +525,8 @@ Match the tone of the concept and opening line.`;
       }
 
       const opening = selectedOpening || selectedBody;
+      // Support both new schema (opening_line) and old schema (filled_opening_line)
+      const openingLineText = opening?.opening_line || opening?.filled_opening_line || "";
 
       const isLimdi = (selectedVideoStyle || "") === "לימודי";
       const finalBriefSystemPrompt = isLimdi ? FINAL_BRIEF_LIMDI_SYSTEM : FINAL_BRIEF_SYSTEM;
@@ -660,20 +539,21 @@ Goal: ${business.main_goal}
 Video style: ${selectedVideoStyle || ""}
 
 Selected concept:
-${JSON.stringify(selectedConcept, null, 2)}
+Title: ${selectedConcept.concept_title || selectedConcept.concept_name || ""}
+Description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
 
-Selected opening line:
-${opening ? JSON.stringify(opening, null, 2) : "(use concept's natural opening line)"}
+Selected opening line (use verbatim in "hook" field):
+"${openingLineText}"
 
 Selected CTA:
-${JSON.stringify(selectedCTA, null, 2)}
+"${selectedCTA.cta_text || selectedCTA}"
 
-Assemble one complete, clean shooting brief from the selections above.
-IMPORTANT: The "hook" field must use the selected opening line exactly (or very close to it).
-Do not invent new ideas — use the selected pieces.
-Write the full script_text as complete natural spoken Hebrew.
-Make it immediately usable for filming.
-The field "video_description" is the social media caption — תיאור הסרטון.`;
+Assemble one complete, concise shooting brief using ONLY the above selected inputs.
+- "hook" field = the selected opening line verbatim.
+- 4-6 shots only.
+- 3-5 text overlays only.
+- script_text should be concise spoken Hebrew.
+- Do NOT regenerate concepts or hooks.`;
 
       const { parsed, provider } = await callWithFallback(finalBriefSystemPrompt, userPrompt, 0.6);
 
