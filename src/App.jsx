@@ -27,6 +27,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminLearning from './pages/admin/Learning';
 import GenerationDebug from './pages/admin/GenerationDebug';
 import AdminTrendPatterns from './pages/admin/TrendPatterns';
+import AdminConceptBank from './pages/admin/ConceptBank';
 import GrokConceptPicker from './pages/GrokConceptPicker';
 import GrokBodyPicker from './pages/GrokBodyPicker';
 import GrokOpeningPicker from './pages/GrokOpeningPicker';
@@ -98,6 +99,7 @@ const AuthenticatedApp = () => {
       <Route path="/admin/learning" element={<ProtectedRoute><AdminLearning /></ProtectedRoute>} />
       <Route path="/admin/generation-debug/:generationRunId" element={<ProtectedRoute><GenerationDebug /></ProtectedRoute>} />
       <Route path="/admin/trend-patterns" element={<ProtectedRoute><AdminTrendPatterns /></ProtectedRoute>} />
+      <Route path="/admin/concept-bank" element={<ProtectedRoute><AdminConceptBank /></ProtectedRoute>} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/settings/privacy" element={<PrivacyPolicy />} />
       <Route path="/settings/terms" element={<TermsOfService />} />
