@@ -3,7 +3,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 
-// Only 5 user-facing styles. Order: מצחיק, תדמית, סרטון הכרות, מכירתי, טרנדי
+// 6 user-facing styles. Order: מצחיק, תדמית, סרטון הכרות, מכירתי, לימודי, טרנדי
 // Removed from UI: סרטון אווירה, כאב / פתרון, חינוכי, השוואה, מיתוס / ניפוץ
 // (those remain as internal AI routing mechanics only)
 const VIDEO_STYLES = [
@@ -38,6 +38,14 @@ const VIDEO_STYLES = [
     desc: "למכור בלי להישמע כמו פרסומת.",
     color: "#F97316",
     bg: "#FFEDD5",
+  },
+  {
+    id: "לימודי",
+    emoji: "🧠",
+    label: "לימודי",
+    desc: "טיפ, הסבר, טעות נפוצה או משהו שהלקוח לא ידע.",
+    color: "#0EA5E9",
+    bg: "#E0F2FE",
   },
   {
     id: "טרנדי",
