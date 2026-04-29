@@ -17,7 +17,7 @@ const INDUSTRIES = [
 ];
 
 const INTERNAL_TYPES = ["מצחיק", "תדמיתי", "היכרותי", "מכירתי", "לימודי"];
-const USER_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי"];
+const USER_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
 
 export default function AdminConceptBank() {
   const [concepts, setConcepts] = useState([]);

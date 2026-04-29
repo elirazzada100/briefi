@@ -117,6 +117,37 @@ JSON schema:
   ]
 }`;
 
+const CONCEPT_GEN_LIMDI_SYSTEM = `You are Briefi Concept Generator for Israeli social media — Educational style.
+
+Generate exactly 4 educational video concept options for the given business.
+Each concept must teach something practical that the viewer didn't know.
+Each concept should reveal a tip, common mistake, explanation, or surprising fact.
+
+Rules:
+- Make it specific to this business — not generic tips anyone could give
+- The viewer should understand what they will LEARN from the first sentence
+- Avoid sounding like a lecture or an academic paper
+- Avoid vague advice like "3 tips for success"
+- Each concept must be immediately filmable with a phone
+- Do NOT make it salesy
+- Write in natural Israeli Hebrew
+
+${FORBIDDEN_PHRASES}
+
+Return ONLY valid JSON. No markdown. No explanation.
+
+JSON schema:
+{
+  "concepts": [
+    {
+      "concept_title": "short punchy title 2-5 words",
+      "short_description": "2-3 sentences: what the viewer learns, what mistake or gap is addressed, how it's shown on screen",
+      "why_it_works": "one sentence practical reason",
+      "idea_tags": ["tag1", "tag2", "tag3"]
+    }
+  ]
+}`;
+
 // Opening lines generated from hook bank templates — EXACT template usage
 const OPENING_GEN_FROM_TEMPLATES_SYSTEM = `You are Briefi Hook Translator and Matcher for Israeli social media.
 
@@ -253,6 +284,44 @@ JSON schema:
   "why_it_works": "why this concept works for this business"
 }`;
 
+const FINAL_BRIEF_LIMDI_SYSTEM = `You are Briefi Final Brief Assembler for Israeli social media — Educational style.
+
+Assemble a complete, client-ready shooting brief for an EDUCATIONAL video.
+Write in natural Israeli Hebrew.
+The brief must be shootable tomorrow with a phone.
+
+For educational (לימודי) videos, emphasize:
+- מה הצופה לומד — what the viewer learns
+- הטעות או הבלבול — the mistake or confusion being addressed
+- ההסבר הפשוט — the simple explanation
+- הדוגמה המצולמת — the filmed example
+- איך לצלם את זה ברור — how to film it clearly
+
+The video should feel useful, specific, practical — NOT a lecture, NOT salesy.
+The viewer must understand what they're about to learn from the first sentence.
+
+${FORBIDDEN_PHRASES}
+
+Return ONLY valid JSON. No markdown. No explanation.
+
+JSON schema:
+{
+  "brief_title": "short title",
+  "video_concept": "1-2 sentence concept in Hebrew — what the viewer learns",
+  "hook": "exact opening line — use the selected opening line",
+  "script_format": "person_to_camera | voiceover | dialogue | text_only",
+  "script_text": "the full spoken educational script — complete natural Hebrew, practical and clear",
+  "shot_structure": [
+    { "step": 1, "visual": "what is filmed", "spoken_or_overlay_text": "what is said or shown" }
+  ],
+  "text_overlays": ["key lesson overlay 1", "key lesson overlay 2"],
+  "cta": "the CTA text",
+  "video_description": "social caption in Hebrew — תיאור הסרטון",
+  "visual_must_haves": ["must-have visual showing the lesson clearly"],
+  "production_notes": "specific practical filming notes for an educational video",
+  "why_it_works": "why this educational concept works for this business"
+}`;
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -273,6 +342,69 @@ Deno.serve(async (req) => {
       const videoStyle = selectedVideoStyle || "מצחיק";
       let contextRows = "";
 
+      // ── ConceptBank retrieval for non-Grok styles ──────────────────────────
+      // For all non-טרנדי styles, first try to retrieve from ConceptBank
+      if (videoStyle !== "טרנדי") {
+        const classifiedIndustry = businessAnalysis?.industry_name || businessAnalysis?.classified_industry || "";
+
+        // Map user-facing style → internal_concept_type(s)
+        const styleToInternalTypes = {
+          "מצחיק": ["מצחיק"],
+          "תדמית": ["תדמיתי"],
+          "סרטון הכרות": ["היכרותי"],
+          "מכירתי": ["מכירתי"],
+          "לימודי": ["לימודי"],
+        };
+        const internalTypes = styleToInternalTypes[videoStyle] || [];
+
+        let bankConcepts = [];
+        if (internalTypes.length > 0 && classifiedIndustry) {
+          // Primary: match industry + internal type
+          for (const itype of internalTypes) {
+            const batch = await base44.asServiceRole.entities.ConceptBank.filter(
+              { is_active: true, industry_name: classifiedIndustry, internal_concept_type: itype },
+              "concept_number_in_section",
+              20
+            );
+            bankConcepts = [...bankConcepts, ...batch];
+          }
+        }
+        if (bankConcepts.length < 4 && internalTypes.length > 0) {
+          // Fallback: any industry with matching internal type
+          for (const itype of internalTypes) {
+            const batch = await base44.asServiceRole.entities.ConceptBank.filter(
+              { is_active: true, internal_concept_type: itype },
+              "global_concept_number",
+              40
+            );
+            bankConcepts = [...bankConcepts, ...batch];
+          }
+        }
+
+        if (bankConcepts.length >= 4) {
+          // Shuffle and pick 4
+          const shuffled = bankConcepts.sort(() => Math.random() - 0.5).slice(0, 4);
+          const concepts = shuffled.map(c => ({
+            concept_title: c.concept_title || "",
+            short_description: c.concept_raw_text || c.concept_description || "",
+            why_it_works: c.concept_description || "",
+            idea_tags: [videoStyle, c.industry_name].filter(Boolean),
+            _source: "concept_bank",
+            _concept_bank_id: c.id,
+            _global_concept_number: c.global_concept_number,
+            _internal_concept_type: c.internal_concept_type,
+          }));
+          return Response.json({
+            concepts,
+            source: "concept_bank",
+            candidates_count: bankConcepts.length,
+            provider_log: { provider_used: "concept_bank", step_name: "concept", success: true },
+          });
+        }
+        console.log(`ConceptBank: only ${bankConcepts.length} candidates for style=${videoStyle}, industry=${classifiedIndustry} — falling back to Grok`);
+      }
+
+      // ── Grok generation (טרנדי or fallback) ───────────────────────────────
       if (videoStyle === "טרנדי") {
         const trendPatterns = await base44.asServiceRole.entities.TrendPattern.filter({ is_active: true });
         const shuffled = trendPatterns.sort(() => Math.random() - 0.5).slice(0, 4);
@@ -283,6 +415,9 @@ Deno.serve(async (req) => {
           });
         }
       }
+
+      // Use dedicated לימודי system prompt for educational style
+      const systemPrompt = videoStyle === "לימודי" ? CONCEPT_GEN_LIMDI_SYSTEM : CONCEPT_GEN_SYSTEM;
 
       const userPrompt = `Business:
 Name: ${business.business_name}
@@ -295,7 +430,8 @@ Style guide:
 - מצחיק: skit, funny situation, punchline, something people forward
 - תדמית: personality, attitude, trust-building without sounding corporate (includes atmosphere/vibe)
 - סרטון הכרות: who is behind the business, no speech, no "nice to meet you"
-- מכירתי: sell without sounding like an ad (includes pain/solution angles)
+- מכירתי: sell without sounding like an ad — direct sales angle
+- לימודי: teach something practical — tip, common mistake, explanation, surprising fact specific to this business
 - טרנדי: use the provided trend patterns below
 ${contextRows}
 
@@ -303,7 +439,7 @@ Generate 4 strong, original video concepts in the "${videoStyle}" style for this
 Each concept must clearly reflect the "${videoStyle}" style from the first sentence.
 Do NOT start any description with: "סרטון שמציג", "נציג את", "נראה את", "לקוחות נהנים".`;
 
-      const { parsed, provider } = await callWithFallback(CONCEPT_GEN_SYSTEM, userPrompt, 0.85);
+      const { parsed, provider } = await callWithFallback(systemPrompt, userPrompt, 0.85);
       const concepts = (parsed.concepts || []).slice(0, 4);
 
       return Response.json({
@@ -334,15 +470,26 @@ Do NOT start any description with: "סרטון שמציג", "נציג את", "נ
       
       let hookCandidates = [];
       try {
-        // Get all active locked hooks, randomized via sort, limited to 30
+        // Get all active locked hooks
         const allActive = await base44.asServiceRole.entities.LockedHookTemplates.filter(
           { is_active: true, is_locked: true },
           "source_order",
           1000
         );
+
+        // For לימודי: prefer hooks with best_for_styles matching לימודי or מכירתי or all
+        // For other styles: use all hooks
+        let pool = allActive;
+        if (videoStyle === "לימודי") {
+          const preferred = allActive.filter(h => {
+            const s = (h.best_for_styles || "").toLowerCase();
+            return s === "all" || s === "" || s.includes("לימודי") || s.includes("מכירתי");
+          });
+          pool = preferred.length >= 10 ? preferred : allActive;
+        }
+
         // Shuffle and pick 30
-        const shuffled = allActive.sort(() => Math.random() - 0.5);
-        hookCandidates = shuffled.slice(0, 30);
+        hookCandidates = pool.sort(() => Math.random() - 0.5).slice(0, 30);
       } catch (e) {
         console.error("Failed to load hook bank:", e.message);
         hookCandidates = [];
@@ -502,6 +649,9 @@ Match the tone of the concept and opening line.`;
 
       const opening = selectedOpening || selectedBody;
 
+      const isLimdi = (selectedVideoStyle || "") === "לימודי";
+      const finalBriefSystemPrompt = isLimdi ? FINAL_BRIEF_LIMDI_SYSTEM : FINAL_BRIEF_SYSTEM;
+
       const userPrompt = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
@@ -525,7 +675,7 @@ Write the full script_text as complete natural spoken Hebrew.
 Make it immediately usable for filming.
 The field "video_description" is the social media caption — תיאור הסרטון.`;
 
-      const { parsed, provider } = await callWithFallback(FINAL_BRIEF_SYSTEM, userPrompt, 0.6);
+      const { parsed, provider } = await callWithFallback(finalBriefSystemPrompt, userPrompt, 0.6);
 
       // Map video_description → caption_suggestion for backwards compatibility
       if (parsed.video_description && !parsed.caption_suggestion) {
