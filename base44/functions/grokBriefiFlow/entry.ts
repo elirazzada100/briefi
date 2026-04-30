@@ -148,55 +148,6 @@ JSON schema:
   ]
 }`;
 
-// Opening lines generated from hook bank templates — EXACT template usage
-const OPENING_GEN_FROM_TEMPLATES_SYSTEM = `You are Briefi Hook Translator and Matcher for Israeli social media.
-
-You receive a selected video concept, business notes, and a list of real hook templates from LockedHookTemplates.
-
-Your job:
-Choose 4 hook templates that fit the selected concept and turn them into Hebrew opening lines.
-
-CRITICAL RULES — DO NOT VIOLATE:
-1. You are NOT writing new hooks.
-2. You are NOT improving the hooks.
-3. You are NOT using the hook bank as inspiration.
-4. You MUST use the templates exactly — preserving wording, structure, order, tension.
-
-If a template is in English:
-Translate it into Hebrew while preserving the EXACT structure, order, tension, and placeholders.
-Do NOT rewrite creatively. Do NOT improve. Do NOT change the meaning.
-Do NOT add emojis, "בואו", "אל תפספסו", "חדש אצלנו", or any marketing language.
-Do NOT shorten unless Hebrew grammar requires a tiny adjustment.
-
-If a template has placeholders like (insert X):
-Fill ONLY the placeholders using the selected concept and business context.
-Do NOT rewrite the template skeleton around the placeholders.
-Do NOT add new claims or extra sentences.
-
-Each output MUST be traceable to one source_hook_template_id.
-Use the id field provided in the template list.
-
-${FORBIDDEN_PHRASES}
-
-Return ONLY valid JSON. No markdown. No explanation.
-
-JSON schema:
-{
-  "opening_options": [
-    {
-      "opening_line": "the final Hebrew opening line with placeholders filled",
-      "why_it_fits": "one short sentence — why this template fits the concept",
-      "mechanic_tag": "short mechanic label e.g. 'שאלה', 'ניפוץ ציפיות', 'הצהרה חזקה', 'השוואה', 'סיפור'",
-      "source_type": "hook_bank",
-      "source_hook_template_id": "the id from the template",
-      "original_template": "the original English template text",
-      "hebrew_template": "literal Hebrew translation of the template structure",
-      "filled_opening_line": "same as opening_line — the filled final version",
-      "filled_slots": {}
-    }
-  ]
-}`;
-
 const OPENING_GEN_GROK_SYSTEM = `You are Briefi Opening Line Generator for Israeli social media.
 
 Generate exactly 4 original opening lines for this video concept and business.
@@ -252,72 +203,29 @@ JSON schema:
   ]
 }`;
 
-const FINAL_BRIEF_SYSTEM = `You are Briefi Final Brief Assembler for Israeli social media.
+const FINAL_BRIEF_SYSTEM = `You are Briefi Final Brief Assembler. Assemble a shooting brief in Israeli Hebrew from the provided inputs only. One call. No retrieval.
 
-Assemble a complete, client-ready shooting brief from the selected concept, opening line, and CTA.
-Write in natural Israeli Hebrew. Keep everything concise and practical.
-The brief must be shootable tomorrow with a phone.
+STRICT LIMITS: shot_structure 4-5 shots. text_overlays 3-4 items. script_text max 80 words. video_description max 2 sentences. production_notes 1 sentence.
 
-Rules:
-- shot_structure: 4-6 shots maximum.
-- text_overlays: 3-5 overlays maximum.
-- script_text: concise, natural spoken Hebrew — not too long.
-- Do NOT retrieve or regenerate concepts or hooks.
-- Use ONLY the selected inputs provided.
+Use ONLY the inputs given. Do NOT invent concepts or hooks. Use the opening line verbatim in "hook".
 
 ${FORBIDDEN_PHRASES}
 
-Return ONLY valid JSON. No markdown. No explanation.
+Return ONLY valid JSON. No markdown.
 
-JSON schema:
-{
-  "brief_title": "short title",
-  "video_concept": "1-2 sentence concept in Hebrew",
-  "hook": "exact opening line — use the selected opening line verbatim",
-  "script_format": "person_to_camera | voiceover | dialogue | text_only",
-  "script_text": "full spoken script — concise natural Hebrew",
-  "shot_structure": [
-    { "step": 1, "visual": "what is filmed", "spoken_or_overlay_text": "what is said or shown" }
-  ],
-  "text_overlays": ["overlay 1", "overlay 2"],
-  "cta": "the CTA text",
-  "video_description": "social caption in Hebrew",
-  "visual_must_haves": ["must-have visual 1"],
-  "production_notes": "practical filming notes — 1-2 sentences",
-  "why_it_works": "one sentence"
-}`;
+{"brief_title":"","video_concept":"","hook":"opening line verbatim","script_format":"person_to_camera|voiceover|dialogue|text_only","script_text":"","shot_structure":[{"step":1,"visual":"","spoken_or_overlay_text":""}],"text_overlays":[],"cta":"","video_description":"","visual_must_haves":[],"production_notes":"","why_it_works":""}`;
 
-const FINAL_BRIEF_LIMDI_SYSTEM = `You are Briefi Final Brief Assembler for Israeli social media — Educational style.
+const FINAL_BRIEF_LIMDI_SYSTEM = `You are Briefi Final Brief Assembler — Educational style. Assemble a shooting brief in Israeli Hebrew. Educational = teach something practical. One call. No retrieval.
 
-Assemble a complete, client-ready shooting brief for an EDUCATIONAL video.
-Write in natural Israeli Hebrew. Keep everything concise and practical.
-The brief must be shootable tomorrow with a phone.
+STRICT LIMITS: shot_structure 4-5 shots. text_overlays 3-4 items. script_text max 80 words. video_description max 2 sentences. production_notes 1 sentence.
 
-For educational (לימודי) videos: teach something practical, specific, filmable.
-The viewer must understand what they learn from the first sentence.
-NOT a lecture. NOT salesy. shot_structure: 4-6 shots. text_overlays: 3-5 max.
+Use ONLY the inputs given. Do NOT invent concepts or hooks. Use the opening line verbatim in "hook". NOT a lecture. NOT salesy.
 
 ${FORBIDDEN_PHRASES}
 
-Return ONLY valid JSON. No markdown. No explanation.
+Return ONLY valid JSON. No markdown.
 
-JSON schema:
-{
-  "brief_title": "short title",
-  "video_concept": "1-2 sentence concept in Hebrew — what the viewer learns",
-  "hook": "exact opening line — use the selected opening line verbatim",
-  "script_format": "person_to_camera | voiceover | dialogue | text_only",
-  "script_text": "spoken educational script — concise natural Hebrew",
-  "shot_structure": [
-    { "step": 1, "visual": "what is filmed", "spoken_or_overlay_text": "what is said or shown" }
-  ],
-  "text_overlays": ["key lesson overlay 1", "key lesson overlay 2"],
-  "cta": "the CTA text",
-  "video_description": "social caption in Hebrew",
-  "visual_must_haves": ["must-have visual 1"],
-  "production_notes": "practical filming notes — 1-2 sentences",
-  "why_it_works": "one sentence"
-}`;
+{"brief_title":"","video_concept":"","hook":"opening line verbatim","script_format":"person_to_camera|voiceover|dialogue|text_only","script_text":"","shot_structure":[{"step":1,"visual":"","spoken_or_overlay_text":""}],"text_overlays":[],"cta":"","video_description":"","visual_must_haves":[],"production_notes":"","why_it_works":""}`;
 
 Deno.serve(async (req) => {
   try {
@@ -634,29 +542,13 @@ Match the tone of the concept and opening line.`;
       const isLimdi = (selectedVideoStyle || "") === "לימודי";
       const finalBriefSystemPrompt = isLimdi ? FINAL_BRIEF_LIMDI_SYSTEM : FINAL_BRIEF_SYSTEM;
 
-      const userPrompt = `Business:
-Name: ${business.business_name}
-Description: ${business.business_description}
-Goal: ${business.main_goal}
+      const userPrompt = `Business: ${business.business_name}. ${business.business_description}. Goal: ${business.main_goal}.
+Style: ${selectedVideoStyle || ""}
+Concept: ${selectedConcept.concept_title || ""} — ${selectedConcept.short_description || selectedConcept.core_situation || ""}
+Opening line (use verbatim as "hook"): "${openingLineText}"
+CTA: "${selectedCTA.cta_text || selectedCTA}"
 
-Video style: ${selectedVideoStyle || ""}
-
-Selected concept:
-Title: ${selectedConcept.concept_title || selectedConcept.concept_name || ""}
-Description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
-
-Selected opening line (use verbatim in "hook" field):
-"${openingLineText}"
-
-Selected CTA:
-"${selectedCTA.cta_text || selectedCTA}"
-
-Assemble one complete, concise shooting brief using ONLY the above selected inputs.
-- "hook" field = the selected opening line verbatim.
-- 4-6 shots only.
-- 3-5 text overlays only.
-- script_text should be concise spoken Hebrew.
-- Do NOT regenerate concepts or hooks.`;
+Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. script max 80 words.`;
 
       const { parsed, provider } = await callWithFallback(finalBriefSystemPrompt, userPrompt, 0.6);
 

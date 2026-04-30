@@ -415,7 +415,7 @@ export default function FinalBrief() {
             onClick={() => navigate(`/project/${projectId}/brief-pack`)}
             className="briefi-btn-ghost w-full"
           >
-            לחבילת הסרטונים בבריף
+            חזרה לסרטונים
           </button>
         </div>
       </div>
