@@ -31,6 +31,7 @@ export default function GrokConceptPicker() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectingIdx, setSelectingIdx] = useState(null);
+  const [resolvedAnalysis, setResolvedAnalysis] = useState(businessAnalysis);
 
   useEffect(() => {
     if (!selectedVideoStyle) {
@@ -54,11 +55,43 @@ export default function GrokConceptPicker() {
       main_goal: proj?.main_goal || "",
     };
 
+    // Ensure industry classification is available (required for strict ConceptBank retrieval)
+    let resolvedAnalysis = businessAnalysis;
+    if (selectedVideoStyle !== "טרנדי" && (!resolvedAnalysis?.industry_order || !resolvedAnalysis?.industry_name)) {
+      const classifyRes = await base44.functions.invoke("classifyBusinessCategory", {
+        businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
+      });
+      const clf = classifyRes.data;
+      // Map classifyBusinessCategory response to industry_order + industry_name
+      const INDUSTRY_MAP = {
+        "food_restaurants": { order: 1, name: "מסעדנות ואוכל" },
+        "beauty_aesthetics": { order: 2, name: "יופי ואסתטיקה" },
+        "fitness_nutrition": { order: 3, name: "פיטנס ותזונה" },
+        "coaches_consultants": { order: 4, name: "מאמנים, יועצים ונותני ידע" },
+        "local_services": { order: 5, name: "עסקים מקומיים ושירותים לבית" },
+        "real_estate_interiors": { order: 6, name: "נדל״ן, עיצוב פנים ושיפוצים" },
+        "events_nightlife": { order: 7, name: "אירועים, לילה וחוויות" },
+        "fashion_boutiques": { order: 8, name: "אופנה, תכשיטים ובוטיקים" },
+        "parenting_family": { order: 9, name: "הורות, ילדים ומשפחה" },
+        "health_wellness": { order: 10, name: "בריאות, טיפול ו-Wellness" },
+      };
+      const mapped = INDUSTRY_MAP[clf?.category_id];
+      resolvedAnalysis = {
+        ...(resolvedAnalysis || {}),
+        industry_order: mapped?.order || null,
+        industry_name: mapped?.name || clf?.category_name_he || "",
+        confidence: clf?.confidence || 0,
+        category_id: clf?.category_id || "",
+      };
+      setResolvedAnalysis(resolvedAnalysis);
+    }
+
     const res = await base44.functions.invoke("grokBriefiFlow", {
       action: "generateConcepts",
       business,
       selectedVideoStyle,
       project_id: projectId,
+      businessAnalysis: resolvedAnalysis,
     });
 
     if (res.data?.error) {
@@ -86,7 +119,7 @@ export default function GrokConceptPicker() {
         selectedConcept: concept,
         selectedVideoStyle,
         business,
-        businessAnalysis,
+        businessAnalysis: resolvedAnalysis,
       },
     });
   };
