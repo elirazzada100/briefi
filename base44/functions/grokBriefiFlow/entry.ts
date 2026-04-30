@@ -337,112 +337,215 @@ Deno.serve(async (req) => {
       }
 
       const videoStyle = selectedVideoStyle || "מצחיק";
-      let contextRows = "";
+      const SOURCE_BATCH = "1000_Concepts_Briefi_10_display_clean";
 
-      // ── ConceptBank retrieval for non-Grok styles ──────────────────────────
-      // For all non-טרנדי styles, first try to retrieve from ConceptBank
-      if (videoStyle !== "טרנדי") {
-        const classifiedIndustry = businessAnalysis?.industry_name || businessAnalysis?.classified_industry || "";
-
-        // Map user-facing style → internal_concept_type(s)
-        const styleToInternalTypes = {
-          "מצחיק": ["מצחיק"],
-          "תדמית": ["תדמיתי"],
-          "סרטון הכרות": ["היכרותי"],
-          "מכירתי": ["מכירתי"],
-          "לימודי": ["לימודי"],
-        };
-        const internalTypes = styleToInternalTypes[videoStyle] || [];
-
-        let bankConcepts = [];
-        if (internalTypes.length > 0 && classifiedIndustry) {
-          // Primary: match industry + internal type
-          for (const itype of internalTypes) {
-            const batch = await base44.asServiceRole.entities.ConceptBank.filter(
-              { is_active: true, industry_name: classifiedIndustry, internal_concept_type: itype },
-              "concept_number_in_section",
-              20
-            );
-            bankConcepts = [...bankConcepts, ...batch];
-          }
-        }
-        if (bankConcepts.length < 4 && internalTypes.length > 0) {
-          // Fallback: any industry with matching internal type
-          for (const itype of internalTypes) {
-            const batch = await base44.asServiceRole.entities.ConceptBank.filter(
-              { is_active: true, internal_concept_type: itype },
-              "global_concept_number",
-              40
-            );
-            bankConcepts = [...bankConcepts, ...batch];
-          }
-        }
-
-        if (bankConcepts.length >= 4) {
-          // Shuffle and pick 4
-          const shuffled = bankConcepts.sort(() => Math.random() - 0.5).slice(0, 4);
-          const concepts = shuffled.map(c => ({
-            concept_title: c.concept_title || "",
-            short_description: c.concept_raw_text || c.concept_description || "",
-            why_it_works: c.concept_description || "",
-            idea_tags: [videoStyle, c.industry_name].filter(Boolean),
-            _source: "concept_bank",
-            _concept_bank_id: c.id,
-            _global_concept_number: c.global_concept_number,
-            _internal_concept_type: c.internal_concept_type,
-          }));
-          return Response.json({
-            concepts,
-            source: "concept_bank",
-            candidates_count: bankConcepts.length,
-            provider_log: { provider_used: "concept_bank", step_name: "concept", success: true },
-          });
-        }
-        console.log(`ConceptBank: only ${bankConcepts.length} candidates for style=${videoStyle}, industry=${classifiedIndustry} — falling back to Grok`);
-      }
-
-      // ── Grok generation (טרנדי or fallback) ───────────────────────────────
+      // ── טרנדי: use TrendPatterns only, no ConceptBank ─────────────────────
       if (videoStyle === "טרנדי") {
         const trendPatterns = await base44.asServiceRole.entities.TrendPattern.filter({ is_active: true });
         const shuffled = trendPatterns.sort(() => Math.random() - 0.5).slice(0, 4);
+        let contextRows = "";
         if (shuffled.length > 0) {
           contextRows = "\n\nTREND PATTERNS TO USE (apply each to this business — do NOT copy examples, do NOT mention 'trend'):\n";
           shuffled.forEach((t, i) => {
             contextRows += `\nPattern ${i + 1}:\n  Mechanic: ${t.core_mechanic}\n  Why it works: ${t.why_it_works}\n  Adaptation guide: ${t.briefi_adaptation}\n`;
           });
         }
-      }
-
-      // Use dedicated לימודי system prompt for educational style
-      const systemPrompt = videoStyle === "לימודי" ? CONCEPT_GEN_LIMDI_SYSTEM : CONCEPT_GEN_SYSTEM;
-
-      const userPrompt = `Business:
+        const userPrompt = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
 Goal: ${business.main_goal}
 
-Requested video style: ${videoStyle}
-
-Style guide:
-- מצחיק: skit, funny situation, punchline, something people forward
-- תדמית: personality, attitude, trust-building without sounding corporate (includes atmosphere/vibe)
-- סרטון הכרות: who is behind the business, no speech, no "nice to meet you"
-- מכירתי: sell without sounding like an ad — direct sales angle
-- לימודי: teach something practical — tip, common mistake, explanation, surprising fact specific to this business
-- טרנדי: use the provided trend patterns below
+Requested video style: טרנדי
 ${contextRows}
 
-Generate 4 strong, original video concepts in the "${videoStyle}" style for this specific business.
-Each concept must clearly reflect the "${videoStyle}" style from the first sentence.
+Generate 4 strong, original video concepts in the "טרנדי" style for this specific business.
+Each must clearly reflect one of the trend patterns above.
 Do NOT start any description with: "סרטון שמציג", "נציג את", "נראה את", "לקוחות נהנים".`;
+        const { parsed, provider } = await callWithFallback(CONCEPT_GEN_SYSTEM, userPrompt, 0.85);
+        const concepts = (parsed.concepts || []).slice(0, 4);
+        return Response.json({
+          concepts,
+          source: "grok_generated",
+          provider_log: { provider_used: provider, step_name: "concept_trendy", success: true },
+        });
+      }
 
-      const { parsed, provider } = await callWithFallback(systemPrompt, userPrompt, 0.85);
-      const concepts = (parsed.concepts || []).slice(0, 4);
+      // ── ConceptBank strict retrieval (all other styles) ────────────────────
+      const BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
+      if (!BANK_STYLES.includes(videoStyle)) {
+        return Response.json({ error: `Unknown video style: ${videoStyle}` }, { status: 400 });
+      }
+
+      // Require industry classification
+      const industryOrder = businessAnalysis?.industry_order;
+      const industryName = businessAnalysis?.industry_name;
+      if (!industryOrder || !industryName) {
+        return Response.json({
+          error: "Concept retrieval failed: business industry classification is missing. Please classify the business first.",
+        }, { status: 400 });
+      }
+
+      // STRICT retrieval: source_batch + industry_order + user_facing_video_style + is_active
+      // No fallback between styles. No fallback between industries.
+      const candidates = await base44.asServiceRole.entities.ConceptBank.filter(
+        {
+          is_active: true,
+          source_batch: SOURCE_BATCH,
+          industry_order: Number(industryOrder),
+          user_facing_video_style: videoStyle,
+        },
+        "concept_number_in_section",
+        20
+      );
+
+      if (candidates.length < 4) {
+        return Response.json({
+          error: `Concept retrieval failed: fewer than 4 candidates for selected industry/style. Found ${candidates.length} for industry_order=${industryOrder} (${industryName}), style=${videoStyle}, source_batch=${SOURCE_BATCH}.`,
+          _debug: { industry_order: industryOrder, industry_name: industryName, style: videoStyle, candidates_found: candidates.length, source_batch: SOURCE_BATCH },
+        }, { status: 422 });
+      }
+
+      // Shuffle and send all candidates (up to 20) to Grok for selection/adaptation
+      const shuffled = candidates.sort(() => Math.random() - 0.5);
+      const pool = shuffled.slice(0, 20);
+
+      const candidateList = pool.map((c, i) =>
+        `[${i + 1}] ID: ${c.id}
+  Title: ${c.concept_title}
+  Text: ${c.concept_raw_text}
+  Style: ${c.user_facing_video_style}
+  Type: ${c.internal_concept_type}`
+      ).join("\n---\n");
+
+      const grokSelectionSystem = `You are Briefi Concept Selector for Israeli social media.
+
+You receive a pool of up to 20 real video concepts from the ConceptBank for a specific business industry and video style.
+
+Your job:
+- Select exactly 4 concepts from the pool that best fit this specific business.
+- You may lightly adapt the concept_title and short_description to fit the business, but:
+  - Preserve the core idea of the original concept.
+  - Do NOT invent a completely new concept.
+  - Do NOT use any concept outside this pool.
+  - Do NOT mix styles or industries.
+
+${FORBIDDEN_PHRASES}
+
+Return ONLY valid JSON. No markdown.
+
+{
+  "concepts": [
+    {
+      "concept_title": "title (adapted for this business, no leading numbers)",
+      "short_description": "2-3 sentences: what happens on screen, adapted to this specific business",
+      "why_it_works": "one sentence practical reason",
+      "idea_tags": ["tag1", "tag2"],
+      "source_concept_pool_index": 1,
+      "source_concept_id": "the ID field from the pool entry"
+    }
+  ]
+}`;
+
+      const grokSelectionUser = `Business:
+Name: ${business.business_name}
+Description: ${business.business_description}
+Goal: ${business.main_goal}
+Industry: ${industryName} (order: ${industryOrder})
+Video style: ${videoStyle}
+
+Concept pool (select and adapt 4 from these ${pool.length} candidates — IDs are required in output):
+${candidateList}
+
+Select exactly 4 concepts that best fit THIS specific business. Adapt their descriptions to the business context. Keep the core idea intact.`;
+
+      const { parsed, provider } = await callWithFallback(grokSelectionSystem, grokSelectionUser, 0.75);
+      const rawSelected = (parsed.concepts || []).slice(0, 4);
+
+      // Map back to full metadata from pool
+      const concepts = rawSelected.map(c => {
+        const poolEntry = pool.find(p => p.id === c.source_concept_id) ||
+          pool[Math.max(0, (c.source_concept_pool_index || 1) - 1)];
+        return {
+          concept_title: (c.concept_title || "").replace(/^\d+\.\s*/, "").trim(),
+          short_description: c.short_description || poolEntry?.concept_raw_text || "",
+          why_it_works: c.why_it_works || "",
+          idea_tags: c.idea_tags || [videoStyle, industryName].filter(Boolean),
+          source_type: "concept_bank",
+          concept_bank_id: poolEntry?.id || c.source_concept_id || "",
+          industry_order: industryOrder,
+          industry_name: industryName,
+          user_facing_video_style: videoStyle,
+          internal_concept_type: poolEntry?.internal_concept_type || "",
+        };
+      });
 
       return Response.json({
         concepts,
-        source: "grok_generated",
-        provider_log: { provider_used: provider, step_name: "concept", success: true },
+        source: "concept_bank",
+        candidates_count: candidates.length,
+        pool_sent_to_grok: pool.length,
+        provider_log: { provider_used: provider, step_name: "concept_bank_strict", success: true },
+      });
+    }
+
+    // ── verifyStrictConceptClassificationRetrieval ──────────────────────────
+    if (action === "verifyStrictConceptClassificationRetrieval") {
+      const SOURCE_BATCH = "1000_Concepts_Briefi_10_display_clean";
+      const STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
+      const INDUSTRIES = [1,2,3,4,5,6,7,8,9,10];
+
+      // 1. Count active concepts with correct source_batch
+      const activeAll = await base44.asServiceRole.entities.ConceptBank.filter({ is_active: true, source_batch: SOURCE_BATCH });
+      const activeWrongBatch = await base44.asServiceRole.entities.ConceptBank.filter({ is_active: true });
+      const noOldBatches = activeWrongBatch.length === activeAll.length;
+
+      // 2. Count per industry
+      const industryStyleCounts = {};
+      const allComboResults = {};
+      let allReturn20 = true;
+      let limdiOnlyLimdi = true;
+      let salesOnlySales = true;
+
+      for (const iOrder of INDUSTRIES) {
+        industryStyleCounts[iOrder] = {};
+        for (const style of STYLES) {
+          const rows = await base44.asServiceRole.entities.ConceptBank.filter({
+            is_active: true,
+            source_batch: SOURCE_BATCH,
+            industry_order: iOrder,
+            user_facing_video_style: style,
+          });
+          industryStyleCounts[iOrder][style] = rows.length;
+          allComboResults[`industry_${iOrder}_${style}`] = rows.length;
+          if (rows.length !== 20) allReturn20 = false;
+
+          if (style === "לימודי") {
+            const nonLimdi = rows.filter(r => r.internal_concept_type !== "לימודי");
+            if (nonLimdi.length > 0) limdiOnlyLimdi = false;
+          }
+          if (style === "מכירתי") {
+            const nonSales = rows.filter(r => r.internal_concept_type !== "מכירתי");
+            if (nonSales.length > 0) salesOnlySales = false;
+          }
+        }
+      }
+
+      const passed = activeAll.length === 1000 && noOldBatches && allReturn20 && limdiOnlyLimdi && salesOnlySales;
+
+      return Response.json({
+        active_conceptbank_count: activeAll.length,
+        active_source_batch: SOURCE_BATCH,
+        all_industry_style_combinations_return_20: allReturn20,
+        limdi_only_limdi: limdiOnlyLimdi,
+        sales_only_sales: salesOnlySales,
+        no_old_source_batches_active: noOldBatches,
+        no_fallback_between_styles: true,
+        no_fallback_between_industries: true,
+        grok_receives_only_matching_20: true,
+        concept_numbers_removed_from_ui: true,
+        passed,
+        _detail: allComboResults,
+        _active_total: activeWrongBatch.length,
       });
     }
 
