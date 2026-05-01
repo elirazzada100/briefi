@@ -1,11 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import OpenAI from 'npm:openai@4.68.0';
 
 const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
 const XAI_BASE_URL = Deno.env.get("XAI_BASE_URL") || "https://api.x.ai/v1";
 const XAI_MODEL = Deno.env.get("XAI_MODEL") || "grok-3";
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-const OPENAI_FAST_MODEL = Deno.env.get("OPENAI_FAST_MODEL") || "gpt-4o-mini";
 
 const FORBIDDEN_PHRASES = `
 Forbidden phrases (NEVER use these):
@@ -53,43 +50,26 @@ async function callGrok(systemPrompt, userPrompt, temperature = 0.7) {
   return content;
 }
 
-// ── OpenAI fallback caller ─────────────────────────────────────────────────────
-async function callOpenAIFallback(systemPrompt, userPrompt, temperature = 0.7) {
-  if (!OPENAI_API_KEY) throw new Error("No OpenAI API key for fallback");
-  const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
-  const response = await openai.chat.completions.create({
-    model: OPENAI_FAST_MODEL,
-    temperature,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    response_format: { type: "json_object" },
-  });
-  return response.choices[0].message.content;
-}
-
 // ── Parse JSON with markdown stripping ────────────────────────────────────────
 function parseJSON(raw) {
   const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   return JSON.parse(cleaned);
 }
 
-// ── Call with Grok + OpenAI fallback ──────────────────────────────────────────
+// ── Call Grok with retry (Grok-only, no OpenAI fallback) ───────────────────────
 async function callWithFallback(systemPrompt, userPrompt, temperature = 0.7) {
-  let provider = "grok";
-  let raw;
-  try {
-    raw = await callGrok(systemPrompt, userPrompt, temperature);
-    const parsed = parseJSON(raw);
-    return { parsed, provider };
-  } catch (grokErr) {
-    console.error("Grok failed, trying OpenAI fallback:", grokErr.message);
-    provider = "openai_fallback";
-    raw = await callOpenAIFallback(systemPrompt, userPrompt, temperature);
-    const parsed = parseJSON(raw);
-    return { parsed, provider };
+  let lastErr;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const raw = await callGrok(systemPrompt, userPrompt, temperature);
+      const parsed = parseJSON(raw);
+      return { parsed, provider: "grok" };
+    } catch (err) {
+      lastErr = err;
+      console.error(`Grok attempt ${attempt} failed:`, err.message);
+    }
   }
+  throw lastErr;
 }
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
@@ -202,6 +182,39 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action, project_id, business, selectedConcept, selectedOpening, selectedBody, selectedCTA, selectedVideoStyle, businessAnalysis } = body;
+
+    // ── generateCreativeDNA ─────────────────────────────────────────────────────
+    if (action === "generateCreativeDNA") {
+      const { project_id: pid, client_name, main_goal, raw_notes } = body;
+
+      const DNA_SYSTEM = `You are Briefi Business Analyst for Israeli social media.
+Analyze the business and produce a creative content strategy.
+Write in natural Israeli Hebrew. Be specific and concrete — not generic marketing advice.
+
+${FORBIDDEN_PHRASES}
+
+Return ONLY valid JSON. No markdown.
+
+{"business_analysis_cards":[{"title":"הכיוון הכי חזק","summary":"","tags":[]},{"title":"מה מוכרים פה באמת","summary":"","tags":[]},{"title":"למה זה יכול לעבוד","summary":"","tags":[]},{"title":"איך נגרום לאנשים לעצור","summary":"","tags":[]},{"title":"הזווית של בריפי","summary":"","tags":[]}],"recommended_content_directions":["","",""],"main_angle":"","audience_truth":"","what_is_interesting":"","what_to_avoid":""}`;
+
+      const dnaUser = `Business name: ${client_name || ""}
+Goal: ${main_goal || ""}
+Notes: ${raw_notes || ""}
+
+Analyze this business. Fill all 5 cards with specific, actionable insights. Provide 3-4 recommended_content_directions.`;
+
+      const { parsed: dna } = await callWithFallback(DNA_SYSTEM, dnaUser, 0.7);
+
+      // Save to project
+      if (pid) {
+        await base44.asServiceRole.entities.Project.update(pid, {
+          creative_dna: dna,
+          status: "in_progress",
+        });
+      }
+
+      return Response.json({ creative_dna: dna, provider: "grok" });
+    }
 
     // ── generateConcepts ────────────────────────────────────────────────────────
     if (action === "generateConcepts") {
@@ -710,6 +723,30 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
         brief_id: savedBrief?.id || null,
         provider_log: { provider_used: provider, step_name: "final_brief", success: true },
       });
+    }
+
+    // ── improveFinalBrief ───────────────────────────────────────────────────────
+    if (action === "improveFinalBrief") {
+      const { original_brief, feedback_text, client_name: cname, main_goal: cgoal } = body;
+      if (!original_brief || !feedback_text) {
+        return Response.json({ error: "original_brief and feedback_text required" }, { status: 400 });
+      }
+
+      const IMPROVE_SYSTEM = `You are Briefi Brief Improver. You receive an existing video brief and user feedback.
+Improve the brief based on the feedback. Keep structure identical. Write in Israeli Hebrew.
+${FORBIDDEN_PHRASES}
+Return ONLY valid JSON with the same schema as the input brief. No markdown.`;
+
+      const improveUser = `Business: ${cname || ""}. Goal: ${cgoal || ""}.
+Feedback from user: "${feedback_text}"
+
+Original brief:
+${JSON.stringify(original_brief, null, 2)}
+
+Improve the brief based on the feedback. Keep all fields. Adjust only what the feedback indicates.`;
+
+      const { parsed } = await callWithFallback(IMPROVE_SYSTEM, improveUser, 0.65);
+      return Response.json({ final_brief: parsed, provider: "grok" });
     }
 
     return Response.json({ error: "Unknown action" }, { status: 400 });

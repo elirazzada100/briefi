@@ -150,7 +150,7 @@ export default function CreativeDNA() {
     setGenerating(true);
     setError(false);
 
-    const response = await base44.functions.invoke("briefiAI", {
+    const response = await base44.functions.invoke("grokBriefiFlow", {
       action: "generateCreativeDNA",
       project_id: project.id,
       client_name: project.client_name,
@@ -160,7 +160,6 @@ export default function CreativeDNA() {
 
     const result = response.data?.creative_dna;
     setDna(result);
-    await base44.entities.Project.update(project.id, { status: "in_progress" });
     setGenerating(false);
   };
 

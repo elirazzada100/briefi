@@ -176,17 +176,14 @@ export default function FinalBrief() {
       video_feedback_created_at: new Date().toISOString(),
     });
 
-    const response = await base44.functions.invoke("briefiAI", {
+    const currentBrief = brief?.adapted_brief || brief?.final_brief || {};
+    const response = await base44.functions.invoke("grokBriefiFlow", {
       action: "improveFinalBrief",
       project_id: projectId,
-      video_brief_id: briefId,
-      original_brief: brief?.adapted_brief || brief?.final_brief,
-      quality_check: { issues: [feedbackFreeText], fix_suggestions: [] },
+      original_brief: currentBrief,
+      feedback_text: feedbackFreeText,
       client_name: project?.client_name || "",
       main_goal: project?.main_goal || "",
-      selected_concept: selectedConcept || {},
-      creative_dna: project?.creative_dna || {},
-      feedback_tags: [label].filter(Boolean),
     });
 
     const improved = response.data?.final_brief;

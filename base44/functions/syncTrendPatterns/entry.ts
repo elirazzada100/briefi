@@ -1,15 +1,17 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import OpenAI from 'npm:openai@4.68.0';
 
-const STRATEGY_MODEL = Deno.env.get("OPENAI_STRATEGY_MODEL") || "gpt-4o";
+// Migrated to Grok — no OpenAI dependency
+const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
+const XAI_BASE_URL = Deno.env.get("XAI_BASE_URL") || "https://api.x.ai/v1";
+const XAI_MODEL = Deno.env.get("XAI_MODEL") || "grok-3";
 
 const TREND_DISCOVERY_PROMPT = `You are a social media trend researcher specializing in Israeli short-form video content (TikTok, Instagram Reels, YouTube Shorts).
 
 Your task: identify 6-8 currently relevant video format/style trends for Israeli social media creators and businesses.
 
 Focus on:
-- Format trends (POV, day-in-my-life, "things I noticed", behind-the-scenes, side-by-side comparison, "tell me you X without telling me", get-ready-with-me, transformation, etc.)
-- Editing style trends (text-on-screen storytelling, reaction face + product, before/after split-screen, etc.)
+- Format trends (POV, day-in-my-life, "things I noticed", behind-the-scenes, side-by-side comparison, transformation, etc.)
+- Editing style trends (text-on-screen storytelling, reaction face + product, before/after, etc.)
 - Behavioral trends popular on Israeli social media
 - Trends that work for local businesses (food, beauty, fitness, services, coaching)
 
@@ -18,31 +20,35 @@ For each trend, provide:
 - How it works structurally
 - How to adapt it to Israeli business content
 - A concrete Hebrew example
-- Category fit: which content categories it works best for
-- Platform it's strongest on
-- Freshness status: current (trending now), stable (evergreen), or outdated
+- Freshness status: current, stable, or outdated
 
-Return valid JSON only. No markdown.
+Return ONLY valid JSON. No markdown.
 
-{
-  "trends": [
-    {
-      "trend_name": "שם הטרנד",
-      "platform": "TikTok | Reels | Shorts | General",
-      "structure": "תיאור המבנה - איך זה עובד",
-      "how_to_adapt": "איך להתאים לעסקים ישראליים",
-      "example_hebrew": "דוגמה ספציפית בעברית",
-      "category_fit": ["מצחיק", "תדמית", "מכירתי"],
-      "risk_notes": "הערת סיכון אם יש",
-      "freshness_status": "current | stable | outdated"
-    }
-  ]
-}`;
+{"trends":[{"trend_name":"","platform":"TikTok|Reels|Shorts|General","structure":"","how_to_adapt":"","example_hebrew":"","category_fit":[],"risk_notes":"","freshness_status":"current|stable|outdated"}]}`;
+
+async function callGrok(userPrompt) {
+  const res = await fetch(`${XAI_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${XAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: XAI_MODEL,
+      temperature: 0.6,
+      messages: [
+        { role: "system", content: TREND_DISCOVERY_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`xAI error: ${res.status}`);
+  const data = await res.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Empty response from Grok");
+  return content;
+}
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
 
-  // Allow both scheduled (no user) and manual admin invocation
   let isScheduled = false;
   try {
     const body = await req.clone().json();
@@ -56,96 +62,60 @@ Deno.serve(async (req) => {
     }
   }
 
-  const openai = new OpenAI({ apiKey: Deno.env.get("OPENAI_API_KEY") });
+  if (!XAI_API_KEY) return Response.json({ error: "XAI_API_KEY is not set" }, { status: 500 });
 
-  // 1. Fetch existing active trends to avoid duplication
   const existingTrends = await base44.asServiceRole.entities.TrendPattern.list();
   const existingNames = existingTrends.map(t => t.trend_name).filter(Boolean);
 
-  // 2. Call LLM to discover current trends
-  const response = await openai.chat.completions.create({
-    model: STRATEGY_MODEL,
-    temperature: 0.6,
-    max_completion_tokens: 3000,
-    messages: [
-      {
-        role: "system",
-        content: TREND_DISCOVERY_PROMPT
-      },
-      {
-        role: "user",
-        content: `Discover current Israeli social media trends. Today's date: ${new Date().toISOString().split("T")[0]}.
+  const userPrompt = `Discover current Israeli social media trends. Today: ${new Date().toISOString().split("T")[0]}.
 ${existingNames.length ? `\nAlready in database (do NOT duplicate): ${existingNames.join(", ")}` : ""}
-\nFocus on trends that are CURRENTLY relevant or evergreen for Israeli businesses.`
-      }
-    ],
-    response_format: { type: "json_object" }
-  });
+Focus on trends CURRENTLY relevant for Israeli businesses.`;
 
-  const parsed = JSON.parse(response.choices[0].message.content);
+  const raw = await callGrok(userPrompt);
+  const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  const parsed = JSON.parse(cleaned);
   const newTrends = parsed.trends || [];
 
-  // 3. Mark outdated existing trends
-  const outdatedCount = await markOutdatedTrends(base44, newTrends);
+  // Mark outdated
+  const outdatedFromGrok = newTrends.filter(t => t.freshness_status === "outdated").map(t => t.trend_name.toLowerCase().trim());
+  let outdatedCount = 0;
+  if (outdatedFromGrok.length > 0) {
+    for (const trend of existingTrends) {
+      if (trend.is_active && outdatedFromGrok.some(n => trend.trend_name?.toLowerCase().includes(n) || n.includes(trend.trend_name?.toLowerCase()))) {
+        await base44.asServiceRole.entities.TrendPattern.update(trend.id, { freshness_status: "outdated", is_active: false });
+        outdatedCount++;
+      }
+    }
+  }
 
-  // 4. Insert new trends (skip duplicates by name)
+  // Insert new (skip duplicates)
   const existingNamesLower = existingNames.map(n => n.toLowerCase().trim());
-  const toInsert = newTrends.filter(t =>
-    t.trend_name && !existingNamesLower.includes(t.trend_name.toLowerCase().trim())
-  );
+  const toInsert = newTrends.filter(t => t.trend_name && !existingNamesLower.includes(t.trend_name.toLowerCase().trim()));
 
   let inserted = 0;
   for (const trend of toInsert) {
     await base44.asServiceRole.entities.TrendPattern.create({
+      pattern_name: trend.trend_name,
       trend_name: trend.trend_name,
-      platform: trend.platform || "General",
-      structure: trend.structure || "",
-      how_to_adapt: trend.how_to_adapt || "",
-      example_hebrew: trend.example_hebrew || "",
-      category_fit: trend.category_fit || [],
-      risk_notes: trend.risk_notes || "",
-      freshness_status: trend.freshness_status || "stable",
-      is_active: true,
+      core_mechanic: trend.structure || "",
+      why_it_works: trend.how_to_adapt || "",
+      briefi_adaptation: trend.how_to_adapt || "",
+      example_israeli: trend.example_hebrew || "",
+      source_name: "grok_sync",
+      source_month: new Date().toISOString().slice(0, 7),
+      source_type: "auto_sync",
+      is_active: trend.freshness_status !== "outdated",
     });
     inserted++;
   }
 
-  // 5. Log the sync
-  const usage = response.usage || {};
-  await base44.asServiceRole.entities.ApiUsage.create({
-    user_id: "system_scheduler",
-    project_id: null,
-    action_type: "syncTrendPatterns",
-    model: STRATEGY_MODEL,
-    input_tokens: usage.prompt_tokens || 0,
-    output_tokens: usage.completion_tokens || 0,
-    estimated_cost_usd: ((usage.prompt_tokens || 0) / 1000) * 0.0025 + ((usage.completion_tokens || 0) / 1000) * 0.01,
-  });
-
   return Response.json({
     success: true,
+    provider: "grok",
     trends_discovered: newTrends.length,
     trends_inserted: inserted,
     trends_skipped_duplicate: newTrends.length - inserted,
     trends_marked_outdated: outdatedCount,
-    existing_total: existingTrends.length,
     timestamp: new Date().toISOString(),
   });
 });
-
-async function markOutdatedTrends(base44, freshTrends) {
-  // If the LLM explicitly marks a trend as outdated, find matching DB records and update them
-  const outdatedFromLLM = freshTrends.filter(t => t.freshness_status === "outdated").map(t => t.trend_name.toLowerCase().trim());
-  if (!outdatedFromLLM.length) return 0;
-
-  const existing = await base44.asServiceRole.entities.TrendPattern.list();
-  let count = 0;
-  for (const trend of existing) {
-    if (trend.is_active && trend.freshness_status !== "outdated" &&
-        outdatedFromLLM.some(name => trend.trend_name?.toLowerCase().includes(name) || name.includes(trend.trend_name?.toLowerCase()))) {
-      await base44.asServiceRole.entities.TrendPattern.update(trend.id, { freshness_status: "outdated", is_active: false });
-      count++;
-    }
-  }
-  return count;
-}
