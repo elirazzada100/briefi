@@ -4,17 +4,18 @@ const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
 const XAI_BASE_URL = Deno.env.get("XAI_BASE_URL") || "https://api.x.ai/v1";
 const XAI_MODEL = Deno.env.get("XAI_MODEL") || "grok-3";
 
+// CANONICAL industry map — order must match ConceptBank industry_order 1-10
 const CATEGORIES = [
-  { id: "food_restaurants", name_he: "מסעדנות ואוכל" },
-  { id: "beauty_aesthetics", name_he: "יופי ואסתטיקה" },
-  { id: "fitness_nutrition", name_he: "פיטנס ותזונה" },
-  { id: "coaches_consultants", name_he: "מאמנים, יועצים ונותני ידע" },
-  { id: "local_services", name_he: "עסקים מקומיים ושירותים לבית" },
-  { id: "real_estate_interiors", name_he: "נדל״ן, עיצוב פנים ושיפוצים" },
-  { id: "events_nightlife", name_he: "אירועים, לילה וחוויות" },
-  { id: "fashion_boutiques", name_he: "אופנה, תכשיטים ובוטיקים" },
-  { id: "parenting_family", name_he: "הורות, ילדים, משפחה וצעצועים" },
-  { id: "health_wellness", name_he: "בריאות, טיפול ו-Wellness" },
+  { id: "food_restaurants",    industry_order: 1,  name_he: "מסעדנות ואוכל" },
+  { id: "beauty_aesthetics",   industry_order: 2,  name_he: "יופי ואסתטיקה" },
+  { id: "fitness_nutrition",   industry_order: 3,  name_he: "פיטנס ותזונה" },
+  { id: "coaches_consultants", industry_order: 4,  name_he: "מאמנים, יועצים ונותני ידע" },
+  { id: "local_services",      industry_order: 5,  name_he: "עסקים מקומיים ושירותים לבית" },
+  { id: "real_estate_interiors",industry_order: 6, name_he: "נדל״ן, עיצוב פנים ושיפוצים" },
+  { id: "events_nightlife",    industry_order: 7,  name_he: "אירועים, לילה וחוויות" },
+  { id: "fashion_boutiques",   industry_order: 8,  name_he: "אופנה, תכשיטים ובוטיקים" },
+  { id: "parenting_family",    industry_order: 9,  name_he: "הורות, ילדים ומשפחה" },
+  { id: "health_wellness",     industry_order: 10, name_he: "בריאות, טיפול ו-Wellness" },
 ];
 
 const SYSTEM_PROMPT = `You are Briefi Category Classifier.
@@ -119,9 +120,13 @@ Deno.serve(async (req) => {
       result.needs_user_confirmation = true;
     }
 
-    // Always override category_name_he from our authoritative list
+    // Always override from our authoritative list — add industry_order
     const cat = CATEGORIES.find(c => c.id === result.category_id);
-    if (cat) result.category_name_he = cat.name_he;
+    if (cat) {
+      result.category_name_he = cat.name_he;
+      result.industry_order = cat.industry_order;
+      result.industry_name = cat.name_he;
+    }
 
     return Response.json(result);
 
