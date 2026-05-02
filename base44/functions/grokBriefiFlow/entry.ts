@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { OwnedProjectError, requireOwnedProject } from "./ownership.js";
 
 const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
 const XAI_BASE_URL = Deno.env.get("XAI_BASE_URL") || "https://api.x.ai/v1";
@@ -90,6 +91,15 @@ const INDUSTRY_MAP = {
 };
 
 const BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
+const PROJECT_SCOPED_ACTIONS = new Set([
+  "generateCreativeDNA",
+  "generateConcepts",
+  "generateBodyOptions",
+  "generateOpeningOptions",
+  "generateCTAOptions",
+  "assembleFinalBrief",
+  "improveFinalBrief",
+]);
 
 // ── SYSTEM PROMPTS ─────────────────────────────────────────────────────────────
 
@@ -182,10 +192,13 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action, project_id, business, selectedConcept, selectedOpening, selectedBody, selectedCTA, selectedVideoStyle, businessAnalysis } = body;
+    const ownedProject = PROJECT_SCOPED_ACTIONS.has(action)
+      ? await requireOwnedProject(base44, user.id, project_id)
+      : null;
 
     // ── generateCreativeDNA ─────────────────────────────────────────────────────
     if (action === "generateCreativeDNA") {
-      const { project_id: pid, client_name, main_goal, raw_notes } = body;
+      const { client_name, main_goal, raw_notes } = body;
 
       const DNA_SYSTEM = `You are Briefi Business Analyst for Israeli social media.
 Analyze the business and produce a creative content strategy.
@@ -206,12 +219,10 @@ Analyze this business. Fill all 5 cards with specific, actionable insights. Prov
       const { parsed: dna } = await callWithFallback(DNA_SYSTEM, dnaUser, 0.7);
 
       // Save to project
-      if (pid) {
-        await base44.asServiceRole.entities.Project.update(pid, {
-          creative_dna: dna,
-          status: "in_progress",
-        });
-      }
+      await base44.asServiceRole.entities.Project.update(ownedProject.id, {
+        creative_dna: dna,
+        status: "in_progress",
+      });
 
       return Response.json({ creative_dna: dna, provider: "grok" });
     }
@@ -688,35 +699,33 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
 
       // Save VideoBrief to DB
       let savedBrief = null;
-      if (project_id) {
-        const existingBriefs = await base44.asServiceRole.entities.VideoBrief.filter({ project_id });
-        savedBrief = await base44.asServiceRole.entities.VideoBrief.create({
-          project_id,
-          category: selectedVideoStyle || "",
-          video_style: selectedVideoStyle || "",
-          brief_title: parsed.brief_title,
-          video_concept: parsed.video_concept,
-          hook: parsed.hook,
-          script_text: parsed.script_text,
-          shot_structure: parsed.shot_structure || [],
-          cta: parsed.cta,
-          caption_suggestion: parsed.caption_suggestion || parsed.video_description || "",
-          production_notes: parsed.production_notes || "",
-          visual_must_haves: parsed.visual_must_haves || [],
-          risk_notes: parsed.why_it_works || "",
-          idea_tags: selectedConcept.idea_tags || selectedConcept.tone_tags || [],
-          script_format: parsed.script_format || "person_to_camera",
-          adapted_brief: parsed,
-          status: "draft",
-          video_number: (existingBriefs.length || 0) + 1,
-          video_order: (existingBriefs.length || 0) + 1,
-        });
+      const existingBriefs = await base44.asServiceRole.entities.VideoBrief.filter({ project_id: ownedProject.id });
+      savedBrief = await base44.asServiceRole.entities.VideoBrief.create({
+        project_id: ownedProject.id,
+        category: selectedVideoStyle || "",
+        video_style: selectedVideoStyle || "",
+        brief_title: parsed.brief_title,
+        video_concept: parsed.video_concept,
+        hook: parsed.hook,
+        script_text: parsed.script_text,
+        shot_structure: parsed.shot_structure || [],
+        cta: parsed.cta,
+        caption_suggestion: parsed.caption_suggestion || parsed.video_description || "",
+        production_notes: parsed.production_notes || "",
+        visual_must_haves: parsed.visual_must_haves || [],
+        risk_notes: parsed.why_it_works || "",
+        idea_tags: selectedConcept.idea_tags || selectedConcept.tone_tags || [],
+        script_format: parsed.script_format || "person_to_camera",
+        adapted_brief: parsed,
+        status: "draft",
+        video_number: (existingBriefs.length || 0) + 1,
+        video_order: (existingBriefs.length || 0) + 1,
+      });
 
-        await base44.asServiceRole.entities.Project.update(project_id, {
-          completed_briefs_count: (existingBriefs.length || 0) + 1,
-          status: "in_progress",
-        });
-      }
+      await base44.asServiceRole.entities.Project.update(ownedProject.id, {
+        completed_briefs_count: (existingBriefs.length || 0) + 1,
+        status: "in_progress",
+      });
 
       return Response.json({
         final_brief: parsed,
@@ -752,6 +761,9 @@ Improve the brief based on the feedback. Keep all fields. Adjust only what the f
     return Response.json({ error: "Unknown action" }, { status: 400 });
 
   } catch (error) {
+    if (error instanceof OwnedProjectError) {
+      return Response.json({ error: error.message }, { status: error.status });
+    }
     console.error("grokBriefiFlow error:", error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
