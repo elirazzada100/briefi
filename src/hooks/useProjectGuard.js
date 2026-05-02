@@ -15,32 +15,27 @@ export function useProjectGuard(projectId) {
   const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
-    if (!projectId) {
-      setLoading(false);
-      return;
-    }
+    if (!projectId) return;
     const check = async () => {
-      try {
-        const me = await base44.auth.me();
-        if (!me) {
-          base44.auth.redirectToLogin();
-          return;
-        }
-        setUser(me);
-        const projects = await base44.entities.Project.filter({ id: projectId, owner_id: me.id });
-        const p = projects[0];
-        if (!p || !p.owner_id) {
-          setAccessDenied(true);
-          navigate("/dashboard");
-          return;
-        }
-        setProject(p);
-      } finally {
-        setLoading(false);
+      const me = await base44.auth.me();
+      if (!me) {
+        base44.auth.redirectToLogin();
+        return;
       }
+      setUser(me);
+      const projects = await base44.entities.Project.filter({ id: projectId });
+      const p = projects[0];
+      if (!p || (p.owner_id && p.owner_id !== me.id)) {
+        setAccessDenied(true);
+        setLoading(false);
+        navigate("/dashboard");
+        return;
+      }
+      setProject(p);
+      setLoading(false);
     };
     check();
-  }, [projectId, navigate]);
+  }, [projectId]);
 
   return { project, user, loading, accessDenied };
 }

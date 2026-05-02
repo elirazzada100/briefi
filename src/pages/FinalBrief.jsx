@@ -3,7 +3,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Pencil, Check, X, Plus, RefreshCw } from "lucide-react";
 import BriefiStepper from "@/components/briefi/BriefiStepper";
-import BriefiLoader from "@/components/shared/BriefiLoader";
+import LoadingState from "@/components/briefi/LoadingState";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
 
 const scriptFormatLabels = {
@@ -204,60 +204,53 @@ export default function FinalBrief() {
     if (!feedbackFreeText) return;
     setImproving(true);
     const label = SMILEY_OPTIONS.find(s => s.score === feedbackScore)?.label || "";
-    try {
-      await invokeSecureBriefMutations({
-        action: "submitVideoFeedback",
-        project_id: projectId,
-        video_brief_id: briefId,
-        rating: feedbackScore || 3,
-        comment: feedbackFreeText,
-        rating_label: label,
-      });
+    await invokeSecureBriefMutations({
+      action: "submitVideoFeedback",
+      project_id: projectId,
+      video_brief_id: briefId,
+      rating: feedbackScore || 3,
+      comment: feedbackFreeText,
+      rating_label: label,
+    });
 
-      const currentBrief = brief?.adapted_brief || brief?.final_brief || {};
-      const response = await base44.functions.invoke("grokBriefiFlow", {
-        action: "improveFinalBrief",
-        project_id: projectId,
-        original_brief: currentBrief,
-        feedback_text: feedbackFreeText,
-        client_name: project?.client_name || "",
-        main_goal: project?.main_goal || "",
-      });
+    const currentBrief = brief?.adapted_brief || brief?.final_brief || {};
+    const response = await base44.functions.invoke("grokBriefiFlow", {
+      action: "improveFinalBrief",
+      project_id: projectId,
+      original_brief: currentBrief,
+      feedback_text: feedbackFreeText,
+      client_name: project?.client_name || "",
+      main_goal: project?.main_goal || "",
+    });
 
-      if (response.data?.error) {
-        throw new Error(response.data.error);
-      }
-
-      const improved = response.data?.final_brief;
-      if (improved) {
-        setBrief(prev => ({ ...prev, adapted_brief: improved }));
-        if (briefId) {
-          const data = await invokeSecureBriefMutations({
-            action: "saveFinalVideoBrief",
-            project_id: projectId,
-            video_brief_id: briefId,
-            video_brief: {
-              adapted_brief: improved,
-              status: brief?.status,
-            },
-          });
-          if (data?.video_brief) {
-            setBrief(data.video_brief);
-          }
+    const improved = response.data?.final_brief;
+    if (improved) {
+      setBrief(prev => ({ ...prev, adapted_brief: improved }));
+      if (briefId) {
+        const data = await invokeSecureBriefMutations({
+          action: "saveFinalVideoBrief",
+          project_id: projectId,
+          video_brief_id: briefId,
+          video_brief: {
+            adapted_brief: improved,
+            status: brief?.status,
+          },
+        });
+        if (data?.video_brief) {
+          setBrief(data.video_brief);
         }
       }
-      setFeedbackScore(null);
-      setFeedbackFreeText("");
-      setFeedbackSaved(false);
-    } finally {
-      setImproving(false);
     }
+    setImproving(false);
+    setFeedbackScore(null);
+    setFeedbackFreeText("");
+    setFeedbackSaved(false);
   };
 
   if (loading || !brief) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <BriefiLoader />
+        <LoadingState message="טוען את הסרטון..." />
       </div>
     );
   }
@@ -265,7 +258,7 @@ export default function FinalBrief() {
   if (improving) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <BriefiLoader />
+        <LoadingState message="משפרים לפי הפידבק..." />
       </div>
     );
   }

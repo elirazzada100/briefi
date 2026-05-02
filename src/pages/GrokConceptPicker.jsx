@@ -47,48 +47,48 @@ export default function GrokConceptPicker() {
   const loadConcepts = async () => {
     setLoading(true);
     setError(null);
-    try {
-      const proj = project;
-      const business = businessFromState || {
-        business_name: proj?.client_name || "",
-        business_description: proj?.raw_notes || "",
-        main_goal: proj?.main_goal || "",
-      };
 
-      let nextResolvedAnalysis = businessAnalysis;
-      if (selectedVideoStyle !== "טרנדי" && (!nextResolvedAnalysis?.industry_order || !nextResolvedAnalysis?.industry_name)) {
-        const classifyRes = await base44.functions.invoke("classifyBusinessCategory", {
-          businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
-        });
-        const clf = classifyRes.data;
-        nextResolvedAnalysis = {
-          ...(nextResolvedAnalysis || {}),
-          industry_order: clf?.industry_order || null,
-          industry_name: clf?.industry_name || clf?.category_name_he || "",
-          confidence: clf?.confidence || 0,
-          category_id: clf?.category_id || "",
-        };
-        setResolvedAnalysis(nextResolvedAnalysis);
-      }
+    const proj = project;
+    const business = businessFromState || {
+      business_name: proj?.client_name || "",
+      business_description: proj?.raw_notes || "",
+      main_goal: proj?.main_goal || "",
+    };
 
-      const res = await base44.functions.invoke("grokBriefiFlow", {
-        action: "generateConcepts",
-        business,
-        selectedVideoStyle,
-        project_id: projectId,
-        businessAnalysis: nextResolvedAnalysis,
+    // Ensure industry classification is available (required for strict ConceptBank retrieval)
+    // classifyBusinessCategory now returns industry_order + industry_name directly
+    let resolvedAnalysis = businessAnalysis;
+    if (selectedVideoStyle !== "טרנדי" && (!resolvedAnalysis?.industry_order || !resolvedAnalysis?.industry_name)) {
+      const classifyRes = await base44.functions.invoke("classifyBusinessCategory", {
+        businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
       });
-
-      if (res.data?.error) {
-        throw new Error(res.data.error);
-      }
-
-      setConcepts(res.data?.concepts || []);
-    } catch (loadError) {
-      setError(loadError.message || "משהו נתקע בדרך. נסו שוב בעוד רגע.");
-    } finally {
-      setLoading(false);
+      const clf = classifyRes.data;
+      resolvedAnalysis = {
+        ...(resolvedAnalysis || {}),
+        industry_order: clf?.industry_order || null,
+        industry_name: clf?.industry_name || clf?.category_name_he || "",
+        confidence: clf?.confidence || 0,
+        category_id: clf?.category_id || "",
+      };
+      setResolvedAnalysis(resolvedAnalysis);
     }
+
+    const res = await base44.functions.invoke("grokBriefiFlow", {
+      action: "generateConcepts",
+      business,
+      selectedVideoStyle,
+      project_id: projectId,
+      businessAnalysis: resolvedAnalysis,
+    });
+
+    if (res.data?.error) {
+      setError(res.data.error);
+      setLoading(false);
+      return;
+    }
+
+    setConcepts(res.data?.concepts || []);
+    setLoading(false);
   };
 
   const handleSelectConcept = (concept, idx) => {

@@ -136,9 +136,8 @@ export default function BriefPack() {
     <div className="bg-background" style={{ minHeight: "100dvh" }} dir="rtl">
       <div className="briefi-header">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(`/project/${projectId}`)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowRight className="w-4 h-4" />
-            חזרה לסרטונים
+          <button onClick={() => navigate("/")} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+            <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="flex-1">
             <h1 className="text-base font-black text-foreground">חבילת הסרטונים בבריף</h1>

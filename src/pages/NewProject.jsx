@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
-import BriefiLoader from "@/components/shared/BriefiLoader";
+import LoadingState from "@/components/shared/LoadingState";
 
 const goals = [
   "יותר פניות",
@@ -29,29 +29,26 @@ export default function NewProject() {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setLoading(true);
-    try {
-      const user = await base44.auth.me();
-      const project = await base44.entities.Project.create({
-        client_name: clientName.trim(),
-        project_name: `בריפים - ${clientName.trim()}`,
-        main_goal: mainGoal,
-        raw_notes: rawNotes.trim(),
-        status: "draft",
-        completed_briefs_count: 0,
-        owner_id: user.id,
-        brief_video_count: briefVideoCount,
-      });
 
-      navigate(`/project/${project.id}/creative-dna`);
-    } finally {
-      setLoading(false);
-    }
+    const user = await base44.auth.me();
+    const project = await base44.entities.Project.create({
+      client_name: clientName.trim(),
+      project_name: `בריפים - ${clientName.trim()}`,
+      main_goal: mainGoal,
+      raw_notes: rawNotes.trim(),
+      status: "draft",
+      completed_briefs_count: 0,
+      owner_id: user.id,
+      brief_video_count: briefVideoCount,
+    });
+
+    navigate(`/project/${project.id}/creative-dna`);
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <BriefiLoader />
+        <LoadingState message="יוצרים את הפרויקט..." />
       </div>
     );
   }

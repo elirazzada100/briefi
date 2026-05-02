@@ -13,7 +13,6 @@ import { hasConsentBeenSet } from '@/lib/cookieConsent';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import NewProject from './pages/NewProject.jsx';
-import ClientDetail from './pages/ClientDetail';
 import CreativeDNA from './pages/CreativeDNA';
 import FinalBrief from './pages/FinalBrief';
 import BriefPack from './pages/BriefPack';
@@ -78,8 +77,6 @@ const AuthenticatedApp = () => {
       {/* Protected routes */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/new-project" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
-      <Route path="/project/:projectId" element={<ProtectedRoute><ClientDetail /></ProtectedRoute>} />
-      <Route path="/project/:projectId/briefs" element={<ProtectedRoute><ClientDetail /></ProtectedRoute>} />
       <Route path="/project/:projectId/creative-dna" element={<ProtectedRoute><CreativeDNA /></ProtectedRoute>} />
       <Route path="/project/:projectId/video-style" element={<ProtectedRoute><VideoStylePicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/grok-concepts" element={<ProtectedRoute><GrokConceptPicker /></ProtectedRoute>} />
