@@ -5,6 +5,7 @@ import { ArrowRight, ChevronLeft, FileText, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import BriefiLoader from "@/components/shared/BriefiLoader";
 import ErrorState from "@/components/shared/ErrorState";
+import { useProjectGuard } from "@/hooks/useProjectGuard";
 
 const statusLabels = {
   draft: "טיוטה",
@@ -31,31 +32,27 @@ function sortBriefs(briefs) {
 export default function ClientDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const [project, setProject] = useState(null);
   const [briefs, setBriefs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const invokeSecureBriefMutations = async (payload) => {
-    const response = await base44.functions.invoke("secureBriefMutations", payload);
-    if (response.data?.error) {
-      throw new Error(response.data.error);
-    }
-    return response.data;
-  };
+  const { project, loading: guardLoading, accessDenied } = useProjectGuard(projectId);
 
   const loadClient = async () => {
-    setLoading(true);
+    if (!project?.id) {
+      return;
+    }
+
     setError(null);
+    setLoading(true);
 
     try {
-      const data = await invokeSecureBriefMutations({
-        action: "getOwnedBriefPackageData",
-        project_id: projectId,
-      });
-      setProject(data.project);
-      setBriefs(sortBriefs(data.video_briefs || []));
+      const videoBriefs = await base44.entities.VideoBrief.filter({ project_id: project.id }, "video_order", 100);
+      setBriefs(sortBriefs(videoBriefs || []));
     } catch (loadError) {
+      console.error("ClientDetail failed to load project briefs", {
+        projectId,
+        reason: loadError?.message || "failed_data_load",
+      });
       setError(loadError);
     } finally {
       setLoading(false);
@@ -63,8 +60,20 @@ export default function ClientDetail() {
   };
 
   useEffect(() => {
-    loadClient();
-  }, [projectId]);
+    if (!guardLoading && !project && !accessDenied) {
+      console.error("ClientDetail missing owned project", {
+        projectId,
+        reason: "project_not_found_or_owner_mismatch",
+      });
+      setError(new Error("Project not found"));
+      setLoading(false);
+      return;
+    }
+
+    if (project?.id) {
+      loadClient();
+    }
+  }, [guardLoading, project?.id, accessDenied]);
 
   const startBriefFlow = () => {
     if (!project) return;
@@ -94,7 +103,7 @@ export default function ClientDetail() {
     };
   }, [briefs]);
 
-  if (loading) {
+  if (guardLoading || loading) {
     return (
       <div className="bg-background flex items-center justify-center" style={{ minHeight: "100dvh" }} dir="rtl">
         <BriefiLoader />

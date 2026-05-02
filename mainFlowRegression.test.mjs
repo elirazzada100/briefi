@@ -28,10 +28,11 @@ test("dashboard client cards open the client detail route instead of jumping to 
   assert.doesNotMatch(dashboard, /Link to=\{`\/project\/\$\{project\.id\}\/brief-pack`\}/);
 });
 
-test("client detail uses secure owned reads and opens briefs for the selected client", () => {
+test("client detail uses the owned project guard and loads project briefs for the selected client", () => {
   const clientDetail = read("./src/pages/ClientDetail.jsx");
 
-  assert.match(clientDetail, /action: "getOwnedBriefPackageData"/);
+  assert.match(clientDetail, /useProjectGuard\(projectId\)/);
+  assert.match(clientDetail, /base44\.entities\.VideoBrief\.filter\(\{ project_id: project\.id \}/);
   assert.match(clientDetail, /navigate\(`\/project\/\$\{projectId\}\/final-brief`/);
   assert.match(clientDetail, /navigate\(`\/project\/\$\{projectId\}\/brief-pack`/);
   assert.match(clientDetail, /navigate\(`\/project\/\$\{projectId\}\/creative-dna`/);
