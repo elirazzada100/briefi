@@ -31,26 +31,24 @@ export default function GrokOpeningPicker() {
   const loadOpeningOptions = async () => {
     setLoading(true);
     setError(null);
-    try {
-      const res = await base44.functions.invoke("grokBriefiFlow", {
-        action: "generateOpeningOptions",
-        project_id: projectId,
-        business,
-        selectedConcept,
-        selectedVideoStyle,
-        businessAnalysis,
-      });
 
-      if (res.data?.error) {
-        throw new Error(res.data.error);
-      }
+    const res = await base44.functions.invoke("grokBriefiFlow", {
+      action: "generateOpeningOptions",
+      project_id: projectId,
+      business,
+      selectedConcept,
+      selectedVideoStyle,
+      businessAnalysis,
+    });
 
-      setOpeningOptions(res.data?.opening_options || []);
-    } catch (loadError) {
-      setError(loadError.message || "משהו נתקע בדרך. נסו שוב בעוד רגע.");
-    } finally {
+    if (res.data?.error) {
+      setError(res.data.error);
       setLoading(false);
+      return;
     }
+
+    setOpeningOptions(res.data?.opening_options || []);
+    setLoading(false);
   };
 
   const handleSelectOpening = (option, idx) => {

@@ -42,7 +42,6 @@ function makeBase44({
   projects = [],
   videoBriefs = [],
   branding = [],
-  feedback = [],
 } = {}) {
   return {
     asServiceRole: {
@@ -50,7 +49,6 @@ function makeBase44({
         Project: makeEntityApi(projects),
         VideoBrief: makeEntityApi(videoBriefs),
         UserBranding: makeEntityApi(branding),
-        UserBriefFeedback: makeEntityApi(feedback),
       },
     },
   };
@@ -210,52 +208,6 @@ test("user B cannot mark user A project exported", async () => {
   );
 });
 
-test("secure owned read actions only return owned project data", async () => {
-  const base44 = makeBase44({
-    projects: [
-      { id: "project-a", owner_id: "user-a" },
-      { id: "project-b", owner_id: "user-b" },
-    ],
-    videoBriefs: [
-      { id: "brief-a1", project_id: "project-a", video_order: 2 },
-      { id: "brief-a2", project_id: "project-a", video_order: 1 },
-      { id: "brief-b1", project_id: "project-b", video_order: 1 },
-    ],
-    branding: [{ id: "branding-a", user_id: "user-a", display_name: "User A" }],
-  });
-
-  const briefPackage = await runSecureBriefMutation(base44, "user-a", {
-    action: "getOwnedBriefPackageData",
-    project_id: "project-a",
-  });
-  assert.equal(briefPackage.project.id, "project-a");
-  assert.deepEqual(briefPackage.video_briefs.map((item) => item.id), ["brief-a2", "brief-a1"]);
-
-  const pdfData = await runSecureBriefMutation(base44, "user-a", {
-    action: "getOwnedPDFExportData",
-    project_id: "project-a",
-  });
-  assert.equal(pdfData.project.id, "project-a");
-  assert.equal(pdfData.branding.display_name, "User A");
-  assert.deepEqual(pdfData.video_briefs.map((item) => item.id), ["brief-a2", "brief-a1"]);
-
-  await assert.rejects(
-    () => runSecureBriefMutation(base44, "user-b", {
-      action: "getOwnedBriefPackageData",
-      project_id: "project-a",
-    }),
-    (error) => error instanceof OwnedProjectError && error.status === 403
-  );
-
-  await assert.rejects(
-    () => runSecureBriefMutation(base44, "user-b", {
-      action: "getOwnedPDFExportData",
-      project_id: "project-a",
-    }),
-    (error) => error instanceof OwnedProjectError && error.status === 403
-  );
-});
-
 test("user B cannot update user A branding", async () => {
   const base44 = makeBase44({
     branding: [{ id: "branding-a", user_id: "user-a", display_name: "Owner" }],
@@ -269,45 +221,6 @@ test("user B cannot update user A branding", async () => {
   assert.equal(result.branding.user_id, "user-b");
   assert.equal(result.branding.display_name, "User B");
   assert.equal(base44.asServiceRole.entities.UserBranding.list.find((item) => item.id === "branding-a").display_name, "Owner");
-});
-
-test("feedback submission is ownership-protected and ignores spoofed user ids", async () => {
-  const base44 = makeBase44({
-    projects: [
-      { id: "project-a", owner_id: "user-a" },
-      { id: "project-b", owner_id: "user-b" },
-    ],
-    videoBriefs: [
-      { id: "brief-a", project_id: "project-a", hook: "Real hook" },
-      { id: "brief-b", project_id: "project-b", hook: "Other hook" },
-    ],
-  });
-
-  const ownFeedback = await runSecureBriefMutation(base44, "user-a", {
-    action: "submitVideoFeedback",
-    project_id: "project-a",
-    video_brief_id: "brief-a",
-    rating: 5,
-    comment: "Great",
-    rating_label: "מעולה",
-    user_id: "spoofed-user",
-  });
-
-  assert.equal(ownFeedback.feedback.project_id, "project-a");
-  assert.equal(ownFeedback.feedback.video_brief_id, "brief-a");
-  assert.equal(ownFeedback.feedback.rating_score, 5);
-  assert.equal(ownFeedback.feedback.user_id, undefined);
-
-  await assert.rejects(
-    () => runSecureBriefMutation(base44, "user-b", {
-      action: "submitVideoFeedback",
-      project_id: "project-a",
-      video_brief_id: "brief-a",
-      rating: 1,
-      comment: "Bad",
-    }),
-    (error) => error instanceof OwnedProjectError && error.status === 403
-  );
 });
 
 test("ownerless project is rejected", async () => {

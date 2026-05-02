@@ -1,5 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import { AdminAccessError, requireAdminUser } from "../_shared/admin.js";
 
 const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
 const XAI_BASE_URL = Deno.env.get("XAI_BASE_URL") || "https://api.x.ai/v1";
@@ -9,7 +8,9 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    requireAdminUser(user);
+    if (!user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     if (!XAI_API_KEY) {
       return Response.json({ error: "XAI_API_KEY is not set" }, { status: 500 });
@@ -19,18 +20,6 @@ Deno.serve(async (req) => {
 
     if (!userPrompt) {
       return Response.json({ error: "userPrompt is required" }, { status: 400 });
-    }
-
-    if (systemPrompt && systemPrompt.length > 4000) {
-      return Response.json({ error: "systemPrompt exceeds max length" }, { status: 400 });
-    }
-
-    if (userPrompt.length > 12000) {
-      return Response.json({ error: "userPrompt exceeds max length" }, { status: 400 });
-    }
-
-    if (typeof temperature !== "number" || temperature < 0 || temperature > 1) {
-      return Response.json({ error: "temperature must be between 0 and 1" }, { status: 400 });
     }
 
     const messages = [];
@@ -67,9 +56,6 @@ Deno.serve(async (req) => {
     return Response.json({ content, model: data.model, usage: data.usage });
 
   } catch (error) {
-    if (error instanceof AdminAccessError) {
-      return Response.json({ error: error.message }, { status: error.status });
-    }
     return Response.json({ error: error.message }, { status: 500 });
   }
 });

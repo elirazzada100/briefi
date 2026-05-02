@@ -49,17 +49,22 @@ export default function BriefPack() {
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const data = await invokeSecureBriefMutations({
-          action: "getOwnedBriefPackageData",
-          project_id: projectId,
-        });
-        setProject(data.project);
-        setBriefs(data.video_briefs || []);
-        setLoading(false);
-      } catch {
+      const user = await base44.auth.me();
+      const [p, b] = await Promise.all([
+        base44.entities.Project.filter({ id: projectId }).then(r => r[0]),
+        base44.entities.VideoBrief.filter({ project_id: projectId })
+      ]);
+      if (!p || p.owner_id !== user.id) {
         navigate("/dashboard");
+        return;
       }
+      setProject(p);
+      // Sort by video_order if set, else video_number
+      const sorted = b.sort((a, b2) =>
+        (a.video_order ?? a.video_number ?? 0) - (b2.video_order ?? b2.video_number ?? 0)
+      );
+      setBriefs(sorted);
+      setLoading(false);
     };
     load();
   }, [projectId]);
@@ -136,9 +141,8 @@ export default function BriefPack() {
     <div className="bg-background" style={{ minHeight: "100dvh" }} dir="rtl">
       <div className="briefi-header">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(`/project/${projectId}`)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowRight className="w-4 h-4" />
-            חזרה לסרטונים
+          <button onClick={() => navigate("/")} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+            <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="flex-1">
             <h1 className="text-base font-black text-foreground">חבילת הסרטונים בבריף</h1>

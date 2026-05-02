@@ -139,7 +139,7 @@ export default function Dashboard() {
                 >
                   <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-4 hover:border-primary/25 hover:shadow-md transition-all">
                     <div className="flex items-start justify-between gap-2">
-                      <Link to={`/project/${project.id}`} className="flex-1 min-w-0">
+                      <Link to={`/project/${project.id}/brief-pack`} className="flex-1 min-w-0">
                         <h3 className="font-bold text-foreground text-sm truncate">{project.client_name}</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">{done} מתוך {total} סרטונים</p>
                       </Link>
@@ -154,12 +154,12 @@ export default function Dashboard() {
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                        <Link to={`/project/${project.id}`}>
+                        <Link to={`/project/${project.id}/brief-pack`}>
                           <ChevronLeft className="h-4 w-4 text-muted-foreground" />
                         </Link>
                       </div>
                     </div>
-                    <Link to={`/project/${project.id}`}>
+                    <Link to={`/project/${project.id}/brief-pack`}>
                       <div className="mt-3">
                         <div className="w-full h-1 rounded-full bg-muted">
                           <div

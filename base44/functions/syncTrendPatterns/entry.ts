@@ -1,7 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import { PROMPT_INJECTION_GUARDRAILS, SAFE_AI_RETRY_MESSAGE } from "../grokBriefiFlow/guardrails.js";
-import { withTimeout } from "../grokBriefiFlow/aiControls.js";
-import { validateTrendSyncOutput } from "../grokBriefiFlow/validation.js";
 
 // Migrated to Grok — no OpenAI dependency
 const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
@@ -27,27 +24,21 @@ For each trend, provide:
 
 Return ONLY valid JSON. No markdown.
 
-{"trends":[{"trend_name":"","platform":"TikTok|Reels|Shorts|General","structure":"","how_to_adapt":"","example_hebrew":"","category_fit":[],"risk_notes":"","freshness_status":"current|stable|outdated"}]}
-
-${PROMPT_INJECTION_GUARDRAILS}`;
+{"trends":[{"trend_name":"","platform":"TikTok|Reels|Shorts|General","structure":"","how_to_adapt":"","example_hebrew":"","category_fit":[],"risk_notes":"","freshness_status":"current|stable|outdated"}]}`;
 
 async function callGrok(userPrompt) {
-  const res = await withTimeout(
-    (signal) => fetch(`${XAI_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${XAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: XAI_MODEL,
-        temperature: 0.6,
-        messages: [
-          { role: "system", content: TREND_DISCOVERY_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-      signal,
+  const res = await fetch(`${XAI_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${XAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: XAI_MODEL,
+      temperature: 0.6,
+      messages: [
+        { role: "system", content: TREND_DISCOVERY_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
     }),
-    15000,
-  );
+  });
   if (!res.ok) throw new Error(`xAI error: ${res.status}`);
   const data = await res.json();
   const content = data?.choices?.[0]?.message?.content;
@@ -56,7 +47,6 @@ async function callGrok(userPrompt) {
 }
 
 Deno.serve(async (req) => {
-  try {
   const base44 = createClientFromRequest(req);
 
   let isScheduled = false;
@@ -84,7 +74,7 @@ Focus on trends CURRENTLY relevant for Israeli businesses.`;
   const raw = await callGrok(userPrompt);
   const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   const parsed = JSON.parse(cleaned);
-  const newTrends = validateTrendSyncOutput(parsed.trends || []);
+  const newTrends = parsed.trends || [];
 
   // Mark outdated
   const outdatedFromGrok = newTrends.filter(t => t.freshness_status === "outdated").map(t => t.trend_name.toLowerCase().trim());
@@ -128,7 +118,4 @@ Focus on trends CURRENTLY relevant for Israeli businesses.`;
     trends_marked_outdated: outdatedCount,
     timestamp: new Date().toISOString(),
   });
-  } catch (error) {
-    return Response.json({ error: SAFE_AI_RETRY_MESSAGE }, { status: error?.status || 500 });
-  }
 });
