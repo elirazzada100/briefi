@@ -77,7 +77,7 @@ export default function GrokBodyPicker() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="בונים 4 אפשרויות מבנה לסרטון..." />
+        <LoadingState message="מסדרים לך רעיון" />
       </div>
     );
   }

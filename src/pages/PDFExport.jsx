@@ -12,6 +12,11 @@ const DNA_LABELS = {
   recommended_content_directions: "כיווני תוכן מומלצים",
 };
 
+function formatShortVideosLabel(count) {
+  if (count === 1) return "סרטון קצר אחד";
+  return `${count} סרטונים קצרים`;
+}
+
 export default function PDFExport() {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -113,7 +118,7 @@ export default function PDFExport() {
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #E6E4DC;">
             <span style="background:${color};color:white;font-weight:900;font-size:12px;padding:4px 10px;border-radius:8px;">#${brief.video_number}</span>
             <div>
-              <div style="font-size:18px;font-weight:900;color:#0B1B36;">${fb.brief_title || `בריף ${brief.video_number}`}</div>
+              <div style="font-size:18px;font-weight:900;color:#0B1B36;">${fb.brief_title || `סרטון ${brief.video_number}`}</div>
               <div style="font-size:11px;color:#9AA1AD;">${brief.category || ""}${fb.client_risk_level ? ` · סיכון: ${fb.client_risk_level}` : ""}</div>
             </div>
           </div>
@@ -169,30 +174,26 @@ export default function PDFExport() {
     }).join("");
 
     return buildFullHTML(`בריף עבודה לסושיאל - ${project?.client_name || ""}`,
-      "בריף עבודה לסושיאל", "חבילת בריפים מפורטת לצילום והפקה",
+      "בריף עבודה לסושיאל", "חבילת סרטונים קצרים לצילום והפקה",
       header, dnaSection + briefsHTML, color, branding, project, briefs.length, preparedBy, date);
   };
 
-  const generateClientHTML = async () => {
+  const generateClientHTML = () => {
     const color = branding?.brand_color || "#6C35FF";
     const date = new Date().toLocaleDateString("he-IL");
     const header = buildHeader(branding, includeLogo, project?.client_name || "", date);
 
-    const response = await base44.functions.invoke("briefiAI", {
-      action: "generateClientBriefSummary",
-      project_id: projectId,
-      client_name: project?.client_name || "",
-      main_goal: project?.main_goal || "",
-      creative_dna: project?.creative_dna || {},
-      video_briefs: briefs.map(b => ({
-        video_number: b.video_order ?? b.video_number,
-        category: b.category || b.video_style || "",
-        // Use adapted_brief (Grok flow) first, fallback to final_brief (legacy)
-        final_brief: b.adapted_brief || b.final_brief || {},
-      })),
+    const clientBriefs = briefs.map((brief, idx) => {
+      const fb = brief.adapted_brief || brief.final_brief || {};
+      return {
+        brief_title: fb.brief_title || brief.brief_title || `סרטון ${idx + 1}`,
+        category: brief.category || brief.video_style || "",
+        short_client_concept: fb.video_concept || brief.video_concept || "",
+        hook: fb.hook || brief.hook || "",
+        short_visual_summary: fb.caption_suggestion || fb.video_description || brief.caption_suggestion || "",
+        cta: fb.cta || brief.cta || "",
+      };
     });
-
-    const clientBriefs = response.data?.client_briefs || [];
 
     const briefsHTML = clientBriefs.map((cb, idx) => `
       <div class="section-page">
@@ -273,7 +274,7 @@ export default function PDFExport() {
     }
   </style>
 </head>
-<body>
+  <body>
   <div class="cover">
     ${headerHTML}
     <div class="cover-title">${title}</div>
@@ -284,7 +285,7 @@ export default function PDFExport() {
       ${preparedBy ? `<div>הוכן על ידי: ${preparedBy}</div>` : ""}
       ${project?.main_goal ? `<div>מטרה: ${project.main_goal}</div>` : ""}
     </div>
-    <div style="margin-top:16px;font-size:15px;font-weight:700;color:${color};">${briefCount} בריפים מוכנים</div>
+    <div style="margin-top:16px;font-size:15px;font-weight:700;color:${color};">${formatShortVideosLabel(briefCount)}</div>
   </div>
   ${bodyHTML}
   <button class="print-btn no-print" onclick="window.print()">🖨️ הדפסה / שמירה כ-PDF</button>
@@ -297,7 +298,7 @@ export default function PDFExport() {
     if (type === "internal") {
       html = generateInternalHTML();
     } else {
-      html = await generateClientHTML();
+      html = generateClientHTML();
     }
     setGenerating(false);
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
@@ -307,8 +308,8 @@ export default function PDFExport() {
     await base44.entities.Project.update(projectId, { status: "exported" });
   };
 
-  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState /></div>;
-  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="מכינים את המסמך..." /></div>;
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="מסדרים את הבריף" /></div>;
+  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="אורזים את הסרטונים" /></div>;
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -327,7 +328,7 @@ export default function PDFExport() {
       <div className="briefi-page-container space-y-5">
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
           <p className="text-sm font-bold text-primary">{project?.client_name}</p>
-          <p className="text-muted-foreground text-sm">{briefs.length} בריפים מוכנים לייצוא</p>
+          <p className="text-muted-foreground text-sm">{formatShortVideosLabel(briefs.length)} לייצוא</p>
         </div>
 
         {/* Branding notice */}
@@ -436,7 +437,7 @@ export default function PDFExport() {
           onClick={() => navigate(`/project/${projectId}/brief-pack`)}
           className="briefi-btn-secondary w-full"
         >
-          חזרה לבריפים
+          חזרה לסרטונים
         </button>
 
         {/* Profile shortcut */}

@@ -77,7 +77,7 @@ export default function BodyPicker() {
     setRewritingIdx(null);
   };
 
-  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="מייצרים CTA מתאים..." /></div>;
+  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="הוק טוב, הכל טוב" /></div>;
   if (error) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><ErrorState onRetry={() => setError(false)} /></div>;
 
   return (

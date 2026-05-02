@@ -169,10 +169,10 @@ export default function CreativeDNA() {
     await base44.entities.Project.update(project.id, { creative_dna: updated });
   };
 
-  if (guardLoading || !project) return <LoadingState message="טוען פרויקט..." />;
-  if (generating) return <LoadingState message="Briefi מנתח את העסק..." />;
+  if (guardLoading || !project) return <LoadingState message="עוד רגע זה מוכן" />;
+  if (generating) return <LoadingState message="מסדרים לך רעיון" />;
   if (error) return <ErrorState onRetry={generateDNA} />;
-  if (!dna) return <LoadingState />;
+  if (!dna) return <LoadingState message="שנייה סיימנו" />;
 
   const cards = dna.business_analysis_cards?.length
     ? dna.business_analysis_cards

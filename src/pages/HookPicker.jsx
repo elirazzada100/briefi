@@ -69,7 +69,7 @@ export default function HookPicker() {
     setRewritingIdx(null);
   };
 
-  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="בונים את מבנה הסרטון..." /></div>;
+  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="עוד רגע זה מוכן" /></div>;
   if (error) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><ErrorState onRetry={() => setError(false)} /></div>;
 
   return (

@@ -93,7 +93,7 @@ export default function CategoryPicker() {
 
   if (guardLoading || !project || loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
-      <LoadingState message={loading ? "רגע, בונים לך כיוונים טובים..." : "טוען..."} />
+      <LoadingState message={loading ? "מסדרים לך רעיון" : "שנייה סיימנו"} />
     </div>
   );
 

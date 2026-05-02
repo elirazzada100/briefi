@@ -48,7 +48,7 @@ export default function NewProject() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="יוצרים את הפרויקט..." />
+        <LoadingState message="עוד רגע זה מוכן" />
       </div>
     );
   }

@@ -6,6 +6,11 @@ const LOADING_MESSAGES = [
   "רגע, מביאים מצלמה מהשכן",
   "הוק טוב, הכל טוב",
   "שנייה סיימנו",
+  "עוד רגע זה מוכן",
+  "מסדרים לך רעיון",
+  "טיפ קטן: פתיחה טובה עושה חצי עבודה.",
+  "טיפ קטן: עדיף רעיון ברור מאפקט יפה.",
+  "טיפ קטן: אל תצלמו הכול. תצלמו את הרגע.",
 ];
 
 export default function BriefiLoader() {
@@ -19,9 +24,11 @@ export default function BriefiLoader() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-8">
+    <div className="flex flex-col items-center justify-center gap-3 px-6 py-8 text-center">
       <Loader2 className="w-7 h-7 text-primary animate-spin" />
-      <p className="text-sm font-semibold text-muted-foreground text-center">{LOADING_MESSAGES[msgIdx]}</p>
+      <p className="max-w-[220px] text-sm font-semibold leading-6 text-muted-foreground">
+        {LOADING_MESSAGES[msgIdx]}
+      </p>
     </div>
   );
 }
