@@ -1,4 +1,14 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import {
+  AI_TIMEOUT_MS,
+  MAX_BUSINESS_NOTES_LENGTH,
+  PROMPT_INJECTION_GUARDRAILS,
+  SAFE_AI_RETRY_MESSAGE,
+  assertMaxLength,
+  formatUntrustedBlock,
+} from "../grokBriefiFlow/guardrails.js";
+import { withTimeout } from "../grokBriefiFlow/aiControls.js";
+import { validateBusinessClassificationOutput } from "../grokBriefiFlow/validation.js";
 
 const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
 const XAI_BASE_URL = Deno.env.get("XAI_BASE_URL") || "https://api.x.ai/v1";
@@ -54,24 +64,30 @@ Return JSON:
   "reason": "",
   "secondary_category_id": "",
   "needs_user_confirmation": false
-}`;
+}
+
+${PROMPT_INJECTION_GUARDRAILS}`;
 
 async function callGrokDirect(systemPrompt, userPrompt, temperature = 0.2) {
-  const apiRes = await fetch(`${XAI_BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${XAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: XAI_MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature,
+  const apiRes = await withTimeout(
+    (signal) => fetch(`${XAI_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${XAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: XAI_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature,
+      }),
+      signal,
     }),
-  });
+    AI_TIMEOUT_MS,
+  );
 
   if (!apiRes.ok) {
     const errText = await apiRes.text();
@@ -96,10 +112,11 @@ Deno.serve(async (req) => {
     if (!businessDescription) {
       return Response.json({ error: "businessDescription is required" }, { status: 400 });
     }
+    assertMaxLength("businessDescription", businessDescription, MAX_BUSINESS_NOTES_LENGTH);
 
     const raw = await callGrokDirect(
       SYSTEM_PROMPT,
-      `Business description:\n${businessDescription}`,
+      `${formatUntrustedBlock("Business description", businessDescription, MAX_BUSINESS_NOTES_LENGTH)}\nClassify into exactly one of the 10 fixed industries.`,
       0.2
     );
 
@@ -128,9 +145,9 @@ Deno.serve(async (req) => {
       result.industry_name = cat.name_he;
     }
 
-    return Response.json(result);
+    return Response.json(validateBusinessClassificationOutput(result));
 
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: SAFE_AI_RETRY_MESSAGE }, { status: error?.status || 500 });
   }
 });
