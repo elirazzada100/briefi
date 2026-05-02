@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Pencil, Check, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
-import LoadingState from "@/components/shared/LoadingState";
+import BriefiLoader from "@/components/shared/BriefiLoader";
 import ErrorState from "@/components/shared/ErrorState";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
 
@@ -149,18 +149,25 @@ export default function CreativeDNA() {
     if (!project) return;
     setGenerating(true);
     setError(false);
+    try {
+      const response = await base44.functions.invoke("grokBriefiFlow", {
+        action: "generateCreativeDNA",
+        project_id: project.id,
+        client_name: project.client_name,
+        main_goal: project.main_goal,
+        raw_notes: project.raw_notes,
+      });
 
-    const response = await base44.functions.invoke("grokBriefiFlow", {
-      action: "generateCreativeDNA",
-      project_id: project.id,
-      client_name: project.client_name,
-      main_goal: project.main_goal,
-      raw_notes: project.raw_notes,
-    });
-
-    const result = response.data?.creative_dna;
-    setDna(result);
-    setGenerating(false);
+      const result = response.data?.creative_dna;
+      if (!result || response.data?.error) {
+        throw new Error(response.data?.error || "Creative DNA generation failed");
+      }
+      setDna(result);
+    } catch {
+      setError(true);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const updateDirections = async (newDirs) => {
@@ -169,10 +176,11 @@ export default function CreativeDNA() {
     await base44.entities.Project.update(project.id, { creative_dna: updated });
   };
 
-  if (guardLoading || !project) return <LoadingState message="טוען פרויקט..." />;
-  if (generating) return <LoadingState message="Briefi מנתח את העסק..." />;
+  if (guardLoading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><BriefiLoader /></div>;
+  if (!project) return <ErrorState />;
+  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><BriefiLoader /></div>;
   if (error) return <ErrorState onRetry={generateDNA} />;
-  if (!dna) return <LoadingState />;
+  if (!dna) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><BriefiLoader /></div>;
 
   const cards = dna.business_analysis_cards?.length
     ? dna.business_analysis_cards
@@ -228,7 +236,7 @@ export default function CreativeDNA() {
             <RotateCcw className="h-4 w-4" />
             שפרו את הניתוח
           </button>
-          <button onClick={() => navigate(`/project/${projectId}/new`)} className="briefi-btn-ghost w-full">
+          <button onClick={() => navigate(`/project/${projectId}`)} className="briefi-btn-ghost w-full">
             <ArrowRight className="h-4 w-4" />
             חזרה
           </button>
