@@ -25,6 +25,14 @@ export default function PDFExport() {
   const [includeLogo, setIncludeLogo] = useState(true);
   const [preparedBy, setPreparedBy] = useState("");
 
+  const invokeSecureBriefMutations = async (payload) => {
+    const response = await base44.functions.invoke("secureBriefMutations", payload);
+    if (response.data?.error) {
+      throw new Error(response.data.error);
+    }
+    return response.data;
+  };
+
   useEffect(() => {
     const load = async () => {
       const user = await base44.auth.me();
@@ -304,7 +312,10 @@ export default function PDFExport() {
     const url = URL.createObjectURL(blob);
     const win = window.open(url, "_blank");
     if (!win) alert("אנא אפשרו חלון קופץ בדפדפן ונסו שנית.");
-    await base44.entities.Project.update(projectId, { status: "exported" });
+    await invokeSecureBriefMutations({
+      action: "markProjectExported",
+      project_id: projectId,
+    });
   };
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState /></div>;
