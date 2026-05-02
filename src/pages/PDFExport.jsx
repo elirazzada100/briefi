@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Check, Printer, User, FileText, Users } from "lucide-react";
 import LoadingState from "@/components/briefi/LoadingState";
-import { escapeHtml } from "@/lib/escapeHtml";
 
 const DNA_LABELS = {
   main_angle: "הזווית המרכזית",
@@ -36,54 +35,52 @@ export default function PDFExport() {
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const data = await invokeSecureBriefMutations({
-          action: "getOwnedPDFExportData",
-          project_id: projectId,
-        });
-        setProject(data.project);
-        setBriefs(data.video_briefs || []);
-        setBranding(data.branding || null);
-        setPreparedBy(data.branding?.display_name || data.branding?.business_name || "");
-        setIncludeLogo(!!data.branding?.logo_url);
-        setLoading(false);
-      } catch {
+      const user = await base44.auth.me();
+      const [p, b, br] = await Promise.all([
+        base44.entities.Project.filter({ id: projectId }).then(r => r[0]),
+        base44.entities.VideoBrief.filter({ project_id: projectId }),
+        base44.entities.UserBranding.filter({ user_id: user.id }).then(r => r[0] || null),
+      ]);
+      // Ownership check — block if project not found OR owner mismatch
+      if (!p || p.owner_id !== user.id) {
         navigate("/dashboard");
+        return;
       }
+      setProject(p);
+      // Sort by video_order (user-defined), fallback to video_number
+      setBriefs(b.sort((a, x) => (a.video_order ?? a.video_number ?? 0) - (x.video_order ?? x.video_number ?? 0)));
+      setBranding(br);
+      setPreparedBy(br?.display_name || br?.business_name || "");
+      setIncludeLogo(!!br?.logo_url);
+      setLoading(false);
     };
     load();
   }, [projectId]);
 
   const buildHeader = (branding, includeLogo, clientName, date) => {
     const color = branding?.brand_color || "#6C35FF";
-    const safeColor = escapeHtml(color);
-    const safeDisplayName = escapeHtml(branding?.display_name);
-    const safeBusinessName = escapeHtml(branding?.business_name);
-    const safeClientName = escapeHtml(clientName);
-    const safeDate = escapeHtml(date);
-    const safeLogoUrl = branding?.logo_url ? escapeHtml(branding.logo_url) : "";
     const logoHtml = includeLogo && branding?.logo_url
-      ? `<img src="${safeLogoUrl}" alt="לוגו" style="max-height:60px; max-width:160px; object-fit:contain;" />`
+      ? `<img src="${branding.logo_url}" alt="לוגו" style="max-height:60px; max-width:160px; object-fit:contain;" />`
       : branding?.business_name
-        ? `<span style="font-size:20px;font-weight:900;color:${safeColor};">${safeBusinessName}</span>`
-        : `<span style="font-size:20px;font-weight:900;color:${safeColor};">Briefi</span>`;
+        ? `<span style="font-size:20px;font-weight:900;color:${color};">${branding.business_name}</span>`
+        : `<span style="font-size:20px;font-weight:900;color:${color};">Briefi</span>`;
 
-    const contactParts = [branding?.email, branding?.phone, branding?.website].filter(Boolean).map(escapeHtml);
+    const contactParts = [branding?.email, branding?.phone, branding?.website].filter(Boolean);
     const contact = contactParts.length ? `<div style="font-size:10px;color:#9AA1AD;margin-top:4px;">${contactParts.join(" · ")}</div>` : "";
 
     return `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
         <div>
           ${logoHtml}
-          ${branding?.display_name && branding.display_name !== branding.business_name ? `<div style="font-size:11px;color:#5F6675;margin-top:2px;">${safeDisplayName}</div>` : ""}
+          ${branding?.display_name && branding.display_name !== branding.business_name ? `<div style="font-size:11px;color:#5F6675;margin-top:2px;">${branding.display_name}</div>` : ""}
           ${contact}
         </div>
         <div style="text-align:left;font-size:11px;color:#5F6675;">
-          <div>${safeClientName}</div>
-          <div>${safeDate}</div>
+          <div>${clientName}</div>
+          <div>${date}</div>
         </div>
       </div>
-      <div style="height:3px;background:${safeColor};border-radius:2px;margin-bottom:24px;"></div>
+      <div style="height:3px;background:${color};border-radius:2px;margin-bottom:24px;"></div>
     `;
   };
 
@@ -99,13 +96,12 @@ export default function PDFExport() {
         ${Object.entries(DNA_LABELS).map(([key, label]) => {
           const val = dna[key];
           if (!val) return "";
-          const escapedLabel = escapeHtml(label);
           return `
             <div style="margin-bottom:16px;">
-              <div style="font-size:10px;font-weight:800;color:${escapeHtml(color)};text-transform:uppercase;margin-bottom:4px;">${escapedLabel}</div>
+              <div style="font-size:10px;font-weight:800;color:${color};text-transform:uppercase;margin-bottom:4px;">${label}</div>
               ${Array.isArray(val)
-                ? `<ul style="padding-right:18px;margin:0;">${val.map(v => `<li style="font-size:13px;color:#5F6675;margin-bottom:3px;">${escapeHtml(v)}</li>`).join("")}</ul>`
-                : `<p style="font-size:13px;color:#5F6675;margin:0;">${escapeHtml(val)}</p>`
+                ? `<ul style="padding-right:18px;margin:0;">${val.map(v => `<li style="font-size:13px;color:#5F6675;margin-bottom:3px;">${v}</li>`).join("")}</ul>`
+                : `<p style="font-size:13px;color:#5F6675;margin:0;">${val}</p>`
               }
             </div>
           `;
@@ -125,38 +121,38 @@ export default function PDFExport() {
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #E6E4DC;">
             <span style="background:${color};color:white;font-weight:900;font-size:12px;padding:4px 10px;border-radius:8px;">#${brief.video_number}</span>
             <div>
-              <div style="font-size:18px;font-weight:900;color:#0B1B36;">${escapeHtml(fb.brief_title || `בריף ${brief.video_number}`)}</div>
-              <div style="font-size:11px;color:#9AA1AD;">${escapeHtml(brief.category || "")}${fb.client_risk_level ? ` · סיכון: ${escapeHtml(fb.client_risk_level)}` : ""}</div>
+              <div style="font-size:18px;font-weight:900;color:#0B1B36;">${fb.brief_title || `בריף ${brief.video_number}`}</div>
+              <div style="font-size:11px;color:#9AA1AD;">${brief.category || ""}${fb.client_risk_level ? ` · סיכון: ${fb.client_risk_level}` : ""}</div>
             </div>
           </div>
 
-          ${fb.video_concept ? `<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:${escapeHtml(color)};margin-bottom:4px;">קונספט לסרטון</div><p style="font-size:13px;color:#5F6675;margin:0;">${escapeHtml(fb.video_concept)}</p></div>` : ""}
+          ${fb.video_concept ? `<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">קונספט לסרטון</div><p style="font-size:13px;color:#5F6675;margin:0;">${fb.video_concept}</p></div>` : ""}
 
           ${fb.hook ? `
-            <div style="background:#F3EFFF;border-right:4px solid ${escapeHtml(color)};padding:12px 14px;border-radius:10px;margin-bottom:14px;">
-              <div style="font-size:10px;font-weight:800;color:${escapeHtml(color)};margin-bottom:4px;">הוק</div>
-              <p style="font-size:15px;font-weight:800;color:#0B1B36;margin:0;">${escapeHtml(fb.hook)}</p>
+            <div style="background:#F3EFFF;border-right:4px solid ${color};padding:12px 14px;border-radius:10px;margin-bottom:14px;">
+              <div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">הוק</div>
+              <p style="font-size:15px;font-weight:800;color:#0B1B36;margin:0;">${fb.hook}</p>
             </div>
           ` : ""}
 
           ${fb.script_text ? `
-            <div style="background:#F9F8FF;border-right:4px solid ${escapeHtml(color)};padding:12px 14px;border-radius:10px;margin-bottom:14px;">
-              <div style="font-size:10px;font-weight:800;color:${escapeHtml(color)};margin-bottom:4px;">טקסט / ווייסאובר ${scriptLabel ? `<span style="background:${escapeHtml(color)};color:white;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;">${escapeHtml(scriptLabel)}</span>` : ""}</div>
-              <p style="font-size:13px;color:#0B1B36;margin:0;line-height:1.8;white-space:pre-line;">${escapeHtml(fb.script_text)}</p>
+            <div style="background:#F9F8FF;border-right:4px solid ${color};padding:12px 14px;border-radius:10px;margin-bottom:14px;">
+              <div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">טקסט / ווייסאובר ${scriptLabel ? `<span style="background:${color};color:white;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;">${scriptLabel}</span>` : ""}</div>
+              <p style="font-size:13px;color:#0B1B36;margin:0;line-height:1.8;white-space:pre-line;">${fb.script_text}</p>
               <p style="font-size:10px;color:#9AA1AD;margin:8px 0 0;font-style:italic;">זה הטקסט שאפשר להקריא, להגיד למצלמה או להשתמש בו כבסיס לצילום.</p>
             </div>
           ` : ""}
 
           ${shotItems.length ? `
             <div style="margin-bottom:14px;">
-              <div style="font-size:10px;font-weight:800;color:${escapeHtml(color)};margin-bottom:6px;">מבנה צילום</div>
+              <div style="font-size:10px;font-weight:800;color:${color};margin-bottom:6px;">מבנה צילום</div>
               ${shotItems.map((step, i) => `
                 <div style="display:flex;gap:10px;align-items:flex-start;padding:8px;background:#F5F5F2;border-radius:8px;margin-bottom:5px;">
-                  <span style="background:rgba(108,53,255,0.12);color:${escapeHtml(color)};font-weight:900;font-size:11px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${escapeHtml(step.step || i + 1)}</span>
+                  <span style="background:rgba(108,53,255,0.12);color:${color};font-weight:900;font-size:11px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${step.step || i + 1}</span>
                   <div>
-                    ${step.visual ? `<p style="font-size:13px;font-weight:600;color:#0B1B36;margin:0 0 2px;">${escapeHtml(step.visual)}</p>` : ""}
-                    ${step.spoken_or_overlay_text ? `<p style="font-size:12px;color:#5F6675;font-style:italic;margin:0;">"${escapeHtml(step.spoken_or_overlay_text)}"</p>` : ""}
-                    ${step.description ? `<p style="font-size:13px;font-weight:600;color:#0B1B36;margin:0;">${escapeHtml(step.description)}</p>` : ""}
+                    ${step.visual ? `<p style="font-size:13px;font-weight:600;color:#0B1B36;margin:0 0 2px;">${step.visual}</p>` : ""}
+                    ${step.spoken_or_overlay_text ? `<p style="font-size:12px;color:#5F6675;font-style:italic;margin:0;">"${step.spoken_or_overlay_text}"</p>` : ""}
+                    ${step.description ? `<p style="font-size:13px;font-weight:600;color:#0B1B36;margin:0;">${step.description}</p>` : ""}
                   </div>
                 </div>
               `).join("")}
@@ -165,17 +161,17 @@ export default function PDFExport() {
 
           ${fb.text_overlays?.length ? `
             <div style="margin-bottom:14px;">
-              <div style="font-size:10px;font-weight:800;color:${escapeHtml(color)};margin-bottom:6px;">טקסטים למסך</div>
-              ${fb.text_overlays.map(t => `<span style="display:inline-block;background:#F0EEF7;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:600;margin:0 0 4px 6px;">"${escapeHtml(t)}"</span>`).join("")}
+              <div style="font-size:10px;font-weight:800;color:${color};margin-bottom:6px;">טקסטים למסך</div>
+              ${fb.text_overlays.map(t => `<span style="display:inline-block;background:#F0EEF7;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:600;margin:0 0 4px 6px;">"${t}"</span>`).join("")}
             </div>
           ` : ""}
 
-          ${fb.cta ? `<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:${escapeHtml(color)};margin-bottom:4px;">קריאה לפעולה</div><p style="font-size:13px;color:#0B1B36;font-weight:700;margin:0;">${escapeHtml(fb.cta)}</p></div>` : ""}
+          ${fb.cta ? `<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">קריאה לפעולה</div><p style="font-size:13px;color:#0B1B36;font-weight:700;margin:0;">${fb.cta}</p></div>` : ""}
 
-          ${(fb.caption_suggestion || fb.video_description) ? `<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:${escapeHtml(color)};margin-bottom:4px;">תיאור הסרטון</div><p style="font-size:12px;color:#5F6675;margin:0;">${escapeHtml(fb.caption_suggestion || fb.video_description)}</p></div>` : ""}
+          ${(fb.caption_suggestion || fb.video_description) ? `<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">תיאור הסרטון</div><p style="font-size:12px;color:#5F6675;margin:0;">${fb.caption_suggestion || fb.video_description}</p></div>` : ""}
 
-          ${fb.production_notes ? `<div style="background:#FFFBEB;border-right:3px solid #F8B900;padding:10px 12px;border-radius:8px;margin-bottom:10px;"><div style="font-size:10px;font-weight:800;color:#C48E00;margin-bottom:3px;">הערות צילום</div><p style="font-size:12px;color:#5F6675;margin:0;">${escapeHtml(fb.production_notes)}</p></div>` : ""}
-          ${fb.shooting_time_priority ? `<div style="background:#F0FDF4;border-right:3px solid #16A34A;padding:10px 12px;border-radius:8px;"><div style="font-size:10px;font-weight:800;color:#16A34A;margin-bottom:3px;">עדיפות לצילום</div><p style="font-size:13px;font-weight:700;color:#0B1B36;margin:0 0 3px;">${escapeHtml(fb.shooting_time_priority)}</p>${fb.shooting_time_reason ? `<p style="font-size:12px;color:#5F6675;margin:0;">${escapeHtml(fb.shooting_time_reason)}</p>` : ""}</div>` : ""}
+          ${fb.production_notes ? `<div style="background:#FFFBEB;border-right:3px solid #F8B900;padding:10px 12px;border-radius:8px;margin-bottom:10px;"><div style="font-size:10px;font-weight:800;color:#C48E00;margin-bottom:3px;">הערות צילום</div><p style="font-size:12px;color:#5F6675;margin:0;">${fb.production_notes}</p></div>` : ""}
+          ${fb.shooting_time_priority ? `<div style="background:#F0FDF4;border-right:3px solid #16A34A;padding:10px 12px;border-radius:8px;"><div style="font-size:10px;font-weight:800;color:#16A34A;margin-bottom:3px;">עדיפות לצילום</div><p style="font-size:13px;font-weight:700;color:#0B1B36;margin:0 0 3px;">${fb.shooting_time_priority}</p>${fb.shooting_time_reason ? `<p style="font-size:12px;color:#5F6675;margin:0;">${fb.shooting_time_reason}</p>` : ""}</div>` : ""}
         </div>
       `;
     }).join("");
@@ -189,53 +185,58 @@ export default function PDFExport() {
     const color = branding?.brand_color || "#6C35FF";
     const date = new Date().toLocaleDateString("he-IL");
     const header = buildHeader(branding, includeLogo, project?.client_name || "", date);
-    const clientBriefs = briefs.map((brief, idx) => {
-      const savedBrief = brief.adapted_brief || brief.final_brief || {};
-      return {
-        brief_title: savedBrief.brief_title || brief.brief_title || `סרטון ${idx + 1}`,
-        category: brief.category || brief.video_style || "",
-        short_client_concept: savedBrief.video_concept || brief.video_concept || "",
-        hook: savedBrief.hook || brief.hook || "",
-        short_visual_summary: savedBrief.caption_suggestion || savedBrief.video_description || brief.caption_suggestion || "",
-        cta: savedBrief.cta || brief.cta || "",
-      };
+
+    const response = await base44.functions.invoke("briefiAI", {
+      action: "generateClientBriefSummary",
+      project_id: projectId,
+      client_name: project?.client_name || "",
+      main_goal: project?.main_goal || "",
+      creative_dna: project?.creative_dna || {},
+      video_briefs: briefs.map(b => ({
+        video_number: b.video_order ?? b.video_number,
+        category: b.category || b.video_style || "",
+        // Use adapted_brief (Grok flow) first, fallback to final_brief (legacy)
+        final_brief: b.adapted_brief || b.final_brief || {},
+      })),
     });
+
+    const clientBriefs = response.data?.client_briefs || [];
 
     const briefsHTML = clientBriefs.map((cb, idx) => `
       <div class="section-page">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #E6E4DC;">
-          <span style="background:${escapeHtml(color)};color:white;font-weight:900;font-size:12px;padding:4px 10px;border-radius:8px;">#${idx + 1}</span>
+          <span style="background:${color};color:white;font-weight:900;font-size:12px;padding:4px 10px;border-radius:8px;">#${idx + 1}</span>
           <div>
-            <div style="font-size:18px;font-weight:900;color:#0B1B36;">${escapeHtml(cb.brief_title || `סרטון ${idx + 1}`)}</div>
-            <div style="font-size:11px;color:#9AA1AD;">${escapeHtml(cb.category || "")}</div>
+            <div style="font-size:18px;font-weight:900;color:#0B1B36;">${cb.brief_title || `סרטון ${idx + 1}`}</div>
+            <div style="font-size:11px;color:#9AA1AD;">${cb.category || ""}</div>
           </div>
         </div>
 
         ${cb.short_client_concept ? `
           <div style="margin-bottom:14px;">
-            <div style="font-size:10px;font-weight:800;color:${escapeHtml(color)};margin-bottom:4px;">קונספט</div>
-            <p style="font-size:14px;color:#0B1B36;margin:0;line-height:1.7;">${escapeHtml(cb.short_client_concept)}</p>
+            <div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">קונספט</div>
+            <p style="font-size:14px;color:#0B1B36;margin:0;line-height:1.7;">${cb.short_client_concept}</p>
           </div>
         ` : ""}
 
         ${cb.hook ? `
-          <div style="background:#F3EFFF;border-right:4px solid ${escapeHtml(color)};padding:12px 14px;border-radius:10px;margin-bottom:14px;">
-            <div style="font-size:10px;font-weight:800;color:${escapeHtml(color)};margin-bottom:4px;">פתיחה מוצעת</div>
-            <p style="font-size:15px;font-weight:800;color:#0B1B36;margin:0;">${escapeHtml(cb.hook)}</p>
+          <div style="background:#F3EFFF;border-right:4px solid ${color};padding:12px 14px;border-radius:10px;margin-bottom:14px;">
+            <div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">פתיחה מוצעת</div>
+            <p style="font-size:15px;font-weight:800;color:#0B1B36;margin:0;">${cb.hook}</p>
           </div>
         ` : ""}
 
         ${cb.short_visual_summary ? `
           <div style="margin-bottom:14px;">
-            <div style="font-size:10px;font-weight:800;color:${escapeHtml(color)};margin-bottom:4px;">מה יראו בסרטון</div>
-            <p style="font-size:13px;color:#5F6675;margin:0;">${escapeHtml(cb.short_visual_summary)}</p>
+            <div style="font-size:10px;font-weight:800;color:${color};margin-bottom:4px;">מה יראו בסרטון</div>
+            <p style="font-size:13px;color:#5F6675;margin:0;">${cb.short_visual_summary}</p>
           </div>
         ` : ""}
 
         ${cb.cta ? `
           <div style="background:#F0F9FF;border-right:3px solid #249BFF;padding:10px 12px;border-radius:8px;">
             <div style="font-size:10px;font-weight:800;color:#249BFF;margin-bottom:3px;">קריאה לפעולה</div>
-            <p style="font-size:13px;font-weight:700;color:#0B1B36;margin:0;">${escapeHtml(cb.cta)}</p>
+            <p style="font-size:13px;font-weight:700;color:#0B1B36;margin:0;">${cb.cta}</p>
           </div>
         ` : ""}
       </div>
@@ -250,7 +251,7 @@ export default function PDFExport() {
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>${escapeHtml(pageTitle)}</title>
+  <title>${pageTitle}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -266,14 +267,14 @@ export default function PDFExport() {
       .page-break { page-break-before: always; }
       .no-print { display: none !important; }
     }
-    .cover { padding: 60px 50px; min-height: 95vh; border-bottom: 6px solid ${escapeHtml(color)}; }
+    .cover { padding: 60px 50px; min-height: 95vh; border-bottom: 6px solid ${color}; }
     .cover-title { font-size: 28px; font-weight: 900; color: #0B1B36; margin: 24px 0 6px; }
     .cover-sub { font-size: 14px; color: #5F6675; margin-bottom: 30px; }
     .cover-divider { border: none; border-top: 1px solid #E6E4DC; margin: 24px 0; }
     .section-page { padding: 40px 50px; }
     .print-btn {
       position: fixed; bottom: 24px; left: 24px;
-      background: ${escapeHtml(color)}; color: white; border: none;
+      background: ${color}; color: white; border: none;
       padding: 14px 28px; border-radius: 14px;
       font-family: 'Heebo', sans-serif; font-size: 16px; font-weight: 800;
       cursor: pointer; box-shadow: 0 8px 30px rgba(0,0,0,0.2); z-index: 9999;
@@ -283,15 +284,15 @@ export default function PDFExport() {
 <body>
   <div class="cover">
     ${headerHTML}
-    <div class="cover-title">${escapeHtml(title)}</div>
-    <div class="cover-sub">${escapeHtml(subtitle)}</div>
+    <div class="cover-title">${title}</div>
+    <div class="cover-sub">${subtitle}</div>
     <div class="cover-divider"></div>
     <div style="font-size:13px;color:#0B1B36;font-weight:600;line-height:2;">
-      <div>לקוח: ${escapeHtml(project?.client_name || "")}</div>
-      ${preparedBy ? `<div>הוכן על ידי: ${escapeHtml(preparedBy)}</div>` : ""}
-      ${project?.main_goal ? `<div>מטרה: ${escapeHtml(project.main_goal)}</div>` : ""}
+      <div>לקוח: ${project?.client_name || ""}</div>
+      ${preparedBy ? `<div>הוכן על ידי: ${preparedBy}</div>` : ""}
+      ${project?.main_goal ? `<div>מטרה: ${project.main_goal}</div>` : ""}
     </div>
-    <div style="margin-top:16px;font-size:15px;font-weight:700;color:${escapeHtml(color)};">${escapeHtml(briefCount)} בריפים מוכנים</div>
+    <div style="margin-top:16px;font-size:15px;font-weight:700;color:${color};">${briefCount} בריפים מוכנים</div>
   </div>
   ${bodyHTML}
   <button class="print-btn no-print" onclick="window.print()">🖨️ הדפסה / שמירה כ-PDF</button>

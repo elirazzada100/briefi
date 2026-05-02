@@ -189,13 +189,14 @@ export default function FinalBrief() {
   const handleSaveFeedback = async () => {
     if (!feedbackScore) return;
     const label = SMILEY_OPTIONS.find(s => s.score === feedbackScore)?.label || "";
-    await invokeSecureBriefMutations({
-      action: "submitVideoFeedback",
+    await base44.entities.UserBriefFeedback.create({
       project_id: projectId,
       video_brief_id: briefId,
-      rating: feedbackScore,
-      comment: feedbackFreeText,
       rating_label: label,
+      video_feedback_score: feedbackScore,
+      video_feedback_label: label,
+      free_text_negative: feedbackFreeText,
+      video_feedback_created_at: new Date().toISOString(),
     });
     setFeedbackSaved(true);
   };
@@ -204,13 +205,14 @@ export default function FinalBrief() {
     if (!feedbackFreeText) return;
     setImproving(true);
     const label = SMILEY_OPTIONS.find(s => s.score === feedbackScore)?.label || "";
-    await invokeSecureBriefMutations({
-      action: "submitVideoFeedback",
+    await base44.entities.UserBriefFeedback.create({
       project_id: projectId,
       video_brief_id: briefId,
-      rating: feedbackScore || 3,
-      comment: feedbackFreeText,
       rating_label: label,
+      video_feedback_score: feedbackScore,
+      video_feedback_label: label,
+      free_text_negative: feedbackFreeText,
+      video_feedback_created_at: new Date().toISOString(),
     });
 
     const currentBrief = brief?.adapted_brief || brief?.final_brief || {};

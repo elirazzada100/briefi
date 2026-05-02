@@ -49,17 +49,22 @@ export default function BriefPack() {
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const data = await invokeSecureBriefMutations({
-          action: "getOwnedBriefPackageData",
-          project_id: projectId,
-        });
-        setProject(data.project);
-        setBriefs(data.video_briefs || []);
-        setLoading(false);
-      } catch {
+      const user = await base44.auth.me();
+      const [p, b] = await Promise.all([
+        base44.entities.Project.filter({ id: projectId }).then(r => r[0]),
+        base44.entities.VideoBrief.filter({ project_id: projectId })
+      ]);
+      if (!p || p.owner_id !== user.id) {
         navigate("/dashboard");
+        return;
       }
+      setProject(p);
+      // Sort by video_order if set, else video_number
+      const sorted = b.sort((a, b2) =>
+        (a.video_order ?? a.video_number ?? 0) - (b2.video_order ?? b2.video_number ?? 0)
+      );
+      setBriefs(sorted);
+      setLoading(false);
     };
     load();
   }, [projectId]);
