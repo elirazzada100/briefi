@@ -43,23 +43,25 @@ export default function GrokCTAPicker() {
   const loadCTAOptions = async () => {
     setLoading(true);
     setError(null);
+    try {
+      const res = await base44.functions.invoke("grokBriefiFlow", {
+        action: "generateCTAOptions",
+        project_id: projectId,
+        business,
+        selectedConcept,
+        selectedOpening: selectedOpening || selectedBody,
+      });
 
-    const res = await base44.functions.invoke("grokBriefiFlow", {
-      action: "generateCTAOptions",
-      project_id: projectId,
-      business,
-      selectedConcept,
-      selectedOpening: selectedOpening || selectedBody,
-    });
+      if (res.data?.error) {
+        throw new Error(res.data.error);
+      }
 
-    if (res.data?.error) {
-      setError(res.data.error);
+      setCtaOptions(res.data?.cta_options || []);
+    } catch (loadError) {
+      setError(loadError.message || "משהו נתקע בדרך. נסו שוב בעוד רגע.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setCtaOptions(res.data?.cta_options || []);
-    setLoading(false);
   };
 
   const handleSelectCTA = async (ctaOption, idx) => {
@@ -67,36 +69,39 @@ export default function GrokCTAPicker() {
     setGeneratingBrief(true);
     setError(null);
 
-    const res = await base44.functions.invoke("grokBriefiFlow", {
-      action: "assembleFinalBrief",
-      project_id: projectId,
-      business,
-      selectedConcept,
-      selectedOpening: selectedOpening || selectedBody,
-      selectedCTA: ctaOption,
-      selectedVideoStyle,
-    });
-
-    if (res.data?.error) {
-      setError(res.data.error);
-      setSelectingIdx(null);
-      setGeneratingBrief(false);
-      return;
-    }
-
-    const briefId = res.data?.brief_id;
-    const finalBrief = res.data?.final_brief;
-
-    navigate(`/project/${projectId}/final-brief`, {
-      state: {
-        briefId,
-        finalBrief,
+    try {
+      const res = await base44.functions.invoke("grokBriefiFlow", {
+        action: "assembleFinalBrief",
+        project_id: projectId,
+        business,
         selectedConcept,
         selectedOpening: selectedOpening || selectedBody,
         selectedCTA: ctaOption,
         selectedVideoStyle,
-      },
-    });
+      });
+
+      if (res.data?.error) {
+        throw new Error(res.data.error);
+      }
+
+      const briefId = res.data?.brief_id;
+      const finalBrief = res.data?.final_brief;
+
+      navigate(`/project/${projectId}/final-brief`, {
+        state: {
+          briefId,
+          finalBrief,
+          selectedConcept,
+          selectedOpening: selectedOpening || selectedBody,
+          selectedCTA: ctaOption,
+          selectedVideoStyle,
+        },
+      });
+    } catch (submitError) {
+      setError(submitError.message || "משהו נתקע בדרך. נסו שוב בעוד רגע.");
+      setSelectingIdx(null);
+      setGeneratingBrief(false);
+    }
   };
 
   if (loading || generatingBrief) {

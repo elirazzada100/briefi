@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Check, Printer, User, FileText, Users } from "lucide-react";
-import LoadingState from "@/components/briefi/LoadingState";
+import BriefiLoader from "@/components/shared/BriefiLoader";
+import ErrorState from "@/components/shared/ErrorState";
 import { escapeHtml } from "@/lib/escapeHtml";
 
 const DNA_LABELS = {
@@ -21,6 +22,7 @@ export default function PDFExport() {
   const [branding, setBranding] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState(null);
 
   const [exportType, setExportType] = useState(null); // "internal" | "client"
   const [includeLogo, setIncludeLogo] = useState(true);
@@ -46,9 +48,10 @@ export default function PDFExport() {
         setBranding(data.branding || null);
         setPreparedBy(data.branding?.display_name || data.branding?.business_name || "");
         setIncludeLogo(!!data.branding?.logo_url);
+      } catch (loadError) {
+        setError(loadError);
+      } finally {
         setLoading(false);
-      } catch {
-        navigate("/dashboard");
       }
     };
     load();
@@ -300,25 +303,42 @@ export default function PDFExport() {
 
   const handleExport = async (type) => {
     setGenerating(true);
-    let html;
-    if (type === "internal") {
-      html = generateInternalHTML();
-    } else {
-      html = await generateClientHTML();
+    try {
+      let html;
+      if (type === "internal") {
+        html = generateInternalHTML();
+      } else {
+        html = await generateClientHTML();
+      }
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, "_blank");
+      if (!win) {
+        alert("אנא אפשרו חלון קופץ בדפדפן ונסו שנית.");
+      }
+      await invokeSecureBriefMutations({
+        action: "markProjectExported",
+        project_id: projectId,
+      });
+    } finally {
+      setGenerating(false);
     }
-    setGenerating(false);
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const win = window.open(url, "_blank");
-    if (!win) alert("אנא אפשרו חלון קופץ בדפדפן ונסו שנית.");
-    await invokeSecureBriefMutations({
-      action: "markProjectExported",
-      project_id: projectId,
-    });
   };
 
-  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState /></div>;
-  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="מכינים את המסמך..." /></div>;
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><BriefiLoader /></div>;
+  if (error || !project) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4" dir="rtl">
+        <div className="w-full max-w-sm">
+          <ErrorState onRetry={() => window.location.reload()} />
+          <button onClick={() => navigate("/dashboard")} className="briefi-btn-secondary w-full mt-4">
+            חזרה ללקוחות שלי
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (generating) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><BriefiLoader /></div>;
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -446,7 +466,7 @@ export default function PDFExport() {
           onClick={() => navigate(`/project/${projectId}/brief-pack`)}
           className="briefi-btn-secondary w-full"
         >
-          חזרה לבריפים
+          חזרה לסרטונים
         </button>
 
         {/* Profile shortcut */}
