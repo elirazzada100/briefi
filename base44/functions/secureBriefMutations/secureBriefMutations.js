@@ -67,6 +67,20 @@ const SAFE_BRANDING_FIELDS = [
   "website",
 ];
 
+const SAFE_FEEDBACK_FIELDS = [
+  "rating_label",
+  "rating_score",
+  "selected_feedback_tags",
+  "free_text_negative",
+  "free_text_positive",
+  "industry",
+  "category",
+  "concept_title",
+  "hook_text",
+  "model_used",
+  "source_batch_version",
+];
+
 function mirrorAdaptedBrief(existingBrief, topLevel, adaptedFields) {
   const adaptedBrief = { ...(existingBrief?.adapted_brief || {}) };
   Object.assign(adaptedBrief, adaptedFields);
@@ -163,6 +177,36 @@ async function handleGetOwnedVideoBrief(base44, userId, body) {
   const { video_brief_id, project_id } = body;
   const { videoBrief } = await requireOwnedVideoBrief(base44, userId, video_brief_id, project_id);
   return { video_brief: videoBrief };
+}
+
+async function handleGetOwnedBriefPackageData(base44, userId, body) {
+  const project = await requireOwnedProject(base44, userId, body.project_id);
+  const videoBriefs = await base44.asServiceRole.entities.VideoBrief.filter({ project_id: project.id });
+  const orderedVideoBriefs = videoBriefs.sort((a, b) =>
+    (a.video_order ?? a.video_number ?? 0) - (b.video_order ?? b.video_number ?? 0)
+  );
+  return {
+    project,
+    video_briefs: orderedVideoBriefs,
+  };
+}
+
+async function handleGetOwnedPDFExportData(base44, userId, body) {
+  const project = await requireOwnedProject(base44, userId, body.project_id);
+  const [videoBriefs, brandingRecords] = await Promise.all([
+    base44.asServiceRole.entities.VideoBrief.filter({ project_id: project.id }),
+    base44.asServiceRole.entities.UserBranding.filter({ user_id: userId }),
+  ]);
+
+  const orderedVideoBriefs = videoBriefs.sort((a, b) =>
+    (a.video_order ?? a.video_number ?? 0) - (b.video_order ?? b.video_number ?? 0)
+  );
+
+  return {
+    project,
+    video_briefs: orderedVideoBriefs,
+    branding: brandingRecords[0] || null,
+  };
 }
 
 async function handleUpdateVideoBriefField(base44, userId, body) {
@@ -276,6 +320,27 @@ async function handleGetOwnedUserBranding(base44, userId) {
   return { branding: existing[0] || null };
 }
 
+async function handleSubmitVideoFeedback(base44, userId, body) {
+  const { project_id, video_brief_id, rating, comment } = body;
+  const { videoBrief, project } = await requireOwnedVideoBrief(base44, userId, video_brief_id, project_id);
+
+  const safeRating = Number(rating);
+  if (!Number.isInteger(safeRating) || safeRating < 1 || safeRating > 5) {
+    throw new SecureBriefMutationError(400, "rating must be an integer between 1 and 5");
+  }
+
+  const feedbackPayload = pickFields(body, SAFE_FEEDBACK_FIELDS);
+  const created = await base44.asServiceRole.entities.UserBriefFeedback.create({
+    ...feedbackPayload,
+    project_id: project.id,
+    video_brief_id: videoBrief.id,
+    rating_score: safeRating,
+    free_text_negative: comment ?? feedbackPayload.free_text_negative ?? "",
+  });
+
+  return { feedback: created };
+}
+
 async function handleUpdateUserBranding(base44, userId, body) {
   const brandingInput = sanitizeObject(body.branding || {}, "branding");
   const payload = pickFields(brandingInput, SAFE_BRANDING_FIELDS);
@@ -307,6 +372,10 @@ export async function runSecureBriefMutation(base44, userId, body) {
   switch (action) {
     case "getOwnedVideoBrief":
       return handleGetOwnedVideoBrief(base44, userId, body);
+    case "getOwnedBriefPackageData":
+      return handleGetOwnedBriefPackageData(base44, userId, body);
+    case "getOwnedPDFExportData":
+      return handleGetOwnedPDFExportData(base44, userId, body);
     case "updateVideoBriefField":
       return handleUpdateVideoBriefField(base44, userId, body);
     case "saveFinalVideoBrief":
@@ -321,6 +390,8 @@ export async function runSecureBriefMutation(base44, userId, body) {
       return handleGetOwnedUserBranding(base44, userId);
     case "updateUserBranding":
       return handleUpdateUserBranding(base44, userId, body);
+    case "submitVideoFeedback":
+      return handleSubmitVideoFeedback(base44, userId, body);
     default:
       throw new SecureBriefMutationError(400, `Unknown action: ${action}`);
   }

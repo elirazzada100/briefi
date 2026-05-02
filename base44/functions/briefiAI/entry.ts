@@ -540,6 +540,16 @@ function sanitizeText(text, maxLen = 3000) {
 }
 
 Deno.serve(async (req) => {
+  return Response.json({ error: "Deprecated: legacy OpenAI flow is disabled in production." }, { status: 410 });
+});
+
+/*
+Legacy OpenAI implementation retained below for reference only.
+Production flow no longer routes here.
+*/
+
+/*
+Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const user = await base44.auth.me();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -1316,3 +1326,4 @@ Return JSON:
 
   return Response.json({ error: "Unknown action" }, { status: 400 });
 });
+*/
