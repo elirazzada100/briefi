@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
@@ -134,33 +134,51 @@ export default function CreativeDNA() {
   const [dna, setDna] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(false);
+  const generationStartedRef = useRef(false);
+  const requestInFlightRef = useRef(false);
 
   const { project, loading: guardLoading } = useProjectGuard(projectId);
 
   useEffect(() => {
     if (project?.creative_dna) {
       setDna(project.creative_dna);
-    } else if (project && !dna && !generating) {
+      generationStartedRef.current = true;
+    } else if (project && !dna && !generationStartedRef.current) {
+      generationStartedRef.current = true;
       generateDNA();
     }
   }, [project]);
 
   const generateDNA = async () => {
-    if (!project) return;
+    if (!project || requestInFlightRef.current) return;
+
+    requestInFlightRef.current = true;
     setGenerating(true);
     setError(false);
 
-    const response = await base44.functions.invoke("grokBriefiFlow", {
-      action: "generateCreativeDNA",
-      project_id: project.id,
-      client_name: project.client_name,
-      main_goal: project.main_goal,
-      raw_notes: project.raw_notes,
-    });
+    try {
+      const response = await base44.functions.invoke("grokBriefiFlow", {
+        action: "generateCreativeDNA",
+        project_id: project.id,
+        client_name: project.client_name,
+        main_goal: project.main_goal,
+        raw_notes: project.raw_notes,
+      });
 
-    const result = response.data?.creative_dna;
-    setDna(result);
-    setGenerating(false);
+      const result = response.data?.creative_dna;
+      if (!result || response.data?.error) {
+        throw new Error(response.data?.error || "DNA generation failed");
+      }
+
+      setDna(result);
+    } catch (err) {
+      console.error("Failed to generate creative DNA:", err);
+      setError(true);
+      generationStartedRef.current = false;
+    } finally {
+      requestInFlightRef.current = false;
+      setGenerating(false);
+    }
   };
 
   const updateDirections = async (newDirs) => {
@@ -169,10 +187,10 @@ export default function CreativeDNA() {
     await base44.entities.Project.update(project.id, { creative_dna: updated });
   };
 
-  if (guardLoading || !project) return <LoadingState message="עוד רגע זה מוכן" />;
-  if (generating) return <LoadingState message="מסדרים לך רעיון" />;
+  if (guardLoading || !project) return <LoadingState message="עוד רגע זה מוכן." />;
+  if (generating) return <LoadingState message={["קוראים את העסק.", "מחפשים את הזווית שתעצור גלילה."]} />;
   if (error) return <ErrorState onRetry={generateDNA} />;
-  if (!dna) return <LoadingState message="שנייה סיימנו" />;
+  if (!dna) return <LoadingState message="שנייה סיימנו." />;
 
   const cards = dna.business_analysis_cards?.length
     ? dna.business_analysis_cards

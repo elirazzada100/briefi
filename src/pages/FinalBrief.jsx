@@ -202,7 +202,7 @@ export default function FinalBrief() {
   if (loading || !brief) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="עוד רגע זה מוכן" />
+        <LoadingState message={["בונים את הסרטון.", "עוד רגע יש לך משהו שאפשר לצלם."]} />
       </div>
     );
   }
@@ -210,7 +210,7 @@ export default function FinalBrief() {
   if (improving) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="מסדרים לך רעיון" />
+        <LoadingState message={["בונים את הסרטון.", "עוד רגע יש לך משהו שאפשר לצלם."]} />
       </div>
     );
   }

@@ -47,48 +47,52 @@ export default function GrokConceptPicker() {
   const loadConcepts = async () => {
     setLoading(true);
     setError(null);
-
-    const proj = project;
-    const business = businessFromState || {
-      business_name: proj?.client_name || "",
-      business_description: proj?.raw_notes || "",
-      main_goal: proj?.main_goal || "",
-    };
-
-    // Ensure industry classification is available (required for strict ConceptBank retrieval)
-    // classifyBusinessCategory now returns industry_order + industry_name directly
-    let resolvedAnalysis = businessAnalysis;
-    if (selectedVideoStyle !== "טרנדי" && (!resolvedAnalysis?.industry_order || !resolvedAnalysis?.industry_name)) {
-      const classifyRes = await base44.functions.invoke("classifyBusinessCategory", {
-        businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
-      });
-      const clf = classifyRes.data;
-      resolvedAnalysis = {
-        ...(resolvedAnalysis || {}),
-        industry_order: clf?.industry_order || null,
-        industry_name: clf?.industry_name || clf?.category_name_he || "",
-        confidence: clf?.confidence || 0,
-        category_id: clf?.category_id || "",
+    try {
+      const proj = project;
+      const business = businessFromState || {
+        business_name: proj?.client_name || "",
+        business_description: proj?.raw_notes || "",
+        main_goal: proj?.main_goal || "",
       };
-      setResolvedAnalysis(resolvedAnalysis);
-    }
 
-    const res = await base44.functions.invoke("grokBriefiFlow", {
-      action: "generateConcepts",
-      business,
-      selectedVideoStyle,
-      project_id: projectId,
-      businessAnalysis: resolvedAnalysis,
-    });
+      // Ensure industry classification is available (required for strict ConceptBank retrieval)
+      // classifyBusinessCategory now returns industry_order + industry_name directly
+      let resolvedAnalysis = businessAnalysis;
+      if (selectedVideoStyle !== "טרנדי" && (!resolvedAnalysis?.industry_order || !resolvedAnalysis?.industry_name)) {
+        const classifyRes = await base44.functions.invoke("classifyBusinessCategory", {
+          businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
+        });
+        const clf = classifyRes.data;
+        resolvedAnalysis = {
+          ...(resolvedAnalysis || {}),
+          industry_order: clf?.industry_order || null,
+          industry_name: clf?.industry_name || clf?.category_name_he || "",
+          confidence: clf?.confidence || 0,
+          category_id: clf?.category_id || "",
+        };
+        setResolvedAnalysis(resolvedAnalysis);
+      }
 
-    if (res.data?.error) {
-      setError(res.data.error);
+      const res = await base44.functions.invoke("grokBriefiFlow", {
+        action: "generateConcepts",
+        business,
+        selectedVideoStyle,
+        project_id: projectId,
+        businessAnalysis: resolvedAnalysis,
+      });
+
+      if (res.data?.error) {
+        setError(res.data.error);
+        return;
+      }
+
+      setConcepts(res.data?.concepts || []);
+    } catch (err) {
+      console.error("Failed to load concepts:", err);
+      setError("משהו נתקע בדרך. נסו שוב בעוד רגע.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setConcepts(res.data?.concepts || []);
-    setLoading(false);
   };
 
   const handleSelectConcept = (concept, idx) => {
@@ -114,7 +118,7 @@ export default function GrokConceptPicker() {
   if (guardLoading || loading) {
     return (
       <div className="bg-background flex items-center justify-center" style={{ minHeight: "100dvh" }} dir="rtl">
-        <BriefiLoader />
+        <BriefiLoader messages={["מסדרים רעיונות.", "בוחרים את אלה שיש להם סיכוי לעבוד באמת."]} />
       </div>
     );
   }

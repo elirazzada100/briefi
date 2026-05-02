@@ -42,22 +42,26 @@ export default function GrokBodyPicker() {
   const loadBodyOptions = async () => {
     setLoading(true);
     setError(null);
+    try {
+      const res = await base44.functions.invoke("grokBriefiFlow", {
+        action: "generateBodyOptions",
+        business,
+        selectedConcept,
+        category_id: categoryId,
+      });
 
-    const res = await base44.functions.invoke("grokBriefiFlow", {
-      action: "generateBodyOptions",
-      business,
-      selectedConcept,
-      category_id: categoryId,
-    });
+      if (res.data?.error) {
+        setError(res.data.error);
+        return;
+      }
 
-    if (res.data?.error) {
-      setError(res.data.error);
+      setBodyOptions(res.data?.body_options || []);
+    } catch (err) {
+      console.error("Failed to load body options:", err);
+      setError("משהו נתקע בדרך. נסו שוב בעוד רגע.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setBodyOptions(res.data?.body_options || []);
-    setLoading(false);
   };
 
   const handleSelectBody = (bodyOption, idx) => {
@@ -77,7 +81,7 @@ export default function GrokBodyPicker() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <LoadingState message="מסדרים לך רעיון" />
+        <LoadingState message={["מסדרים רעיונות.", "עוד רגע זה מוכן."]} />
       </div>
     );
   }

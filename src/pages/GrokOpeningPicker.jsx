@@ -31,23 +31,27 @@ export default function GrokOpeningPicker() {
   const loadOpeningOptions = async () => {
     setLoading(true);
     setError(null);
+    try {
+      const res = await base44.functions.invoke("grokBriefiFlow", {
+        action: "generateOpeningOptions",
+        business,
+        selectedConcept,
+        selectedVideoStyle,
+        businessAnalysis,
+      });
 
-    const res = await base44.functions.invoke("grokBriefiFlow", {
-      action: "generateOpeningOptions",
-      business,
-      selectedConcept,
-      selectedVideoStyle,
-      businessAnalysis,
-    });
+      if (res.data?.error) {
+        setError(res.data.error);
+        return;
+      }
 
-    if (res.data?.error) {
-      setError(res.data.error);
+      setOpeningOptions(res.data?.opening_options || []);
+    } catch (err) {
+      console.error("Failed to load opening options:", err);
+      setError("משהו נתקע בדרך. נסו שוב בעוד רגע.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setOpeningOptions(res.data?.opening_options || []);
-    setLoading(false);
   };
 
   const handleSelectOpening = (option, idx) => {
@@ -66,7 +70,7 @@ export default function GrokOpeningPicker() {
   if (loading) {
     return (
       <div className="bg-background flex items-center justify-center" style={{ minHeight: "100dvh" }} dir="rtl">
-        <BriefiLoader />
+        <BriefiLoader messages={["כותבים פתיחה.", "משפט ראשון טוב עושה חצי עבודה."]} />
       </div>
     );
   }
