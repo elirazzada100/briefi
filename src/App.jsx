@@ -14,23 +14,18 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import NewProject from './pages/NewProject.jsx';
 import CreativeDNA from './pages/CreativeDNA';
-import CategoryPicker from './pages/CategoryPicker';
-import HookPicker from './pages/HookPicker';
-import BodyPicker from './pages/BodyPicker';
-import CTAPicker from './pages/CTAPicker';
 import FinalBrief from './pages/FinalBrief';
 import BriefPack from './pages/BriefPack';
 import PDFExport from './pages/PDFExport';
-import ConceptPicker from './pages/ConceptPicker';
 import UserProfile from './pages/UserProfile';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import AdminLearning from './pages/admin/Learning';
 import GenerationDebug from './pages/admin/GenerationDebug';
 import AdminTrendPatterns from './pages/admin/TrendPatterns';
 import AdminConceptBank from './pages/admin/ConceptBank';
 import AdminHookBank from './pages/admin/HookBank';
 import GrokConceptPicker from './pages/GrokConceptPicker';
-import GrokBodyPicker from './pages/GrokBodyPicker';
 import GrokOpeningPicker from './pages/GrokOpeningPicker';
 import GrokCTAPicker from './pages/GrokCTAPicker';
 import VideoStylePicker from './pages/VideoStylePicker';
@@ -85,23 +80,18 @@ const AuthenticatedApp = () => {
       <Route path="/project/:projectId/creative-dna" element={<ProtectedRoute><CreativeDNA /></ProtectedRoute>} />
       <Route path="/project/:projectId/video-style" element={<ProtectedRoute><VideoStylePicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/grok-concepts" element={<ProtectedRoute><GrokConceptPicker /></ProtectedRoute>} />
-      <Route path="/project/:projectId/grok-body" element={<ProtectedRoute><GrokBodyPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/grok-opening" element={<ProtectedRoute><GrokOpeningPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/grok-cta" element={<ProtectedRoute><GrokCTAPicker /></ProtectedRoute>} />
-      <Route path="/project/:projectId/category" element={<ProtectedRoute><CategoryPicker /></ProtectedRoute>} />
-      <Route path="/project/:projectId/concepts" element={<ProtectedRoute><ConceptPicker /></ProtectedRoute>} />
-      <Route path="/project/:projectId/hooks" element={<ProtectedRoute><HookPicker /></ProtectedRoute>} />
-      <Route path="/project/:projectId/body" element={<ProtectedRoute><BodyPicker /></ProtectedRoute>} />
-      <Route path="/project/:projectId/cta" element={<ProtectedRoute><CTAPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/final-brief" element={<ProtectedRoute><FinalBrief /></ProtectedRoute>} />
       <Route path="/project/:projectId/brief-pack" element={<ProtectedRoute><BriefPack /></ProtectedRoute>} />
       <Route path="/project/:projectId/export" element={<ProtectedRoute><PDFExport /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-      <Route path="/admin/learning" element={<ProtectedRoute><AdminLearning /></ProtectedRoute>} />
-      <Route path="/admin/generation-debug/:generationRunId" element={<ProtectedRoute><GenerationDebug /></ProtectedRoute>} />
-      <Route path="/admin/trend-patterns" element={<ProtectedRoute><AdminTrendPatterns /></ProtectedRoute>} />
-      <Route path="/admin/concept-bank" element={<ProtectedRoute><AdminConceptBank /></ProtectedRoute>} />
-      <Route path="/admin/hook-bank" element={<ProtectedRoute><AdminHookBank /></ProtectedRoute>} />
+      <Route path="/admin" element={<AdminRoute><AdminLearning /></AdminRoute>} />
+      <Route path="/admin/learning" element={<AdminRoute><AdminLearning /></AdminRoute>} />
+      <Route path="/admin/generation-debug/:generationRunId" element={<AdminRoute><GenerationDebug /></AdminRoute>} />
+      <Route path="/admin/trend-patterns" element={<AdminRoute><AdminTrendPatterns /></AdminRoute>} />
+      <Route path="/admin/concept-bank" element={<AdminRoute><AdminConceptBank /></AdminRoute>} />
+      <Route path="/admin/hook-bank" element={<AdminRoute><AdminHookBank /></AdminRoute>} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/settings/privacy" element={<PrivacyPolicy />} />
       <Route path="/settings/terms" element={<TermsOfService />} />

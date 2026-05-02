@@ -66,6 +66,16 @@ Every concept must be: specific, practical, shootable tomorrow, clear from the f
 Return valid JSON only. No markdown.`;
 
 Deno.serve(async (req) => {
+  return Response.json({ error: "Deprecated: legacy OpenAI concept generation is disabled in production." }, { status: 410 });
+});
+
+/*
+Legacy OpenAI implementation retained below for reference only.
+Production flow no longer routes here.
+*/
+
+/*
+Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -286,3 +296,4 @@ Return valid JSON:
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
+*/
