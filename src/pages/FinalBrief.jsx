@@ -92,32 +92,13 @@ export default function FinalBrief() {
 
   const { project, loading } = useProjectGuard(projectId);
 
-  const invokeSecureBriefMutations = async (payload) => {
-    const response = await base44.functions.invoke("secureBriefMutations", payload);
-    if (response.data?.error) {
-      throw new Error(response.data.error);
-    }
-    return response.data;
-  };
-
   useEffect(() => {
-    if (finalBriefFromState && briefId) {
-      setBrief({ adapted_brief: finalBriefFromState, id: briefId });
-    }
-    if (briefId) {
-      invokeSecureBriefMutations({
-        action: "getOwnedVideoBrief",
-        project_id: projectId,
-        video_brief_id: briefId,
-      }).then((data) => {
-        if (data?.video_brief) setBrief(data.video_brief);
-      }).catch(() => {
-        navigate(`/project/${projectId}/brief-pack`);
-      });
-      return;
-    }
     if (finalBriefFromState) {
       setBrief({ adapted_brief: finalBriefFromState, id: briefId });
+    } else if (briefId) {
+      base44.entities.VideoBrief.filter({ id: briefId }).then(r => {
+        if (r[0]) setBrief(r[0]);
+      });
     }
   }, [briefId, finalBriefFromState]);
 
@@ -152,34 +133,14 @@ export default function FinalBrief() {
     const updated = { ...(brief?.adapted_brief || {}), [field]: value };
     setBrief(prev => ({ ...prev, adapted_brief: updated }));
     if (briefId) {
-      const data = await invokeSecureBriefMutations({
-        action: "saveFinalVideoBrief",
-        project_id: projectId,
-        video_brief_id: briefId,
-        video_brief: {
-          adapted_brief: updated,
-          status: brief?.status,
-        },
-      });
-      if (data?.video_brief) {
-        setBrief(data.video_brief);
-      }
+      await base44.entities.VideoBrief.update(briefId, { adapted_brief: updated });
     }
   };
 
   const handleSave = async () => {
     setSaving(true);
     if (briefId) {
-      const data = await invokeSecureBriefMutations({
-        action: "updateVideoBriefField",
-        project_id: projectId,
-        video_brief_id: briefId,
-        field: "status",
-        value: "approved",
-      });
-      if (data?.video_brief) {
-        setBrief(data.video_brief);
-      }
+      await base44.entities.VideoBrief.update(briefId, { status: "approved" });
     }
     setSaving(false);
     setSaved(true);
@@ -229,18 +190,7 @@ export default function FinalBrief() {
     if (improved) {
       setBrief(prev => ({ ...prev, adapted_brief: improved }));
       if (briefId) {
-        const data = await invokeSecureBriefMutations({
-          action: "saveFinalVideoBrief",
-          project_id: projectId,
-          video_brief_id: briefId,
-          video_brief: {
-            adapted_brief: improved,
-            status: brief?.status,
-          },
-        });
-        if (data?.video_brief) {
-          setBrief(data.video_brief);
-        }
+        await base44.entities.VideoBrief.update(briefId, { adapted_brief: improved });
       }
     }
     setImproving(false);

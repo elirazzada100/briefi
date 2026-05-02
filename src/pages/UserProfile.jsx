@@ -16,6 +16,7 @@ export default function UserProfile() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [brandingId, setBrandingId] = useState(null);
 
   const [form, setForm] = useState({
     display_name: "",
@@ -27,27 +28,20 @@ export default function UserProfile() {
     website: "",
   });
 
-  const invokeSecureBriefMutations = async (payload) => {
-    const response = await base44.functions.invoke("secureBriefMutations", payload);
-    if (response.data?.error) {
-      throw new Error(response.data.error);
-    }
-    return response.data;
-  };
-
   useEffect(() => {
     const load = async () => {
-      const data = await invokeSecureBriefMutations({ action: "getOwnedUserBranding" });
-      const existing = data?.branding;
-      if (existing) {
+      const user = await base44.auth.me();
+      const existing = await base44.entities.UserBranding.filter({ user_id: user.id });
+      if (existing.length > 0) {
+        setBrandingId(existing[0].id);
         setForm({
-          display_name: existing.display_name || "",
-          business_name: existing.business_name || "",
-          logo_url: existing.logo_url || "",
-          brand_color: existing.brand_color || "#6C35FF",
-          email: existing.email || "",
-          phone: existing.phone || "",
-          website: existing.website || "",
+          display_name: existing[0].display_name || "",
+          business_name: existing[0].business_name || "",
+          logo_url: existing[0].logo_url || "",
+          brand_color: existing[0].brand_color || "#6C35FF",
+          email: existing[0].email || "",
+          phone: existing[0].phone || "",
+          website: existing[0].website || "",
         });
       }
       setLoading(false);
@@ -66,10 +60,14 @@ export default function UserProfile() {
 
   const handleSave = async () => {
     setSaving(true);
-    await invokeSecureBriefMutations({
-      action: "updateUserBranding",
-      branding: form,
-    });
+    const user = await base44.auth.me();
+    const data = { ...form, user_id: user.id };
+    if (brandingId) {
+      await base44.entities.UserBranding.update(brandingId, data);
+    } else {
+      const created = await base44.entities.UserBranding.create(data);
+      setBrandingId(created.id);
+    }
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

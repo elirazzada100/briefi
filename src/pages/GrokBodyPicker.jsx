@@ -45,7 +45,6 @@ export default function GrokBodyPicker() {
 
     const res = await base44.functions.invoke("grokBriefiFlow", {
       action: "generateBodyOptions",
-      project_id: projectId,
       business,
       selectedConcept,
       category_id: categoryId,

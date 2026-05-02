@@ -39,14 +39,6 @@ export default function BriefPack() {
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
 
-  const invokeSecureBriefMutations = async (payload) => {
-    const response = await base44.functions.invoke("secureBriefMutations", payload);
-    if (response.data?.error) {
-      throw new Error(response.data.error);
-    }
-    return response.data;
-  };
-
   useEffect(() => {
     const load = async () => {
       const user = await base44.auth.me();
@@ -72,24 +64,15 @@ export default function BriefPack() {
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    await invokeSecureBriefMutations({
-      action: "deleteVideoFromBriefPackage",
-      project_id: projectId,
-      video_brief_id: deleteTarget.id,
-    });
+    await base44.entities.VideoBrief.delete(deleteTarget.id);
     const updated = briefs.filter(b => b.id !== deleteTarget.id);
     setBriefs(updated);
-    setProject(prev => prev ? { ...prev, completed_briefs_count: updated.length } : prev);
+    // Update project count
+    await base44.entities.Project.update(projectId, {
+      completed_briefs_count: updated.length,
+    });
     setDeleting(false);
     setDeleteTarget(null);
-  };
-
-  const persistBriefOrder = async (orderedBriefs) => {
-    await invokeSecureBriefMutations({
-      action: "reorderVideosInBriefPackage",
-      project_id: projectId,
-      ordered_video_ids: orderedBriefs.map((brief) => brief.id),
-    });
   };
 
   // ── Drag and drop reorder ────────────────────────────────────────────────────
@@ -103,7 +86,10 @@ export default function BriefPack() {
     setBriefs(newBriefs);
     setDragIdx(null);
     setDragOverIdx(null);
-    await persistBriefOrder(newBriefs);
+    // Persist order
+    await Promise.all(newBriefs.map((b, i) =>
+      base44.entities.VideoBrief.update(b.id, { video_order: i + 1 })
+    ));
   };
 
   // Up/Down buttons fallback for mobile
@@ -112,7 +98,9 @@ export default function BriefPack() {
     const newBriefs = [...briefs];
     [newBriefs[idx - 1], newBriefs[idx]] = [newBriefs[idx], newBriefs[idx - 1]];
     setBriefs(newBriefs);
-    await persistBriefOrder(newBriefs);
+    await Promise.all(newBriefs.map((b, i) =>
+      base44.entities.VideoBrief.update(b.id, { video_order: i + 1 })
+    ));
   };
 
   const moveDown = async (idx) => {
@@ -120,7 +108,9 @@ export default function BriefPack() {
     const newBriefs = [...briefs];
     [newBriefs[idx], newBriefs[idx + 1]] = [newBriefs[idx + 1], newBriefs[idx]];
     setBriefs(newBriefs);
-    await persistBriefOrder(newBriefs);
+    await Promise.all(newBriefs.map((b, i) =>
+      base44.entities.VideoBrief.update(b.id, { video_order: i + 1 })
+    ));
   };
 
   if (loading) return (

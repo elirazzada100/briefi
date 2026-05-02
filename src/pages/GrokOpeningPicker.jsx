@@ -34,7 +34,6 @@ export default function GrokOpeningPicker() {
 
     const res = await base44.functions.invoke("grokBriefiFlow", {
       action: "generateOpeningOptions",
-      project_id: projectId,
       business,
       selectedConcept,
       selectedVideoStyle,

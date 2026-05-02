@@ -46,7 +46,6 @@ export default function GrokCTAPicker() {
 
     const res = await base44.functions.invoke("grokBriefiFlow", {
       action: "generateCTAOptions",
-      project_id: projectId,
       business,
       selectedConcept,
       selectedOpening: selectedOpening || selectedBody,
