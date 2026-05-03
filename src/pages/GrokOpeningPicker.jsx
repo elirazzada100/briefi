@@ -14,11 +14,14 @@ export default function GrokOpeningPicker() {
   const selectedVideoStyle = state?.selectedVideoStyle;
   const business = state?.business;
   const businessAnalysis = state?.businessAnalysis;
+  const specialFocusText = state?.specialFocusText || "";
+  const specialFocusEnabled = Boolean(state?.specialFocusEnabled && specialFocusText.trim());
 
   const [openingOptions, setOpeningOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectingIdx, setSelectingIdx] = useState(null);
+  const [hookRegenerateCount, setHookRegenerateCount] = useState(0);
 
   useEffect(() => {
     if (!selectedConcept || !business) {
@@ -38,6 +41,8 @@ export default function GrokOpeningPicker() {
         selectedConcept,
         selectedVideoStyle,
         businessAnalysis,
+        specialFocusText,
+        specialFocusEnabled,
       });
 
       if (res.data?.error) {
@@ -56,13 +61,15 @@ export default function GrokOpeningPicker() {
 
   const handleSelectOpening = (option, idx) => {
     setSelectingIdx(idx);
-    navigate(`/project/${projectId}/grok-cta`, {
+    navigate(`/project/${projectId}/grok-body`, {
       state: {
         selectedConcept,
         selectedOpening: option,
         selectedVideoStyle,
         business,
         businessAnalysis,
+        specialFocusText,
+        specialFocusEnabled,
       },
     });
   };
@@ -86,7 +93,7 @@ export default function GrokOpeningPicker() {
             <p className="text-xs font-bold text-foreground truncate">
               {selectedConcept?.concept_title || selectedConcept?.concept_name || "קונספט נבחר"}
             </p>
-            <p className="text-[10px] text-muted-foreground">בחרו פתיחה לסרטון</p>
+            <p className="text-[10px] text-muted-foreground">בחירת פתיחה לסרטון</p>
           </div>
         </div>
         <div className="mt-2">
@@ -96,8 +103,8 @@ export default function GrokOpeningPicker() {
 
       <div className="briefi-page-container space-y-3">
         <div>
-          <h1 className="text-xl font-black text-foreground">בחרו פתיחה לסרטון</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">המשפט הראשון שמכניס את הצופה פנימה.</p>
+          <h1 className="text-xl font-black text-foreground">בחירת פתיחה לסרטון</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">הפתיחה היא מה שעוצר את הגלילה. בחירת האפשרות שהכי מתאימה לקונספט.</p>
         </div>
 
         {error && (
@@ -143,6 +150,27 @@ export default function GrokOpeningPicker() {
                 </div>
               );
             })}
+            <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-4 space-y-2.5">
+              <button
+                onClick={async () => {
+                  if (hookRegenerateCount >= 3) return;
+                  setHookRegenerateCount((count) => count + 1);
+                  await loadOpeningOptions();
+                }}
+                disabled={hookRegenerateCount >= 3}
+                className="briefi-btn-secondary w-full"
+              >
+                יצירת הוקים חדשים
+              </button>
+              <p className="text-xs text-muted-foreground text-center">
+                לא נמצאה פתיחה מתאימה? אפשר לייצר סט חדש.
+              </p>
+              {hookRegenerateCount >= 3 && (
+                <p className="text-xs text-amber-700 text-center">
+                  זה הסט האחרון לסרטון הזה. מומלץ לבחור את הפתיחה הקרובה ביותר ולהמשיך.
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -21,14 +21,18 @@ export default function GrokBodyPicker() {
   const selectedConcept = state?.selectedConcept;
   const selectedVideoStyle = state?.selectedVideoStyle;
   const categoryId = state?.categoryId;
+  const selectedOpening = state?.selectedOpening;
   const business = state?.business;
   const businessAnalysis = state?.businessAnalysis;
+  const specialFocusText = state?.specialFocusText || "";
+  const specialFocusEnabled = Boolean(state?.specialFocusEnabled && specialFocusText.trim());
 
   const [bodyOptions, setBodyOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedIdx, setExpandedIdx] = useState(null);
   const [selectingIdx, setSelectingIdx] = useState(null);
+  const stepNumber = selectedVideoStyle === "טרנדי" ? 2 : 3;
 
   // Guard: must have concept
   useEffect(() => {
@@ -47,7 +51,12 @@ export default function GrokBodyPicker() {
         action: "generateBodyOptions",
         business,
         selectedConcept,
+        selectedOpening,
+        selectedVideoStyle,
         category_id: categoryId,
+        businessAnalysis,
+        specialFocusText,
+        specialFocusEnabled,
       });
 
       if (res.data?.error) {
@@ -70,10 +79,13 @@ export default function GrokBodyPicker() {
       state: {
         selectedConcept,
         selectedBody: bodyOption,
+        selectedOpening,
         selectedVideoStyle,
         categoryId,
         business,
         businessAnalysis,
+        specialFocusText,
+        specialFocusEnabled,
       },
     });
   };
@@ -95,18 +107,18 @@ export default function GrokBodyPicker() {
           </button>
           <div className="flex-1">
             <p className="text-xs font-bold text-foreground truncate">{selectedConcept?.concept_title || selectedConcept?.concept_name || "קונספט נבחר"}</p>
-            <p className="text-[10px] text-muted-foreground">בחרו מבנה סרטון</p>
+            <p className="text-[10px] text-muted-foreground">בחירת מבנה לסרטון</p>
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={5} />
+          <BriefiStepper currentStep={stepNumber} />
         </div>
       </div>
 
       <div className="briefi-page-container space-y-4">
         <div>
-          <h1 className="text-xl font-black text-foreground">בחרו מבנה לסרטון</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">4 דרכים שונות לצלם את אותו קונספט. בחרו אחת.</p>
+          <h1 className="text-xl font-black text-foreground">בחירת מבנה לסרטון</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">4 דרכים שונות לצלם את אותו קונספט. בחרו את האפשרות שהכי מתאימה.</p>
         </div>
 
         {error && (

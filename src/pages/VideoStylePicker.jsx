@@ -68,7 +68,7 @@ export default function VideoStylePicker() {
 
   const handleContinue = () => {
     if (!selected) return;
-    navigate(`/project/${projectId}/grok-concepts`, {
+    navigate(`/project/${projectId}/special-focus`, {
       state: {
         selectedVideoStyle: selected,
         business,
@@ -151,7 +151,7 @@ export default function VideoStylePicker() {
             className="briefi-btn-primary w-full"
           >
             <Sparkles className="h-4 w-4" />
-            תנו לי 4 קונספטים
+            המשך
           </button>
           <button onClick={() => navigate(-1)} className="briefi-btn-ghost w-full">
             <ArrowRight className="h-4 w-4" />

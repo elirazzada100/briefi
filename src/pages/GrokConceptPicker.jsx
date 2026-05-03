@@ -26,6 +26,8 @@ export default function GrokConceptPicker() {
   const selectedVideoStyle = state?.selectedVideoStyle;
   const businessFromState = state?.business;
   const businessAnalysis = state?.businessAnalysis;
+  const specialFocusText = state?.specialFocusText || "";
+  const specialFocusEnabled = Boolean(state?.specialFocusEnabled && specialFocusText.trim());
 
   const [concepts, setConcepts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,8 @@ export default function GrokConceptPicker() {
         selectedVideoStyle,
         project_id: projectId,
         businessAnalysis: resolvedAnalysis,
+        specialFocusText,
+        specialFocusEnabled,
       });
 
       if (res.data?.error) {
@@ -105,12 +109,16 @@ export default function GrokConceptPicker() {
       main_goal: proj?.main_goal || "",
     };
 
-    navigate(`/project/${projectId}/grok-opening`, {
+    const nextRoute = selectedVideoStyle === "טרנדי" ? "grok-body" : "grok-opening";
+
+    navigate(`/project/${projectId}/${nextRoute}`, {
       state: {
         selectedConcept: concept,
         selectedVideoStyle,
         business,
         businessAnalysis: resolvedAnalysis,
+        specialFocusText,
+        specialFocusEnabled,
       },
     });
   };

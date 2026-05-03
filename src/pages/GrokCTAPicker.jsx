@@ -24,12 +24,15 @@ export default function GrokCTAPicker() {
   const selectedVideoStyle = state?.selectedVideoStyle;
   const business = state?.business;
   const businessAnalysis = state?.businessAnalysis;
+  const specialFocusText = state?.specialFocusText || "";
+  const specialFocusEnabled = Boolean(state?.specialFocusEnabled && specialFocusText.trim());
 
   const [ctaOptions, setCtaOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generatingBrief, setGeneratingBrief] = useState(false);
   const [error, setError] = useState(null);
   const [selectingIdx, setSelectingIdx] = useState(null);
+  const stepNumber = selectedVideoStyle === "טרנדי" ? 3 : 4;
 
   // Guard
   useEffect(() => {
@@ -49,6 +52,10 @@ export default function GrokCTAPicker() {
         business,
         selectedConcept,
         selectedOpening: selectedOpening || selectedBody,
+        selectedVideoStyle,
+        businessAnalysis,
+        specialFocusText,
+        specialFocusEnabled,
       });
 
       if (res.data?.error) {
@@ -95,10 +102,14 @@ export default function GrokCTAPicker() {
           finalBrief,
           selectedConcept,
           selectedOpening: selectedOpening || selectedBody,
-          selectedCTA: ctaOption,
-          selectedVideoStyle,
-        },
-      });
+        selectedCTA: ctaOption,
+        selectedVideoStyle,
+        selectedBody,
+        businessAnalysis,
+        specialFocusText,
+        specialFocusEnabled,
+      },
+    });
     } catch (err) {
       console.error("Failed to assemble final brief:", err);
       setError("משהו נתקע בדרך. נסו שוב בעוד רגע.");
@@ -137,7 +148,7 @@ export default function GrokCTAPicker() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={3} />
+          <BriefiStepper currentStep={stepNumber} />
         </div>
       </div>
 
