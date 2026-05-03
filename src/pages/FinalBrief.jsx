@@ -177,15 +177,12 @@ export default function FinalBrief() {
 
   const handleSaveFeedback = async () => {
     if (!feedbackScore) return;
-    const label = SMILEY_OPTIONS.find(s => s.score === feedbackScore)?.label || "";
-    await base44.entities.UserBriefFeedback.create({
+    await base44.functions.invoke("secureVideoFeedback", {
+      action: "submitVideoFeedback",
       project_id: projectId,
       video_brief_id: briefId,
-      rating_label: label,
-      video_feedback_score: feedbackScore,
-      video_feedback_label: label,
-      free_text_negative: feedbackFreeText,
-      video_feedback_created_at: new Date().toISOString(),
+      rating: feedbackScore,
+      comment: feedbackFreeText,
     });
     setFeedbackSaved(true);
   };
@@ -193,15 +190,12 @@ export default function FinalBrief() {
   const handleImproveWithFeedback = async () => {
     if (!feedbackFreeText) return;
     setImproving(true);
-    const label = SMILEY_OPTIONS.find(s => s.score === feedbackScore)?.label || "";
-    await base44.entities.UserBriefFeedback.create({
+    await base44.functions.invoke("secureVideoFeedback", {
+      action: "submitVideoFeedback",
       project_id: projectId,
       video_brief_id: briefId,
-      rating_label: label,
-      video_feedback_score: feedbackScore,
-      video_feedback_label: label,
-      free_text_negative: feedbackFreeText,
-      video_feedback_created_at: new Date().toISOString(),
+      rating: feedbackScore || 3,
+      comment: feedbackFreeText,
     });
 
     const currentBrief = brief?.adapted_brief || brief?.final_brief || {};
