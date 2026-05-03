@@ -96,8 +96,12 @@ export default function FinalBrief() {
     if (finalBriefFromState) {
       setBrief({ adapted_brief: finalBriefFromState, id: briefId });
     } else if (briefId) {
-      base44.entities.VideoBrief.filter({ id: briefId }).then(r => {
-        if (r[0]) setBrief(r[0]);
+      base44.functions.invoke("secureFinalBrief", {
+        action: "getOwnedVideoBrief",
+        project_id: projectId,
+        brief_id: briefId,
+      }).then((response) => {
+        if (response.data?.brief) setBrief(response.data.brief);
       });
     }
   }, [briefId, finalBriefFromState]);
@@ -133,14 +137,38 @@ export default function FinalBrief() {
     const updated = { ...(brief?.adapted_brief || {}), [field]: value };
     setBrief(prev => ({ ...prev, adapted_brief: updated }));
     if (briefId) {
-      await base44.entities.VideoBrief.update(briefId, { adapted_brief: updated });
+      const fieldUpdates = { adapted_brief: updated };
+      if (field === "brief_title") fieldUpdates.brief_title = value;
+      if (field === "video_concept") fieldUpdates.video_concept = value;
+      if (field === "hook") fieldUpdates.hook = value;
+      if (field === "script_text") fieldUpdates.script_text = value;
+      if (field === "shot_structure") fieldUpdates.shot_structure = value;
+      if (field === "cta") fieldUpdates.cta = value;
+      if (field === "caption_suggestion") fieldUpdates.caption_suggestion = value;
+      if (field === "production_notes") fieldUpdates.production_notes = value;
+      if (field === "visual_must_haves") fieldUpdates.visual_must_haves = value;
+      if (field === "risk_notes") fieldUpdates.risk_notes = value;
+      if (field === "script_format") fieldUpdates.script_format = value;
+      if (field === "text_overlays") fieldUpdates.text_overlays = value;
+
+      await base44.functions.invoke("secureFinalBrief", {
+        action: "updateOwnedVideoBrief",
+        project_id: projectId,
+        brief_id: briefId,
+        updates: fieldUpdates,
+      });
     }
   };
 
   const handleSave = async () => {
     setSaving(true);
     if (briefId) {
-      await base44.entities.VideoBrief.update(briefId, { status: "approved" });
+      await base44.functions.invoke("secureFinalBrief", {
+        action: "updateOwnedVideoBrief",
+        project_id: projectId,
+        brief_id: briefId,
+        updates: { status: "approved" },
+      });
     }
     setSaving(false);
     setSaved(true);
@@ -190,7 +218,26 @@ export default function FinalBrief() {
     if (improved) {
       setBrief(prev => ({ ...prev, adapted_brief: improved }));
       if (briefId) {
-        await base44.entities.VideoBrief.update(briefId, { adapted_brief: improved });
+        await base44.functions.invoke("secureFinalBrief", {
+          action: "updateOwnedVideoBrief",
+          project_id: projectId,
+          brief_id: briefId,
+          updates: {
+            adapted_brief: improved,
+            brief_title: improved.brief_title || "",
+            video_concept: improved.video_concept || "",
+            hook: improved.hook || "",
+            script_text: improved.script_text || "",
+            shot_structure: improved.shot_structure || [],
+            cta: improved.cta || "",
+            caption_suggestion: improved.caption_suggestion || improved.video_description || "",
+            production_notes: improved.production_notes || "",
+            visual_must_haves: improved.visual_must_haves || [],
+            risk_notes: improved.why_it_works || "",
+            script_format: improved.script_format || "",
+            text_overlays: improved.text_overlays || [],
+          },
+        });
       }
     }
     setImproving(false);
