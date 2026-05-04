@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowRight, Sparkles } from "lucide-react";
+import BriefiStepper from "@/components/briefi/BriefiStepper";
 
 export default function SpecialFocus() {
   const { projectId } = useParams();
@@ -35,6 +36,9 @@ export default function SpecialFocus() {
           <div className="flex-1">
             <p className="text-xs font-bold text-foreground">יש משהו מיוחד שנכניס לסרטון?</p>
           </div>
+        </div>
+        <div className="mt-2">
+          <BriefiStepper currentStep={2} isTrendy={selectedVideoStyle === "טרנדי"} />
         </div>
       </div>
 

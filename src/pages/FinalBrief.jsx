@@ -79,7 +79,7 @@ export default function FinalBrief() {
   const selectedOpening = state?.selectedOpening || state?.selectedBody;
   const selectedCTA = state?.selectedCTA;
   const selectedVideoStyle = state?.selectedVideoStyle;
-  const stepNumber = selectedVideoStyle === "טרנדי" ? 4 : 5;
+  const stepNumber = selectedVideoStyle === "טרנדי" ? 5 : 6;
 
   const [brief, setBrief] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -275,7 +275,7 @@ export default function FinalBrief() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={stepNumber} />
+          <BriefiStepper currentStep={stepNumber} isTrendy={selectedVideoStyle === "טרנדי"} />
         </div>
       </div>
 

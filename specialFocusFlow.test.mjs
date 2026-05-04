@@ -13,13 +13,17 @@ test("special focus step exists after style and is free text only", () => {
   const styleSource = read("src/pages/VideoStylePicker.jsx");
   const focusSource = read("src/pages/SpecialFocus.jsx");
   const appSource = read("src/App.jsx");
+  const stepperSource = read("src/components/briefi/BriefiStepper.jsx");
 
   assert.ok(styleSource.includes('navigate(`/project/${projectId}/special-focus`'));
   assert.ok(appSource.includes('path="/project/:projectId/special-focus"'));
+  assert.ok(stepperSource.includes('const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "סיטיאיי", "בריף"]'));
+  assert.ok(stepperSource.includes('const TRENDY_STEPS = ["סגנון", "פוקוס", "קונספט", "סיטיאיי", "בריף"]'));
   assert.ok(focusSource.includes("יש משהו מיוחד שנכניס לסרטון?"));
   assert.ok(focusSource.includes("מה חשוב להכניס?"));
   assert.ok(focusSource.includes("לא, להמשיך רגיל"));
   assert.ok(focusSource.includes("להמשיך לקונספטים"));
+  assert.ok(focusSource.includes('<BriefiStepper currentStep={2} isTrendy={selectedVideoStyle === "טרנדי"} />'));
   assert.ok(!focusSource.includes("briefi-chip"));
   assert.ok(!focusSource.includes("VIDEO_STYLES"));
 });
@@ -37,20 +41,24 @@ test("special focus is saved into state and sent to concept generation", () => {
   assert.ok(grokSource.includes("specialFocusEnabled"));
 });
 
-test("trendy flow skips hook and body tolerates missing opening", () => {
+test("trendy flow skips hook and no standalone video-structure step remains in flow", () => {
   const conceptSource = read("src/pages/GrokConceptPicker.jsx");
-  const bodySource = read("src/pages/GrokBodyPicker.jsx");
+  const openingSource = read("src/pages/GrokOpeningPicker.jsx");
+  const ctaSource = read("src/pages/GrokCTAPicker.jsx");
   const grokSource = read("base44/functions/grokBriefiFlow/entry.ts");
 
-  assert.ok(conceptSource.includes('const nextRoute = selectedVideoStyle === "טרנדי" ? "grok-body" : "grok-opening";'));
-  assert.ok(bodySource.includes('const selectedOpening = state?.selectedOpening;'));
-  assert.ok(grokSource.includes('const openingLineText = selectedOpening?.opening_line || selectedConcept?.opening_line || "";'));
-  assert.ok(grokSource.includes('"(no opening selected)"'));
+  assert.ok(conceptSource.includes('const nextRoute = selectedVideoStyle === "טרנדי" ? "grok-cta" : "grok-opening";'));
+  assert.ok(openingSource.includes('navigate(`/project/${projectId}/grok-cta`, {'));
+  assert.ok(ctaSource.includes('const stepNumber = selectedVideoStyle === "טרנדי" ? 4 : 5;'));
+  assert.ok(!conceptSource.includes('const nextRoute = selectedVideoStyle === "טרנדי" ? "grok-body" : "grok-opening";'));
+  assert.ok(!openingSource.includes('navigate(`/project/${projectId}/grok-body`, {'));
+  assert.ok(!conceptSource.includes("מבנה הסרטון"));
   assert.ok(grokSource.includes('Each concept must include: trend_name, opening_line, business_fit, why_it_fits, body_direction.'));
 });
 
 test("non-trendy hook step keeps regenerate and regenerate limit", () => {
   const openingSource = read("src/pages/GrokOpeningPicker.jsx");
+  const stepperSource = read("src/components/briefi/BriefiStepper.jsx");
 
   assert.ok(openingSource.includes("יצירת הוקים חדשים"));
   assert.ok(openingSource.includes("לא נמצאה פתיחה מתאימה? אפשר לייצר סט חדש."));
@@ -59,6 +67,7 @@ test("non-trendy hook step keeps regenerate and regenerate limit", () => {
   assert.ok(openingSource.includes("זה הסט האחרון לסרטון הזה. מומלץ לבחור את הפתיחה הקרובה ביותר ולהמשיך."));
   assert.ok(openingSource.includes("selectedConcept,"));
   assert.ok(openingSource.includes("specialFocusText"));
+  assert.ok(stepperSource.includes('"הוק"'));
 });
 
 test("new flow remains gender-neutral and OpenAI stays unused", () => {

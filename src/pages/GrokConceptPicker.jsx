@@ -109,7 +109,7 @@ export default function GrokConceptPicker() {
       main_goal: proj?.main_goal || "",
     };
 
-    const nextRoute = selectedVideoStyle === "טרנדי" ? "grok-body" : "grok-opening";
+    const nextRoute = selectedVideoStyle === "טרנדי" ? "grok-cta" : "grok-opening";
 
     navigate(`/project/${projectId}/${nextRoute}`, {
       state: {
@@ -146,7 +146,7 @@ export default function GrokConceptPicker() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={1} />
+          <BriefiStepper currentStep={3} isTrendy={selectedVideoStyle === "טרנדי"} />
         </div>
       </div>
 

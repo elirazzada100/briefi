@@ -61,7 +61,7 @@ export default function GrokOpeningPicker() {
 
   const handleSelectOpening = (option, idx) => {
     setSelectingIdx(idx);
-    navigate(`/project/${projectId}/grok-body`, {
+    navigate(`/project/${projectId}/grok-cta`, {
       state: {
         selectedConcept,
         selectedOpening: option,
@@ -97,7 +97,7 @@ export default function GrokOpeningPicker() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={2} />
+          <BriefiStepper currentStep={4} />
         </div>
       </div>
 
