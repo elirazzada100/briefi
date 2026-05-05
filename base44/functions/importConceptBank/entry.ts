@@ -1,6 +1,20 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const CSV_URL = "https://media.base44.com/files/public/69ed0172145044ff033ecacf/2db45fb33_briefi_concept_csv.csv";
+const UGC_IMPORT_READY_PATH = new URL("../../data/conceptbank/briefi_ugc_conceptbank_1000_import_ready.csv", import.meta.url);
+
+const CSV_SOURCES = {
+  default: {
+    type: "remote",
+    url: CSV_URL,
+  },
+  ugc: {
+    type: "local",
+    path: UGC_IMPORT_READY_PATH,
+    source_file: "briefi_ugc_conceptbank_1000.csv",
+    source_batch: "1000_UGC_Briefi_10_display_clean",
+  },
+};
 
 function parseCSV(text) {
   const lines = text.split('\n');
@@ -54,13 +68,34 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: admin only' }, { status: 403 });
     }
 
-    // Fetch CSV
-    const csvRes = await fetch(CSV_URL);
-    if (!csvRes.ok) throw new Error(`Failed to fetch CSV: ${csvRes.status}`);
-    const csvText = await csvRes.text();
+    let body = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
+    const requestedSource = body?.source || "default";
+    const sourceConfig = CSV_SOURCES[requestedSource];
+
+    if (!sourceConfig) {
+      return Response.json({
+        error: "Unknown import source",
+        allowed_sources: Object.keys(CSV_SOURCES),
+      }, { status: 400 });
+    }
+
+    let csvText = "";
+    if (sourceConfig.type === "remote") {
+      const csvRes = await fetch(sourceConfig.url);
+      if (!csvRes.ok) throw new Error(`Failed to fetch CSV: ${csvRes.status}`);
+      csvText = await csvRes.text();
+    } else {
+      csvText = await Deno.readTextFile(sourceConfig.path);
+    }
 
     const rows = parseCSV(csvText);
-    console.log(`Parsed ${rows.length} rows from CSV`);
+    console.log(`Parsed ${rows.length} rows from CSV source "${requestedSource}"`);
 
     // Insert in batches of 50
     const BATCH_SIZE = 50;
@@ -94,6 +129,7 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
+      source: requestedSource,
       total_parsed: rows.length,
       inserted,
       failed,
