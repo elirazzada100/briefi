@@ -28,6 +28,23 @@ test("special focus step exists after style and is free text only", () => {
   assert.ok(!focusSource.includes("VIDEO_STYLES"));
 });
 
+test("ugc style exists above trendy and stays in the regular flow", () => {
+  const styleSource = read("src/pages/VideoStylePicker.jsx");
+  const stepperSource = read("src/components/briefi/BriefiStepper.jsx");
+
+  assert.ok(styleSource.includes('id: "ugc"'));
+  assert.ok(styleSource.includes('label: "עדות / המלצה"'));
+  assert.ok(styleSource.includes('desc: "לא לשכוח קוד קופון!"'));
+  assert.ok(styleSource.includes('isTrendy={selected === "trendy" || selected === "טרנדי"}'));
+
+  const ugcIndex = styleSource.indexOf('id: "ugc"');
+  const trendyIndex = styleSource.indexOf('id: "טרנדי"');
+  assert.ok(ugcIndex > -1 && trendyIndex > -1 && ugcIndex < trendyIndex);
+
+  assert.ok(stepperSource.includes('const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "סיטיאיי", "בריף"]'));
+  assert.ok(stepperSource.includes('"הוק"'));
+});
+
 test("special focus is saved into state and sent to concept generation", () => {
   const focusSource = read("src/pages/SpecialFocus.jsx");
   const conceptSource = read("src/pages/GrokConceptPicker.jsx");

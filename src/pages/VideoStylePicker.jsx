@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import BriefiStepper from "@/components/briefi/BriefiStepper";
 
-// 6 user-facing styles. Order: מצחיק, תדמית, סרטון הכרות, מכירתי, לימודי, טרנדי
+// 7 user-facing styles. Order: מצחיק, תדמית, סרטון הכרות, מכירתי, לימודי, עדות / המלצה, טרנדי
 // Removed from UI: סרטון אווירה, כאב / פתרון, חינוכי, השוואה, מיתוס / ניפוץ
 // (those remain as internal AI routing mechanics only)
 const VIDEO_STYLES = [
@@ -49,6 +49,14 @@ const VIDEO_STYLES = [
     bg: "#E0F2FE",
   },
   {
+    id: "ugc",
+    emoji: "💬",
+    label: "עדות / המלצה",
+    desc: "לא לשכוח קוד קופון!",
+    color: "#EC4899",
+    bg: "#FCE7F3",
+  },
+  {
     id: "טרנדי",
     emoji: "🔥",
     label: "טרנדי",
@@ -90,7 +98,7 @@ export default function VideoStylePicker() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={1} isTrendy={selected === "טרנדי"} />
+          <BriefiStepper currentStep={1} isTrendy={selected === "trendy" || selected === "טרנדי"} />
         </div>
       </div>
 
