@@ -93,6 +93,7 @@ async function callWithFallback(systemPrompt, userPrompt, temperature = 0.7) {
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
 const ACTIVE_CONCEPT_SOURCE_BATCH = "1000_Concepts_Briefi_10_display_clean";
+const UGC_CONCEPT_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean";
 
 // Canonical industry map — industry_order is the single source of truth for retrieval
 const INDUSTRY_MAP = {
@@ -108,7 +109,7 @@ const INDUSTRY_MAP = {
   "health_wellness":      { order: 10, name: "בריאות, טיפול ו-Wellness" },
 };
 
-const BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
+const BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי", "ugc"];
 
 // ── SYSTEM PROMPTS ─────────────────────────────────────────────────────────────
 
@@ -349,9 +350,13 @@ Return ONLY valid JSON. No markdown.
       if (canonicalIndustry) industryName = canonicalIndustry.name;
 
       // ── STEP 2: Strict retrieval — EXACT filters, no fallback ──────────────
+      const conceptSourceBatch = videoStyle === "ugc"
+        ? UGC_CONCEPT_SOURCE_BATCH
+        : ACTIVE_CONCEPT_SOURCE_BATCH;
+
       const retrievalQuery = {
         is_active: true,
-        source_batch: ACTIVE_CONCEPT_SOURCE_BATCH,
+        source_batch: conceptSourceBatch,
         industry_order: industryOrder,
         user_facing_video_style: videoStyle,
       };
@@ -366,7 +371,7 @@ Return ONLY valid JSON. No markdown.
       const debugData = {
         classifiedIndustry: { industry_order: industryOrder, industry_name: industryName },
         selected_video_style: videoStyle,
-        retrieval_query: { source_batch: ACTIVE_CONCEPT_SOURCE_BATCH, industry_order: industryOrder, user_facing_video_style: videoStyle },
+        retrieval_query: { source_batch: conceptSourceBatch, industry_order: industryOrder, user_facing_video_style: videoStyle },
         candidate_count: candidates.length,
         candidate_concept_ids: candidates.map(c => c.id),
         grok_selected_concept_ids: [],
