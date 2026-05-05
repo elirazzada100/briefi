@@ -111,6 +111,30 @@ const INDUSTRY_MAP = {
 
 const BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי", "ugc"];
 
+const UGC_CONCEPT_GUIDANCE = `UGC-SPECIFIC GUIDANCE:
+- These are UGC/testimonial/recommendation concepts, not polished commercial ads.
+- concept_raw_text may contain guidance fields such as built_in_hook, body_template, cta_template, video_structure, psychology, filming_style, adaptation_rule.
+- Use those fields as adaptation guidance when they appear.
+- The result should feel like a real Israeli creator speaking naturally to camera: selfie, POV, mirror, hand-held, daily-use context.
+- Keep it personal, practical, and recommendation-based. Not corporate. Not over-explained.
+- If special_focus_text is provided, treat it as the hero focus of the video. Do not ignore it and do not overwrite it.`;
+
+const UGC_OPENING_GUIDANCE = `UGC HOOK GUIDANCE:
+- Prefer the built_in_hook logic found in concept_raw_text when available.
+- Adapt it naturally to the business and to special_focus_text as the hero focus when provided.
+- Keep the hook casual, spoken, first-person when appropriate, and not salesy.`;
+
+const UGC_CTA_GUIDANCE = `UGC CTA GUIDANCE:
+- Prefer the cta_template found in concept_raw_text when available.
+- The CTA should feel like a soft recommendation or personal nudge, not a hard sale.
+- Keep special_focus_text as the hero focus when provided.`;
+
+const UGC_FINAL_BRIEF_GUIDANCE = `UGC FINAL BRIEF GUIDANCE:
+- Use body_template, video_structure, filming_style, psychology, and adaptation_rule from concept_raw_text as structure guidance when available.
+- The result must feel shootable as phone-shot UGC: selfie, POV, mirror, hand-held, real-life context.
+- Keep special_focus_text as the hero focus when provided.
+- The tone should sound like a real Israeli creator recommendation, not a polished commercial.`;
+
 // ── SYSTEM PROMPTS ─────────────────────────────────────────────────────────────
 
 const OPENING_GEN_GROK_SYSTEM = `You are Briefi Opening Line Generator for Israeli social media.
@@ -257,6 +281,7 @@ Analyze this business. Fill all 5 cards with specific, actionable insights. Prov
       }
 
       const videoStyle = selectedVideoStyle || "מצחיק";
+      const isUGC = videoStyle === "ugc";
 
       // ── טרנדי: TrendPatterns only — never queries ConceptBank ──────────────
       if (videoStyle === "טרנדי") {
@@ -416,6 +441,7 @@ Return ONLY valid JSON. No markdown.
       const specialFocusContext = specialFocusEnabled && specialFocusText
         ? `\nSpecial focus to weave in naturally: ${specialFocusText}\nUse it as situational context, not as a forced sales line.\n`
         : "";
+      const ugcConceptContext = isUGC ? `\n${UGC_CONCEPT_GUIDANCE}\n` : "";
 
       const grokSelectionUser = `Business:
 Name: ${business.business_name}
@@ -424,6 +450,7 @@ Goal: ${business.main_goal}
 Industry: ${industryName} (industry_order=${industryOrder})
 Video style: ${videoStyle}
 ${specialFocusContext}
+${ugcConceptContext}
 
 CANDIDATE POOL — select 4 from these ${pool.length} only (IDs are mandatory in output):
 ${candidateList}`;
@@ -635,11 +662,13 @@ Return ONLY: {"industry_order":number,"industry_name":""}`;
       }
 
       const videoStyle = selectedVideoStyle || "מצחיק";
+      const isUGC = videoStyle === "ugc";
       const classifiedIndustry = businessAnalysis?.industry_name || businessAnalysis?.classified_industry || "";
 
       const specialFocusContext = specialFocusEnabled && specialFocusText
         ? `Special focus to weave in naturally: ${specialFocusText}\n`
         : "";
+      const ugcOpeningContext = isUGC ? `${UGC_OPENING_GUIDANCE}\n` : "";
 
       const userPrompt = `Business:
 Name: ${business.business_name}
@@ -647,6 +676,7 @@ Description: ${business.business_description}
 Goal: ${business.main_goal}
 Industry: ${classifiedIndustry}
 ${specialFocusContext}
+${ugcOpeningContext}
 
 Video style: ${videoStyle}
 
@@ -737,16 +767,19 @@ Generate 4 body options. Each must include:
       }
 
       const opening = selectedOpening || selectedBody;
+      const isUGC = (selectedVideoStyle || "") === "ugc";
 
       const specialFocusContext = specialFocusEnabled && specialFocusText
         ? `Special focus to keep in mind: ${specialFocusText}\n`
         : "";
+      const ugcCTAContext = isUGC ? `${UGC_CTA_GUIDANCE}\n` : "";
 
       const userPrompt = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
 Goal: ${business.main_goal}
 ${specialFocusContext}
+${ugcCTAContext}
 
 Selected concept:
 ${JSON.stringify(selectedConcept, null, 2)}
@@ -781,10 +814,16 @@ Match the tone of the concept and opening line.`;
       const openingLineText = opening?.opening_line || opening?.filled_opening_line || "";
 
       const isLimdi = (selectedVideoStyle || "") === "לימודי";
+      const isUGC = (selectedVideoStyle || "") === "ugc";
       const finalBriefSystemPrompt = isLimdi ? FINAL_BRIEF_LIMDI_SYSTEM : FINAL_BRIEF_SYSTEM;
+      const specialFocusContext = specialFocusEnabled && specialFocusText
+        ? `Special focus / hero focus: ${specialFocusText}\n`
+        : "";
+      const ugcFinalBriefContext = isUGC ? `${UGC_FINAL_BRIEF_GUIDANCE}\n` : "";
 
       const userPrompt = `Business: ${business.business_name}. ${business.business_description}. Goal: ${business.main_goal}.
 Style: ${selectedVideoStyle || ""}
+${specialFocusContext}${ugcFinalBriefContext}
 Concept: ${selectedConcept.concept_title || ""} — ${selectedConcept.short_description || selectedConcept.core_situation || ""}
 Opening line (use verbatim as "hook"): "${openingLineText}"
 CTA: "${selectedCTA.cta_text || selectedCTA}"
