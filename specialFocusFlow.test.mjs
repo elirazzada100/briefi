@@ -17,8 +17,8 @@ test("special focus step exists after style and is free text only", () => {
 
   assert.ok(styleSource.includes('navigate(`/project/${projectId}/special-focus`'));
   assert.ok(appSource.includes('path="/project/:projectId/special-focus"'));
-  assert.ok(stepperSource.includes('const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "סיטיאיי", "בריף"]'));
-  assert.ok(stepperSource.includes('const TRENDY_STEPS = ["סגנון", "פוקוס", "קונספט", "סיטיאיי", "בריף"]'));
+  assert.ok(stepperSource.includes('const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "CTA"]'));
+  assert.ok(stepperSource.includes('const TRENDY_STEPS = ["סגנון", "פוקוס", "קונספט", "CTA"]'));
   assert.ok(focusSource.includes("יש משהו מיוחד שנכניס לסרטון?"));
   assert.ok(focusSource.includes("מה חשוב להכניס?"));
   assert.ok(focusSource.includes("לא, להמשיך רגיל"));
@@ -41,7 +41,7 @@ test("ugc style exists above trendy and stays in the regular flow", () => {
   const trendyIndex = styleSource.indexOf('id: "טרנדי"');
   assert.ok(ugcIndex > -1 && trendyIndex > -1 && ugcIndex < trendyIndex);
 
-  assert.ok(stepperSource.includes('const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "סיטיאיי", "בריף"]'));
+  assert.ok(stepperSource.includes('const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "CTA"]'));
   assert.ok(stepperSource.includes('"הוק"'));
 });
 
@@ -85,6 +85,25 @@ test("non-trendy hook step keeps regenerate and regenerate limit", () => {
   assert.ok(openingSource.includes("selectedConcept,"));
   assert.ok(openingSource.includes("specialFocusText"));
   assert.ok(stepperSource.includes('"הוק"'));
+  assert.ok(stepperSource.includes('"CTA"'));
+  assert.ok(!stepperSource.includes("סיטיאיי"));
+  assert.ok(!stepperSource.includes("בריף"));
+});
+
+test("final brief hides the stepper while earlier creation pages keep it", () => {
+  const finalBriefSource = read("src/pages/FinalBrief.jsx");
+  const styleSource = read("src/pages/VideoStylePicker.jsx");
+  const focusSource = read("src/pages/SpecialFocus.jsx");
+  const conceptSource = read("src/pages/GrokConceptPicker.jsx");
+  const openingSource = read("src/pages/GrokOpeningPicker.jsx");
+  const ctaSource = read("src/pages/GrokCTAPicker.jsx");
+
+  assert.ok(!finalBriefSource.includes("BriefiStepper"));
+  assert.ok(styleSource.includes("<BriefiStepper"));
+  assert.ok(focusSource.includes("<BriefiStepper"));
+  assert.ok(conceptSource.includes("<BriefiStepper"));
+  assert.ok(openingSource.includes("<BriefiStepper"));
+  assert.ok(ctaSource.includes("<BriefiStepper"));
 });
 
 test("new flow remains gender-neutral and OpenAI stays unused", () => {
