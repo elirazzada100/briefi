@@ -345,12 +345,6 @@ Return ONLY valid JSON. No markdown.
 
       // If not provided, classify now
       if (!industryOrder) {
-        const classifyRaw = await fetch(`${req.url.replace(/\/[^/]+$/, "")}/classifyBusinessCategory`, {
-          method: "POST",
-          headers: { "Authorization": req.headers.get("Authorization") || "", "Content-Type": "application/json" },
-          body: JSON.stringify({ businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}` }),
-        });
-        // Inline classify via Grok directly (avoid cross-function call issues)
         const classifyRes = await base44.asServiceRole.functions.invoke("classifyBusinessCategory", {
           businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
         });

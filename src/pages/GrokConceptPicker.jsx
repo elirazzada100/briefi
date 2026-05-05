@@ -86,7 +86,7 @@ export default function GrokConceptPicker() {
       });
 
       if (res.data?.error) {
-        setError(res.data.error);
+        setError(res.data.message || res.data.error);
         return;
       }
 

@@ -171,7 +171,7 @@ export default function FinalBrief() {
     }
     setSaving(false);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), 500);
   };
 
   const handleSaveFeedback = async () => {
