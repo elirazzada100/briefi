@@ -33,7 +33,7 @@ test("ugc style exists above trendy and stays in the regular flow", () => {
   const stepperSource = read("src/components/briefi/BriefiStepper.jsx");
 
   assert.ok(styleSource.includes('id: "ugc"'));
-  assert.ok(styleSource.includes('label: "עדות / המלצה"'));
+  assert.ok(styleSource.includes('label: "UGC / המלצה"'));
   assert.ok(styleSource.includes('desc: "לא לשכוח קוד קופון!"'));
   assert.ok(styleSource.includes('isTrendy={selected === "trendy" || selected === "טרנדי"}'));
 
