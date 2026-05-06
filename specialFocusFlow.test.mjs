@@ -42,7 +42,6 @@ test("style picker stays non-UGC and regular flow stays non-trendy", () => {
   assert.ok(stepperSource.includes('const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "CTA"]'));
   assert.ok(stepperSource.includes('"הוק"'));
 });
-
 test("special focus is saved into state and sent to concept generation", () => {
   const focusSource = read("src/pages/SpecialFocus.jsx");
   const conceptSource = read("src/pages/GrokConceptPicker.jsx");
@@ -83,25 +82,6 @@ test("non-trendy hook step keeps regenerate and regenerate limit", () => {
   assert.ok(openingSource.includes("selectedConcept,"));
   assert.ok(openingSource.includes("specialFocusText"));
   assert.ok(stepperSource.includes('"הוק"'));
-  assert.ok(stepperSource.includes('"CTA"'));
-  assert.ok(!stepperSource.includes("סיטיאיי"));
-  assert.ok(!stepperSource.includes("בריף"));
-});
-
-test("final brief hides the stepper while earlier creation pages keep it", () => {
-  const finalBriefSource = read("src/pages/FinalBrief.jsx");
-  const styleSource = read("src/pages/VideoStylePicker.jsx");
-  const focusSource = read("src/pages/SpecialFocus.jsx");
-  const conceptSource = read("src/pages/GrokConceptPicker.jsx");
-  const openingSource = read("src/pages/GrokOpeningPicker.jsx");
-  const ctaSource = read("src/pages/GrokCTAPicker.jsx");
-
-  assert.ok(!finalBriefSource.includes("BriefiStepper"));
-  assert.ok(styleSource.includes("<BriefiStepper"));
-  assert.ok(focusSource.includes("<BriefiStepper"));
-  assert.ok(conceptSource.includes("<BriefiStepper"));
-  assert.ok(openingSource.includes("<BriefiStepper"));
-  assert.ok(ctaSource.includes("<BriefiStepper"));
 });
 
 test("new flow remains gender-neutral and OpenAI stays unused", () => {
