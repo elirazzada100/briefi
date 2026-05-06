@@ -75,10 +75,10 @@ async function callWithFallback(systemPrompt, userPrompt, temperature = 0.7) {
   throw lastErr;
 }
 
-// ── OpenAI concept selector (ConceptBank selection only) ──────────────────────
-async function selectConceptsWithOpenAI(systemPrompt, userPrompt) {
+// ── OpenAI caller (concept step only: classification + selection) ─────────────
+async function callOpenAIForConcepts(systemPrompt, userPrompt, temperature = 0.7) {
   if (!OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not set — cannot run concept selection");
+    throw new Error("OPENAI_API_KEY is not set — cannot run concept step");
   }
   const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -92,7 +92,7 @@ async function selectConceptsWithOpenAI(systemPrompt, userPrompt) {
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      temperature: 0.7,
+      temperature,
       response_format: { type: "json_object" },
     }),
   });
@@ -102,8 +102,55 @@ async function selectConceptsWithOpenAI(systemPrompt, userPrompt) {
   }
   const data = await apiRes.json();
   const content = data?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Empty response from OpenAI concept selector");
+  if (!content) throw new Error("Empty response from OpenAI");
   return parseJSON(content);
+}
+
+// Alias for concept selection (named clearly per spec)
+async function selectConceptsWithOpenAI(systemPrompt, userPrompt) {
+  return callOpenAIForConcepts(systemPrompt, userPrompt, 0.7);
+}
+
+// ── OpenAI classification (concept step only) ─────────────────────────────────
+// Canonical map used for strict validation — must match INDUSTRY_MAP exactly
+const CLASSIFY_SYSTEM = `You are a business category classifier. Classify the business into exactly one of these 10 categories.
+Return ONLY valid JSON: {"industry_order": <number 1-10>, "industry_name": "<exact name below>"}
+
+1 = מסעדנות ואוכל
+2 = יופי ואסתטיקה
+3 = פיטנס ותזונה
+4 = מאמנים, יועצים ונותני ידע
+5 = עסקים מקומיים ושירותים לבית
+6 = נדל״ן, עיצוב פנים ושיפוצים
+7 = אירועים, לילה וחוויות
+8 = אופנה, תכשיטים ובוטיקים
+9 = הורות, ילדים ומשפחה
+10 = בריאות, טיפול ו-Wellness
+
+Rules:
+- Toy stores, games shops, kids products → 9
+- Restaurants, cafes, food → 1
+- Hair, nails, beauty clinics → 2
+- Gyms, personal trainers, nutrition → 3
+- Coaches, consultants, course creators → 4
+- Plumbers, electricians, cleaners, home services → 5
+- Real estate, interior design, renovations → 6
+- Events, weddings, DJs, nightlife → 7
+- Fashion, jewelry, clothing boutiques → 8
+- Therapists, physiotherapy, wellness → 10`;
+
+async function classifyWithOpenAI(businessDescription) {
+  const result = await callOpenAIForConcepts(
+    CLASSIFY_SYSTEM,
+    `Business: ${businessDescription}`,
+    0.1
+  );
+  const order = Number(result.industry_order);
+  const canonical = Object.values(INDUSTRY_MAP).find(i => i.order === order);
+  if (!canonical || order < 1 || order > 10) {
+    throw new Error(`OpenAI classification returned invalid industry_order: ${result.industry_order}`);
+  }
+  return { industry_order: order, industry_name: canonical.name };
 }
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
@@ -303,23 +350,66 @@ Return ONLY valid JSON. No markdown.
       }
 
       // ── STEP 1: Resolve industry_order ──────────────────────────────────────
-      // industry_order is the ONLY key used for retrieval — prevents Hebrew string mismatches
+      const t0 = Date.now();
       let industryOrder = businessAnalysis?.industry_order
         ? Number(businessAnalysis.industry_order)
         : null;
       let industryName = businessAnalysis?.industry_name || "";
+      let classificationMs = 0;
 
-      // If not provided, classify now
-      if (!industryOrder) {
-        const classifyRes = await base44.asServiceRole.functions.invoke("classifyBusinessCategory", {
-          businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
-        });
-        const clf = classifyRes;
-        const mapped = INDUSTRY_MAP[clf?.category_id];
-        if (mapped) {
-          industryOrder = mapped.order;
-          industryName = mapped.name;
+      if (!OPENAI_API_KEY) {
+        return Response.json({
+          error: "OPENAI_API_KEY is not set — concept step unavailable",
+          message: "שגיאת הגדרה: מפתח OpenAI חסר. פנו לתמיכה.",
+        }, { status: 500 });
+      }
+
+      // Normalize from canonical map if already provided
+      if (industryOrder) {
+        const canonical = Object.values(INDUSTRY_MAP).find(i => i.order === industryOrder);
+        if (canonical) industryName = canonical.name;
+      }
+
+      // ── STEP 1+2 PARALLEL: Classify (if needed) + pre-fetch ConceptBank ─────
+      // If we already have industry_order, skip classification and go straight to retrieval.
+      // If we don't, run OpenAI classification — fast single call (~1-2s).
+      let candidates;
+
+      if (industryOrder && industryOrder >= 1 && industryOrder <= 10) {
+        // industry_order already known — query ConceptBank directly, no classification needed
+        const t1 = Date.now();
+        candidates = await base44.asServiceRole.entities.ConceptBank.filter(
+          { is_active: true, source_batch: ACTIVE_CONCEPT_SOURCE_BATCH, industry_order: industryOrder, user_facing_video_style: videoStyle },
+          "concept_number_in_section",
+          20
+        );
+        classificationMs = 0;
+        console.log(`[concepts] skipped classification (industry_order=${industryOrder}), db_query=${Date.now()-t1}ms`);
+      } else {
+        // Classify with OpenAI + query ConceptBank in parallel once we have the order
+        const t1 = Date.now();
+        let clf;
+        try {
+          clf = await classifyWithOpenAI(`${business.business_name}. ${business.business_description}. ${business.main_goal}`);
+        } catch (err) {
+          console.error("OpenAI classification failed:", err.message);
+          return Response.json({
+            error: "CONCEPT_RETRIEVAL_FAILED",
+            message: "לא הצלחנו לסווג את העסק. נסו שוב.",
+            details: err.message,
+          }, { status: 400 });
         }
+        classificationMs = Date.now() - t1;
+        industryOrder = clf.industry_order;
+        industryName = clf.industry_name;
+
+        const t2 = Date.now();
+        candidates = await base44.asServiceRole.entities.ConceptBank.filter(
+          { is_active: true, source_batch: ACTIVE_CONCEPT_SOURCE_BATCH, industry_order: industryOrder, user_facing_video_style: videoStyle },
+          "concept_number_in_section",
+          20
+        );
+        console.log(`[concepts] openai_classify=${classificationMs}ms, db_query=${Date.now()-t2}ms`);
       }
 
       if (!industryOrder || industryOrder < 1 || industryOrder > 10) {
@@ -330,24 +420,6 @@ Return ONLY valid JSON. No markdown.
         }, { status: 400 });
       }
 
-      // Normalize industryName from canonical map (prevents mismatch)
-      const canonicalIndustry = Object.values(INDUSTRY_MAP).find(i => i.order === industryOrder);
-      if (canonicalIndustry) industryName = canonicalIndustry.name;
-
-      // ── STEP 2: Strict retrieval — EXACT filters, no fallback ──────────────
-      const retrievalQuery = {
-        is_active: true,
-        source_batch: ACTIVE_CONCEPT_SOURCE_BATCH,
-        industry_order: industryOrder,
-        user_facing_video_style: videoStyle,
-      };
-
-      const candidates = await base44.asServiceRole.entities.ConceptBank.filter(
-        retrievalQuery,
-        "concept_number_in_section",
-        20
-      );
-
       // Debug panel data
       const debugData = {
         classifiedIndustry: { industry_order: industryOrder, industry_name: industryName },
@@ -357,6 +429,7 @@ Return ONLY valid JSON. No markdown.
         candidate_concept_ids: candidates.map(c => c.id),
         grok_selected_concept_ids: [],
         validation_passed: false,
+        classification_ms: classificationMs,
       };
 
       // Fail loudly — do NOT mix or fallback
@@ -447,7 +520,9 @@ ${candidateList}`;
       }
 
       // First attempt
+      const tSelection = Date.now();
       let { mapped: concepts, validationErrors } = await runSelectionAndValidate(openaiSelectionUser);
+      const selectionMs = Date.now() - tSelection;
 
       // Retry once with stricter prompt if validation failed
       if (validationErrors.length > 0) {
@@ -469,8 +544,12 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
         }
       }
 
+      const totalMs = Date.now() - t0;
       debugData.grok_selected_concept_ids = concepts.map(c => c.concept_bank_id);
       debugData.validation_passed = true;
+      debugData.openai_selection_ms = selectionMs;
+      debugData.total_ms = totalMs;
+      console.log(`[concepts] classification=${classificationMs}ms, openai_selection=${selectionMs}ms, total=${totalMs}ms`);
 
       return Response.json({
         concepts,
