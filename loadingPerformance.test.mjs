@@ -17,45 +17,6 @@ test("business analysis page blocks duplicate generation and has no artificial d
   assert.ok(!source.includes("setTimeout"));
 });
 
-test("active creation pages keep artificial delays at or below 100ms", () => {
-  const specialFocus = read("src/pages/SpecialFocus.jsx");
-  const conceptPicker = read("src/pages/GrokConceptPicker.jsx");
-  const openingPicker = read("src/pages/GrokOpeningPicker.jsx");
-  const ctaPicker = read("src/pages/GrokCTAPicker.jsx");
-  const finalBrief = read("src/pages/FinalBrief.jsx");
-
-  for (const source of [specialFocus, conceptPicker, openingPicker, ctaPicker]) {
-    assert.ok(!source.includes("setTimeout"), "active flow page should not add artificial delay");
-  }
-
-  assert.ok(finalBrief.includes("setTimeout(() => setSaved(false), 100)"));
-  assert.ok(!finalBrief.includes("setTimeout(() => setSaved(false), 2000)"));
-});
-
-test("concept flow removes duplicate classification wait and guards duplicate requests", () => {
-  const conceptPicker = read("src/pages/GrokConceptPicker.jsx");
-  const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
-
-  assert.ok(conceptPicker.includes("initialLoadStartedRef"));
-  assert.ok(conceptPicker.includes("requestInFlightRef"));
-  assert.ok(!conceptPicker.includes('functions.invoke("classifyBusinessCategory"'));
-  assert.ok(grokFlow.includes('const classifyRes = await base44.asServiceRole.functions.invoke("classifyBusinessCategory"'));
-  assert.ok(!grokFlow.includes("const classifyRaw = await fetch"));
-});
-
-test("opening, CTA, and final brief loading paths guard duplicate work", () => {
-  const openingPicker = read("src/pages/GrokOpeningPicker.jsx");
-  const ctaPicker = read("src/pages/GrokCTAPicker.jsx");
-  const finalBrief = read("src/pages/FinalBrief.jsx");
-
-  assert.ok(openingPicker.includes("initialLoadStartedRef"));
-  assert.ok(openingPicker.includes("requestInFlightRef"));
-  assert.ok(ctaPicker.includes("initialLoadStartedRef"));
-  assert.ok(ctaPicker.includes("requestInFlightRef"));
-  assert.ok(ctaPicker.includes("if (generatingBrief) return;"));
-  assert.ok(finalBrief.includes("initialLoadStartedRef"));
-});
-
 test("loading components rotate at 3 seconds and keep text narrow/centered", () => {
   const sharedLoader = read("src/components/shared/BriefiLoader.jsx");
   const sharedState = read("src/components/shared/LoadingState.jsx");

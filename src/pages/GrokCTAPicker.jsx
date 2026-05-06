@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
@@ -33,8 +33,6 @@ export default function GrokCTAPicker() {
   const [error, setError] = useState(null);
   const [selectingIdx, setSelectingIdx] = useState(null);
   const stepNumber = selectedVideoStyle === "טרנדי" ? 4 : 5;
-  const initialLoadStartedRef = useRef(false);
-  const requestInFlightRef = useRef(false);
 
   // Guard
   useEffect(() => {
@@ -42,16 +40,10 @@ export default function GrokCTAPicker() {
       navigate(`/project/${projectId}/grok-concepts`);
       return;
     }
-    if (!initialLoadStartedRef.current) {
-      initialLoadStartedRef.current = true;
-      loadCTAOptions();
-    }
+    loadCTAOptions();
   }, []);
 
   const loadCTAOptions = async () => {
-    if (requestInFlightRef.current) return;
-
-    requestInFlightRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -76,13 +68,11 @@ export default function GrokCTAPicker() {
       console.error("Failed to load CTA options:", err);
       setError("משהו נתקע בדרך. נסו שוב בעוד רגע.");
     } finally {
-      requestInFlightRef.current = false;
       setLoading(false);
     }
   };
 
   const handleSelectCTA = async (ctaOption, idx) => {
-    if (generatingBrief) return;
     setSelectingIdx(idx);
     setGeneratingBrief(true);
     setError(null);
