@@ -32,6 +32,7 @@ test("regular concept retrieval stays strict to active ConceptBank filters", () 
   assert.ok(source.includes("const candidates = await base44.asServiceRole.entities.ConceptBank.filter("));
   assert.ok(source.includes('"concept_number_in_section"'));
   assert.ok(source.includes("20"));
+  assert.ok(source.includes('message: "לא נמצאו קונספטים מתאימים לבנק הקונספטים. צריך לבדוק קטגוריה/סגנון או לוודא שהבנק נטען."'));
 });
 
 test("business category classification maps into industry_order for ConceptBank retrieval", () => {
@@ -65,6 +66,7 @@ test("regular concept flow returns graceful no-candidates errors instead of cras
 
   assert.ok(source.includes("if (candidates.length < 4) {"));
   assert.ok(source.includes('error: "CONCEPT_RETRIEVAL_FAILED"'));
-  assert.ok(source.includes('message: "משהו השתבש בשליפת הרעיונות. נסו שוב בעוד רגע."'));
+  assert.ok(source.includes('message: "לא נמצאו קונספטים מתאימים לבנק הקונספטים. צריך לבדוק קטגוריה/סגנון או לוודא שהבנק נטען."'));
   assert.ok(source.includes("candidate_count: candidates.length,"));
+  assert.ok(source.includes("source_batch: ACTIVE_CONCEPT_SOURCE_BATCH,"));
 });

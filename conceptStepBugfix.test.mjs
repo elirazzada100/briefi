@@ -26,7 +26,9 @@ test("focus to concept preserves selected style and handles empty or non-empty f
 
   assert.ok(conceptSource.includes('const specialFocusText = state?.specialFocusText || "";'));
   assert.ok(conceptSource.includes("const specialFocusEnabled = Boolean(state?.specialFocusEnabled && specialFocusText.trim());"));
-  assert.ok(conceptSource.includes("const selectedVideoStyle = state?.selectedVideoStyle || state?.selectedStyle || state?.videoStyle;"));
+  assert.ok(conceptSource.includes("function normalizeSelectedVideoStyle(value) {"));
+  assert.ok(conceptSource.includes('const selectedVideoStyle = normalizeSelectedVideoStyle('));
+  assert.ok(conceptSource.includes("state?.selectedVideoStyle || state?.selectedStyle || state?.videoStyle"));
   assert.ok(conceptSource.includes("specialFocusText,"));
   assert.ok(conceptSource.includes("specialFocusEnabled,"));
 });

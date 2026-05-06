@@ -110,6 +110,12 @@ const INDUSTRY_MAP = {
 
 const BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
 
+function normalizeVideoStyle(value) {
+  const normalized = (value || "").trim();
+  if (normalized === "trendy") return "טרנדי";
+  return normalized;
+}
+
 // ── SYSTEM PROMPTS ─────────────────────────────────────────────────────────────
 
 const OPENING_GEN_GROK_SYSTEM = `You are Briefi Opening Line Generator for Israeli social media.
@@ -252,10 +258,13 @@ Analyze this business. Fill all 5 cards with specific, actionable insights. Prov
     // ── generateConcepts ────────────────────────────────────────────────────────
     if (action === "generateConcepts") {
       if (!business) {
-        return Response.json({ error: "business is required" }, { status: 400 });
+        return Response.json({
+          error: "MISSING_PROJECT_CONTEXT",
+          message: "חסר מידע על הפרויקט. חזרו רגע אחורה ונסו שוב.",
+        }, { status: 400 });
       }
 
-      const videoStyle = selectedVideoStyle || "מצחיק";
+      const videoStyle = normalizeVideoStyle(selectedVideoStyle || "מצחיק");
 
       // ── טרנדי: TrendPatterns only — never queries ConceptBank ──────────────
       if (videoStyle === "טרנדי") {
@@ -307,7 +316,11 @@ Return ONLY valid JSON. No markdown.
 
       // ── ConceptBank strict retrieval (non-trendy styles only) ──────────────
       if (!BANK_STYLES.includes(videoStyle)) {
-        return Response.json({ error: `Unknown video style: ${videoStyle}` }, { status: 400 });
+        return Response.json({
+          error: "UNSUPPORTED_VIDEO_STYLE",
+          message: "הסגנון שנבחר לא נתמך כרגע. חזרו לבחירת סגנון ונסו שוב.",
+          selected_video_style: videoStyle,
+        }, { status: 400 });
       }
 
       // ── STEP 1: Resolve industry_order ──────────────────────────────────────
@@ -371,10 +384,11 @@ Return ONLY valid JSON. No markdown.
       if (candidates.length < 4) {
         return Response.json({
           error: "CONCEPT_RETRIEVAL_FAILED",
-          message: "משהו השתבש בשליפת הרעיונות. נסו שוב בעוד רגע.",
+          message: "לא נמצאו קונספטים מתאימים לבנק הקונספטים. צריך לבדוק קטגוריה/סגנון או לוודא שהבנק נטען.",
           industry_order: industryOrder,
           selected_video_style: videoStyle,
           candidate_count: candidates.length,
+          source_batch: ACTIVE_CONCEPT_SOURCE_BATCH,
           _debug: debugData,
         }, { status: 422 });
       }
@@ -470,7 +484,7 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
           // Both attempts failed — return debug error, do not show bad concepts
           return Response.json({
             error: "GROK_CONCEPT_SELECTION_VALIDATION_FAILED",
-            message: "משהו השתבש בשליפת הרעיונות. נסו שוב בעוד רגע.",
+            message: "הצלחנו למצוא קונספטים, אבל העיבוד נתקע. נסו שוב בעוד רגע.",
             validation_errors: retry.validationErrors,
             _debug: { ...debugData, grok_selected_concept_ids: retry.mapped.map(c => c.concept_bank_id) },
           }, { status: 422 });

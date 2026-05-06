@@ -61,7 +61,9 @@ test("special focus is saved into state and sent to concept generation", () => {
   assert.ok(focusSource.includes("onClick={() => navigateToConcept(specialFocusText)}"));
   assert.ok(focusSource.includes("onClick={() => navigateToConcept(\"\")}"));
   assert.ok(conceptSource.includes("const specialFocusText = state?.specialFocusText || \"\";"));
-  assert.ok(conceptSource.includes("const selectedVideoStyle = state?.selectedVideoStyle || state?.selectedStyle || state?.videoStyle;"));
+  assert.ok(conceptSource.includes("function normalizeSelectedVideoStyle(value) {"));
+  assert.ok(conceptSource.includes('const selectedVideoStyle = normalizeSelectedVideoStyle('));
+  assert.ok(conceptSource.includes("state?.selectedVideoStyle || state?.selectedStyle || state?.videoStyle"));
   assert.ok(conceptSource.includes("specialFocusEnabled,"));
   assert.ok(grokSource.includes("specialFocusText"));
   assert.ok(grokSource.includes("specialFocusEnabled"));

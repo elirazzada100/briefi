@@ -6,6 +6,45 @@ import BriefiLoader from "@/components/shared/BriefiLoader";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
 import BriefiStepper from "@/components/briefi/BriefiStepper";
 
+const SUPPORTED_BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
+
+function normalizeSelectedVideoStyle(value) {
+  const normalized = (value || "").trim();
+  if (normalized === "trendy") return "טרנדי";
+  return normalized;
+}
+
+function extractInvokePayload(result) {
+  return result?.data ?? result ?? {};
+}
+
+function extractReadableError(error, fallbackMessage) {
+  const payload =
+    error?.response?.data ??
+    error?.data ??
+    error?.body ??
+    error?.cause?.data ??
+    null;
+
+  if (payload?.message) return payload.message;
+  if (payload?.error === "UNSUPPORTED_VIDEO_STYLE") {
+    return "הסגנון שנבחר לא נתמך כרגע. חזרו לבחירת סגנון ונסו שוב.";
+  }
+  if (payload?.error === "MISSING_PROJECT_CONTEXT") {
+    return "חסר מידע על הפרויקט. חזרו רגע אחורה ונסו שוב.";
+  }
+  if (payload?.error === "CONCEPT_RETRIEVAL_FAILED") {
+    return payload.message || "לא נמצאו קונספטים מתאימים לבנק הקונספטים. צריך לבדוק קטגוריה/סגנון או לוודא שהבנק נטען.";
+  }
+  if (payload?.error === "GROK_CONCEPT_SELECTION_VALIDATION_FAILED") {
+    return payload.message || "הצלחנו למצוא קונספטים, אבל העיבוד נתקע. נסו שוב בעוד רגע.";
+  }
+  if (typeof error?.message === "string" && error.message.trim()) {
+    return error.message;
+  }
+  return fallbackMessage;
+}
+
 // Remove leading number patterns like "57. " or "12. " and trailing dashes/spaces
 function cleanConceptTitle(title) {
   if (!title) return title;
@@ -23,7 +62,9 @@ export default function GrokConceptPicker() {
   const { project, loading: guardLoading } = useProjectGuard(projectId);
 
   // Receive video style from VideoStylePicker
-  const selectedVideoStyle = state?.selectedVideoStyle || state?.selectedStyle || state?.videoStyle;
+  const selectedVideoStyle = normalizeSelectedVideoStyle(
+    state?.selectedVideoStyle || state?.selectedStyle || state?.videoStyle
+  );
   const businessFromState = state?.business;
   const businessAnalysis = state?.businessAnalysis;
   const specialFocusText = state?.specialFocusText || "";
@@ -61,11 +102,31 @@ export default function GrokConceptPicker() {
     setError(null);
     try {
       const proj = project;
+      if (!selectedVideoStyle) {
+        setError("הסגנון שנבחר לא נתמך כרגע. חזרו לבחירת סגנון ונסו שוב.");
+        return;
+      }
+
+      if (selectedVideoStyle !== "טרנדי" && !SUPPORTED_BANK_STYLES.includes(selectedVideoStyle)) {
+        setError("הסגנון שנבחר לא נתמך כרגע. חזרו לבחירת סגנון ונסו שוב.");
+        return;
+      }
+
+      if (!businessFromState && !proj) {
+        setError("חסר מידע על הפרויקט. חזרו רגע אחורה ונסו שוב.");
+        return;
+      }
+
       const business = businessFromState || {
         business_name: proj?.client_name || "",
         business_description: proj?.raw_notes || "",
         main_goal: proj?.main_goal || "",
       };
+
+      if (!business.business_name && !business.business_description && !business.main_goal) {
+        setError("חסר מידע על הפרויקט. חזרו רגע אחורה ונסו שוב.");
+        return;
+      }
 
       const res = await base44.functions.invoke("grokBriefiFlow", {
         action: "generateConcepts",
@@ -76,23 +137,29 @@ export default function GrokConceptPicker() {
         specialFocusText,
         specialFocusEnabled,
       });
+      const payload = extractInvokePayload(res);
 
-      if (res.data?.error) {
-        setError(res.data.message || res.data.error);
+      if (payload?.error) {
+        setError(payload.message || payload.error);
         return;
       }
 
-      if (res.data?.classifiedIndustry) {
+      if (payload?.classifiedIndustry) {
         setResolvedAnalysis((prev) => ({
           ...(prev || {}),
-          ...res.data.classifiedIndustry,
+          ...payload.classifiedIndustry,
         }));
       }
 
-      setConcepts(res.data?.concepts || []);
+      if (!Array.isArray(payload?.concepts)) {
+        setError("הצלחנו למצוא קונספטים, אבל העיבוד נתקע. נסו שוב בעוד רגע.");
+        return;
+      }
+
+      setConcepts(payload.concepts);
     } catch (err) {
       console.error("Failed to load concepts:", err);
-      setError("משהו נתקע בדרך. נסו שוב בעוד רגע.");
+      setError(extractReadableError(err, "הצלחנו למצוא קונספטים, אבל העיבוד נתקע. נסו שוב בעוד רגע."));
     } finally {
       setLoading(false);
     }
