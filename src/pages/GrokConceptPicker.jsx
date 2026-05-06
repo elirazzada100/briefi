@@ -41,21 +41,11 @@ export default function GrokConceptPicker() {
       navigate(`/project/${projectId}/video-style`);
       return;
     }
-    // Start immediately if we have business data from state — don't wait for DB project load
-    if (!initialLoadStartedRef.current && (businessFromState || project)) {
+    if ((project || businessFromState) && !initialLoadStartedRef.current) {
       initialLoadStartedRef.current = true;
       loadConcepts();
     }
   }, [project, selectedVideoStyle]);
-
-  // Also start immediately if businessFromState exists (no need to wait for project guard)
-  useEffect(() => {
-    if (!selectedVideoStyle || initialLoadStartedRef.current) return;
-    if (businessFromState) {
-      initialLoadStartedRef.current = true;
-      loadConcepts();
-    }
-  }, []);
 
   const loadConcepts = async () => {
     if (requestInFlightRef.current) return;
@@ -71,10 +61,23 @@ export default function GrokConceptPicker() {
         main_goal: proj?.main_goal || "",
       };
 
-      // Pass businessAnalysis directly — backend classifies if industry_order is missing.
-      // Do NOT call classifyBusinessCategory here — eliminates one full AI round trip (~10-15s).
-      const resolvedAnalysis = businessAnalysis || null;
-      setResolvedAnalysis(resolvedAnalysis);
+      // Ensure industry classification is available (required for strict ConceptBank retrieval)
+      // classifyBusinessCategory now returns industry_order + industry_name directly
+      let resolvedAnalysis = businessAnalysis;
+      if (selectedVideoStyle !== "טרנדי" && (!resolvedAnalysis?.industry_order || !resolvedAnalysis?.industry_name)) {
+        const classifyRes = await base44.functions.invoke("classifyBusinessCategory", {
+          businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
+        });
+        const clf = classifyRes.data;
+        resolvedAnalysis = {
+          ...(resolvedAnalysis || {}),
+          industry_order: clf?.industry_order || null,
+          industry_name: clf?.industry_name || clf?.category_name_he || "",
+          confidence: clf?.confidence || 0,
+          category_id: clf?.category_id || "",
+        };
+        setResolvedAnalysis(resolvedAnalysis);
+      }
 
       const res = await base44.functions.invoke("grokBriefiFlow", {
         action: "generateConcepts",
@@ -119,7 +122,7 @@ export default function GrokConceptPicker() {
     });
   };
 
-  if (loading) {
+  if (guardLoading || loading) {
     return (
       <div className="bg-background flex items-center justify-center" style={{ minHeight: "100dvh" }} dir="rtl">
         <BriefiLoader messages={["מסדרים רעיונות.", "בוחרים את אלה שיש להם סיכוי לעבוד באמת."]} />
