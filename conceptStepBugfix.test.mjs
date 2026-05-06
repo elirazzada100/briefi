@@ -31,9 +31,9 @@ test("concept retrieval no longer uses the extra classify fetch hop and keeps ba
   const source = read("base44/functions/grokBriefiFlow/entry.ts");
 
   assert.ok(!source.includes("const classifyRaw = await fetch("));
-  assert.ok(source.includes('const conceptSourceBatch = videoStyle === "ugc"'));
-  assert.ok(source.includes('? UGC_CONCEPT_SOURCE_BATCH'));
-  assert.ok(source.includes(': ACTIVE_CONCEPT_SOURCE_BATCH;'));
+  assert.ok(source.includes('source_batch: ACTIVE_CONCEPT_SOURCE_BATCH'));
+  assert.ok(!source.includes("UGC_CONCEPT_SOURCE_BATCH"));
+  assert.ok(!source.includes('videoStyle === "ugc"'));
   assert.ok(source.includes('if (videoStyle === "טרנדי") {'));
 });
 

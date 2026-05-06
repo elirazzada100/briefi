@@ -28,18 +28,16 @@ test("special focus step exists after style and is free text only", () => {
   assert.ok(!focusSource.includes("VIDEO_STYLES"));
 });
 
-test("ugc style exists above trendy and stays in the regular flow", () => {
+test("style picker stays non-UGC and regular flow stays non-trendy", () => {
   const styleSource = read("src/pages/VideoStylePicker.jsx");
   const stepperSource = read("src/components/briefi/BriefiStepper.jsx");
 
-  assert.ok(styleSource.includes('id: "ugc"'));
-  assert.ok(styleSource.includes('label: "UGC / המלצה"'));
-  assert.ok(styleSource.includes('desc: "לא לשכוח קוד קופון!"'));
+  assert.ok(!styleSource.includes('id: "ugc"'));
+  assert.ok(!styleSource.includes("UGC / המלצה"));
+  assert.ok(!styleSource.includes("לא לשכוח קוד קופון!"));
   assert.ok(styleSource.includes('isTrendy={selected === "trendy" || selected === "טרנדי"}'));
-
-  const ugcIndex = styleSource.indexOf('id: "ugc"');
   const trendyIndex = styleSource.indexOf('id: "טרנדי"');
-  assert.ok(ugcIndex > -1 && trendyIndex > -1 && ugcIndex < trendyIndex);
+  assert.ok(trendyIndex > -1);
 
   assert.ok(stepperSource.includes('const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "CTA"]'));
   assert.ok(stepperSource.includes('"הוק"'));

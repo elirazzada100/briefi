@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import BriefiStepper from "@/components/briefi/BriefiStepper";
 
-// 7 user-facing styles. Order: מצחיק, תדמית, סרטון הכרות, מכירתי, לימודי, UGC / המלצה, טרנדי
+// 6 user-facing styles. Order: מצחיק, תדמית, סרטון הכרות, מכירתי, לימודי, טרנדי
 // Removed from UI: סרטון אווירה, כאב / פתרון, חינוכי, השוואה, מיתוס / ניפוץ
 // (those remain as internal AI routing mechanics only)
 const VIDEO_STYLES = [
@@ -47,14 +47,6 @@ const VIDEO_STYLES = [
     desc: "טיפ, הסבר, טעות נפוצה או משהו שהלקוח לא ידע.",
     color: "#0EA5E9",
     bg: "#E0F2FE",
-  },
-  {
-    id: "ugc",
-    emoji: "💬",
-    label: "UGC / המלצה",
-    desc: "לא לשכוח קוד קופון!",
-    color: "#EC4899",
-    bg: "#FCE7F3",
   },
   {
     id: "טרנדי",
