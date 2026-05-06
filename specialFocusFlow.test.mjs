@@ -105,3 +105,13 @@ test("new flow remains gender-neutral and OpenAI stays unused", () => {
     assert.ok(!source.includes("npm:openai"), `${file} should not import OpenAI`);
   }
 });
+
+test("final brief hides the stepper while earlier creation pages keep it", () => {
+  const finalBriefSource = read("src/pages/FinalBrief.jsx");
+  const focusSource = read("src/pages/SpecialFocus.jsx");
+  const conceptSource = read("src/pages/GrokConceptPicker.jsx");
+
+  assert.ok(!finalBriefSource.includes("BriefiStepper"));
+  assert.ok(focusSource.includes("BriefiStepper"));
+  assert.ok(conceptSource.includes("BriefiStepper"));
+});
