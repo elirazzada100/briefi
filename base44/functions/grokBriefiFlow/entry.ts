@@ -482,6 +482,7 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
 
       return Response.json({
         concepts,
+        classifiedIndustry: { industry_order: industryOrder, industry_name: industryName },
         source: "concept_bank",
         candidates_count: candidates.length,
         pool_sent_to_grok: pool.length,
