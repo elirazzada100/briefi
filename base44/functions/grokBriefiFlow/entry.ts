@@ -4,6 +4,9 @@ const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
 const XAI_BASE_URL = Deno.env.get("XAI_BASE_URL") || "https://api.x.ai/v1";
 const XAI_MODEL = Deno.env.get("XAI_MODEL") || "grok-3";
 
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+const OPENAI_CONCEPT_MODEL = "gpt-4.1-mini-2025-04-14";
+
 const FORBIDDEN_PHRASES = `
 Forbidden phrases (NEVER use these):
 - "חוויה בלתי נשכחת"
@@ -70,6 +73,37 @@ async function callWithFallback(systemPrompt, userPrompt, temperature = 0.7) {
     }
   }
   throw lastErr;
+}
+
+// ── OpenAI concept selector (ConceptBank selection only) ──────────────────────
+async function selectConceptsWithOpenAI(systemPrompt, userPrompt) {
+  if (!OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not set — cannot run concept selection");
+  }
+  const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: OPENAI_CONCEPT_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!apiRes.ok) {
+    const errText = await apiRes.text();
+    throw new Error(`OpenAI API error: ${apiRes.status} — ${errText}`);
+  }
+  const data = await apiRes.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Empty response from OpenAI concept selector");
+  return parseJSON(content);
 }
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
@@ -337,7 +371,14 @@ Return ONLY valid JSON. No markdown.
         }, { status: 422 });
       }
 
-      // ── STEP 3: Send all 20 candidates to Grok for selection/adaptation ────
+      // ── STEP 3: Send all 20 candidates to OpenAI for selection/adaptation ───
+      if (!OPENAI_API_KEY) {
+        return Response.json({
+          error: "OPENAI_API_KEY is not set — concept selection unavailable",
+          message: "שגיאת הגדרה: מפתח OpenAI חסר. פנו לתמיכה.",
+        }, { status: 500 });
+      }
+
       const pool = candidates.sort(() => Math.random() - 0.5);
       const candidateIdSet = new Set(pool.map(c => c.id));
 
@@ -345,7 +386,7 @@ Return ONLY valid JSON. No markdown.
         `[${i + 1}] ID: ${c.id}\n  Title: ${c.concept_title}\n  Text: ${c.concept_raw_text}`
       ).join("\n---\n");
 
-      const GROK_SELECTION_SYSTEM = `You are Briefi Concept Selector. You receive exactly ${pool.length} ConceptBank candidates for industry_order=${industryOrder} and style="${videoStyle}".
+      const OPENAI_SELECTION_SYSTEM = `You are Briefi Concept Selector. You receive exactly ${pool.length} ConceptBank candidates for industry_order=${industryOrder} and style="${videoStyle}".
 
 RULES — ALL MANDATORY:
 1. Select EXACTLY 4 concepts from the provided pool.
@@ -360,7 +401,7 @@ ${FORBIDDEN_PHRASES}
 Return ONLY valid JSON. No markdown.
 {"concepts":[{"concept_title":"","short_description":"","why_it_works":"","idea_tags":[],"source_concept_id":"exact-id-from-pool"}]}`;
 
-      const grokSelectionUser = `Business:
+      const openaiSelectionUser = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
 Goal: ${business.main_goal}
@@ -370,9 +411,9 @@ Video style: ${videoStyle}
 CANDIDATE POOL — select 4 from these ${pool.length} only (IDs are mandatory in output):
 ${candidateList}`;
 
-      // Helper to run Grok selection and validate output
-      async function runSelectionAndValidate(userPrompt, attempt) {
-        const { parsed, provider } = await callWithFallback(GROK_SELECTION_SYSTEM, userPrompt, attempt === 1 ? 0.75 : 0.5);
+      // Helper to run OpenAI selection and validate output
+      async function runSelectionAndValidate(userPrompt) {
+        const parsed = await selectConceptsWithOpenAI(OPENAI_SELECTION_SYSTEM, userPrompt);
         const rawSelected = (parsed.concepts || []).slice(0, 4);
 
         // Map back to pool entries
@@ -402,30 +443,28 @@ ${candidateList}`;
           if (c.user_facing_video_style !== videoStyle) validationErrors.push(`[${i}] wrong video style`);
         });
 
-        return { mapped, validationErrors, provider };
+        return { mapped, validationErrors };
       }
 
       // First attempt
-      let { mapped: concepts, validationErrors, provider } = await runSelectionAndValidate(grokSelectionUser, 1);
+      let { mapped: concepts, validationErrors } = await runSelectionAndValidate(openaiSelectionUser);
 
       // Retry once with stricter prompt if validation failed
       if (validationErrors.length > 0) {
-        const retryPrompt = `${grokSelectionUser}
+        const retryPrompt = `${openaiSelectionUser}
 
 VALIDATION FAILED on previous attempt: ${validationErrors.join("; ")}
 You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts with valid source_concept_id values.`;
-        const retry = await runSelectionAndValidate(retryPrompt, 2);
+        const retry = await runSelectionAndValidate(retryPrompt);
         if (retry.validationErrors.length === 0) {
           concepts = retry.mapped;
           validationErrors = [];
-          provider = retry.provider;
         } else {
-          // Both attempts failed — return debug error, do not show bad concepts
           return Response.json({
-            error: "GROK_CONCEPT_SELECTION_VALIDATION_FAILED",
+            error: "OPENAI_CONCEPT_SELECTION_VALIDATION_FAILED",
             message: "משהו השתבש בשליפת הרעיונות. נסו שוב בעוד רגע.",
             validation_errors: retry.validationErrors,
-            _debug: { ...debugData, grok_selected_concept_ids: retry.mapped.map(c => c.concept_bank_id) },
+            _debug: { ...debugData, selected_concept_ids: retry.mapped.map(c => c.concept_bank_id) },
           }, { status: 422 });
         }
       }
@@ -437,9 +476,9 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
         concepts,
         source: "concept_bank",
         candidates_count: candidates.length,
-        pool_sent_to_grok: pool.length,
+        pool_sent_to_openai: pool.length,
         validation_passed: true,
-        provider_log: { provider_used: provider, step_name: "concept_bank_strict", success: true },
+        provider_log: { provider_used: "openai", step_name: "concept_bank_strict", success: true },
         _debug: debugData,
       });
     }
