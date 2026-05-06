@@ -39,11 +39,11 @@ test("business category classification maps into industry_order for ConceptBank 
   const source = read("base44/functions/grokBriefiFlow/entry.ts");
 
   assert.ok(source.includes('const classifyRes = await base44.asServiceRole.functions.invoke("classifyBusinessCategory", {'));
-  assert.ok(source.includes("const mapped = INDUSTRY_MAP[clf?.category_id];"));
-  assert.ok(source.includes("industryOrder = mapped.order;"));
+  assert.ok(source.includes("const normalizedClassification = normalizeIndustryResult(clf);"));
+  assert.ok(source.includes("industryOrder = normalizedClassification.industry_order;"));
   assert.ok(source.includes("classifiedIndustry: { industry_order: industryOrder, industry_name: industryName }"));
   assert.ok(source.includes('details: "industry_order missing or out of range"'));
-  assert.ok(source.includes('message: "לא הצלחנו לסווג את העסק. נסו שוב."'));
+  assert.ok(source.includes('message: "לא הצלחנו לזהות את קטגוריית העסק. נסו להוסיף עוד כמה מילים על סוג העסק."'));
 });
 
 test("Grok is constrained to ConceptBank candidate pool and cannot invent freeform regular concepts", () => {

@@ -47,6 +47,8 @@ test("backend concept action returns precise errors for missing context, unsuppo
 
   assert.ok(source.includes('error: "MISSING_PROJECT_CONTEXT"'));
   assert.ok(source.includes('message: "חסר מידע על הפרויקט. חזרו רגע אחורה ונסו שוב."'));
+  assert.ok(source.includes('error: "CLASSIFICATION_UNDETERMINED"'));
+  assert.ok(source.includes('message: "לא הצלחנו לזהות את קטגוריית העסק. נסו להוסיף עוד כמה מילים על סוג העסק."'));
   assert.ok(source.includes('error: "UNSUPPORTED_VIDEO_STYLE"'));
   assert.ok(source.includes('message: "הסגנון שנבחר לא נתמך כרגע. חזרו לבחירת סגנון ונסו שוב."'));
   assert.ok(source.includes('message: "לא נמצאו קונספטים מתאימים לבנק הקונספטים. צריך לבדוק קטגוריה/סגנון או לוודא שהבנק נטען."'));
