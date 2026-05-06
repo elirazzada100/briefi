@@ -13,17 +13,20 @@ test("focus to concept preserves selected style and handles empty or non-empty f
   const focusSource = read("src/pages/SpecialFocus.jsx");
   const conceptSource = read("src/pages/GrokConceptPicker.jsx");
 
+  assert.ok(focusSource.includes("...incomingState,"));
   assert.ok(focusSource.includes("selectedVideoStyle,"));
   assert.ok(focusSource.includes("businessAnalysis,"));
   assert.ok(focusSource.includes("const buildFocusState = (value) => {"));
   assert.ok(focusSource.includes("specialFocusText: trimmed"));
   assert.ok(focusSource.includes("specialFocusEnabled: false"));
   assert.ok(focusSource.includes("specialFocusEnabled: true"));
-  assert.ok(focusSource.includes("state: buildFocusState(\"\")"));
+  assert.ok(focusSource.includes("const navigateToConcept = (value) => {"));
+  assert.ok(focusSource.includes("onClick={() => navigateToConcept(\"\")}"));
+  assert.ok(focusSource.includes("onClick={() => navigateToConcept(specialFocusText)}"));
 
   assert.ok(conceptSource.includes('const specialFocusText = state?.specialFocusText || "";'));
   assert.ok(conceptSource.includes("const specialFocusEnabled = Boolean(state?.specialFocusEnabled && specialFocusText.trim());"));
-  assert.ok(conceptSource.includes("selectedVideoStyle,"));
+  assert.ok(conceptSource.includes("const selectedVideoStyle = state?.selectedVideoStyle || state?.selectedStyle || state?.videoStyle;"));
   assert.ok(conceptSource.includes("specialFocusText,"));
   assert.ok(conceptSource.includes("specialFocusEnabled,"));
 });

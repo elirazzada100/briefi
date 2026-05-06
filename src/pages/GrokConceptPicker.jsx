@@ -23,7 +23,7 @@ export default function GrokConceptPicker() {
   const { project, loading: guardLoading } = useProjectGuard(projectId);
 
   // Receive video style from VideoStylePicker
-  const selectedVideoStyle = state?.selectedVideoStyle;
+  const selectedVideoStyle = state?.selectedVideoStyle || state?.selectedStyle || state?.videoStyle;
   const businessFromState = state?.business;
   const businessAnalysis = state?.businessAnalysis;
   const specialFocusText = state?.specialFocusText || "";

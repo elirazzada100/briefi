@@ -7,15 +7,17 @@ export default function SpecialFocus() {
   const { projectId } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
+  const incomingState = state || {};
   const [specialFocusText, setSpecialFocusText] = useState(state?.specialFocusText || "");
 
-  const business = state?.business;
-  const businessAnalysis = state?.businessAnalysis;
-  const selectedVideoStyle = state?.selectedVideoStyle;
+  const business = incomingState.business;
+  const businessAnalysis = incomingState.businessAnalysis;
+  const selectedVideoStyle = incomingState.selectedVideoStyle || incomingState.selectedStyle || incomingState.videoStyle;
 
   const buildFocusState = (value) => {
     const trimmed = value.trim();
     return {
+      ...incomingState,
       selectedVideoStyle,
       business,
       businessAnalysis,
@@ -30,9 +32,9 @@ export default function SpecialFocus() {
     };
   };
 
-  const handleContinue = () => {
+  const navigateToConcept = (value) => {
     navigate(`/project/${projectId}/grok-concepts`, {
-      state: buildFocusState(specialFocusText),
+      state: buildFocusState(value),
     });
   };
 
@@ -73,16 +75,12 @@ export default function SpecialFocus() {
         </div>
 
         <div className="space-y-2">
-          <button onClick={handleContinue} className="briefi-btn-primary w-full">
+          <button onClick={() => navigateToConcept(specialFocusText)} className="briefi-btn-primary w-full">
             <Sparkles className="h-4 w-4" />
             להמשיך לקונספטים
           </button>
           <button
-            onClick={() => {
-              navigate(`/project/${projectId}/grok-concepts`, {
-                state: buildFocusState(""),
-              });
-            }}
+            onClick={() => navigateToConcept("")}
             className="briefi-btn-secondary w-full"
           >
             לא, להמשיך רגיל

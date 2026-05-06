@@ -12,13 +12,17 @@ function read(relativePath) {
 test("empty focus path normalizes immediately and does not create fake focus", () => {
   const focusSource = read("src/pages/SpecialFocus.jsx");
 
+  assert.ok(focusSource.includes("const navigateToConcept = (value) => {"));
   assert.ok(focusSource.includes("const buildFocusState = (value) => {"));
   assert.ok(focusSource.includes("const trimmed = value.trim();"));
+  assert.ok(focusSource.includes("...incomingState,"));
   assert.ok(focusSource.includes("specialFocusText: trimmed"));
   assert.ok(focusSource.includes("specialFocusEnabled: false"));
   assert.ok(focusSource.includes("specialFocusEnabled: true"));
-  assert.ok(focusSource.includes("state: buildFocusState(specialFocusText)"));
-  assert.ok(focusSource.includes("state: buildFocusState(\"\")"));
+  assert.ok(focusSource.includes("navigate(`/project/${projectId}/grok-concepts`, {"));
+  assert.ok(focusSource.includes("state: buildFocusState(value),"));
+  assert.ok(focusSource.includes("onClick={() => navigateToConcept(specialFocusText)}"));
+  assert.ok(focusSource.includes("onClick={() => navigateToConcept(\"\")}"));
 });
 
 test("empty focus to concept avoids duplicate client-side work", () => {

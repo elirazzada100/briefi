@@ -47,14 +47,21 @@ test("special focus is saved into state and sent to concept generation", () => {
   const conceptSource = read("src/pages/GrokConceptPicker.jsx");
   const grokSource = read("base44/functions/grokBriefiFlow/entry.ts");
 
+  assert.ok(focusSource.includes("const incomingState = state || {};"));
+  assert.ok(focusSource.includes("const selectedVideoStyle = incomingState.selectedVideoStyle || incomingState.selectedStyle || incomingState.videoStyle;"));
   assert.ok(focusSource.includes("const buildFocusState = (value) => {"));
   assert.ok(focusSource.includes("const trimmed = value.trim();"));
+  assert.ok(focusSource.includes("...incomingState,"));
   assert.ok(focusSource.includes("specialFocusText: trimmed"));
   assert.ok(focusSource.includes("specialFocusEnabled: false"));
   assert.ok(focusSource.includes("specialFocusEnabled: true"));
-  assert.ok(focusSource.includes("state: buildFocusState(specialFocusText)"));
-  assert.ok(focusSource.includes("state: buildFocusState(\"\")"));
+  assert.ok(focusSource.includes("const navigateToConcept = (value) => {"));
+  assert.ok(focusSource.includes("navigate(`/project/${projectId}/grok-concepts`, {"));
+  assert.ok(focusSource.includes("state: buildFocusState(value),"));
+  assert.ok(focusSource.includes("onClick={() => navigateToConcept(specialFocusText)}"));
+  assert.ok(focusSource.includes("onClick={() => navigateToConcept(\"\")}"));
   assert.ok(conceptSource.includes("const specialFocusText = state?.specialFocusText || \"\";"));
+  assert.ok(conceptSource.includes("const selectedVideoStyle = state?.selectedVideoStyle || state?.selectedStyle || state?.videoStyle;"));
   assert.ok(conceptSource.includes("specialFocusEnabled,"));
   assert.ok(grokSource.includes("specialFocusText"));
   assert.ok(grokSource.includes("specialFocusEnabled"));
