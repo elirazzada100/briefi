@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
@@ -34,6 +34,8 @@ export default function GrokConceptPicker() {
   const [error, setError] = useState(null);
   const [selectingIdx, setSelectingIdx] = useState(null);
   const [resolvedAnalysis, setResolvedAnalysis] = useState(businessAnalysis);
+  const initialLoadStartedRef = useRef(false);
+  const requestInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!selectedVideoStyle) {
@@ -41,12 +43,16 @@ export default function GrokConceptPicker() {
       navigate(`/project/${projectId}/video-style`);
       return;
     }
-    if (project || businessFromState) {
+    if ((project || businessFromState) && !initialLoadStartedRef.current) {
+      initialLoadStartedRef.current = true;
       loadConcepts();
     }
   }, [project, selectedVideoStyle]);
 
   const loadConcepts = async () => {
+    if (requestInFlightRef.current) return;
+
+    requestInFlightRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -56,31 +62,15 @@ export default function GrokConceptPicker() {
         business_description: proj?.raw_notes || "",
         main_goal: proj?.main_goal || "",
       };
-
-      // Ensure industry classification is available (required for strict ConceptBank retrieval)
-      // classifyBusinessCategory now returns industry_order + industry_name directly
-      let resolvedAnalysis = businessAnalysis;
-      if (selectedVideoStyle !== "טרנדי" && (!resolvedAnalysis?.industry_order || !resolvedAnalysis?.industry_name)) {
-        const classifyRes = await base44.functions.invoke("classifyBusinessCategory", {
-          businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
-        });
-        const clf = classifyRes.data;
-        resolvedAnalysis = {
-          ...(resolvedAnalysis || {}),
-          industry_order: clf?.industry_order || null,
-          industry_name: clf?.industry_name || clf?.category_name_he || "",
-          confidence: clf?.confidence || 0,
-          category_id: clf?.category_id || "",
-        };
-        setResolvedAnalysis(resolvedAnalysis);
-      }
+      const nextAnalysis = businessAnalysis || null;
+      setResolvedAnalysis(nextAnalysis);
 
       const res = await base44.functions.invoke("grokBriefiFlow", {
         action: "generateConcepts",
         business,
         selectedVideoStyle,
         project_id: projectId,
-        businessAnalysis: resolvedAnalysis,
+        businessAnalysis: nextAnalysis,
         specialFocusText,
         specialFocusEnabled,
       });
@@ -95,6 +85,7 @@ export default function GrokConceptPicker() {
       console.error("Failed to load concepts:", err);
       setError("משהו נתקע בדרך. נסו שוב בעוד רגע.");
     } finally {
+      requestInFlightRef.current = false;
       setLoading(false);
     }
   };
