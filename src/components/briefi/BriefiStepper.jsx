@@ -1,11 +1,11 @@
-const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "CTA"];
-const TRENDY_STEPS = ["סגנון", "פוקוס", "קונספט", "CTA"];
+const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "סיטיאיי", "בריף"];
+const TRENDY_STEPS = ["סגנון", "פוקוס", "קונספט", "סיטיאיי", "בריף"];
 
 export default function BriefiStepper({ currentStep, isTrendy = false }) {
   const steps = isTrendy ? TRENDY_STEPS : REGULAR_STEPS;
 
   return (
-    <div className="flex items-center justify-center gap-0 w-full" dir="rtl">
+    <div className="flex items-center justify-center gap-0 w-full">
       {steps.map((label, i) => {
         const stepNum = i + 1;
         const isDone = stepNum < currentStep;
