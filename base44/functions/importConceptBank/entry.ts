@@ -54,6 +54,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: admin only' }, { status: 403 });
     }
 
+    // Fetch CSV
     const csvRes = await fetch(CSV_URL);
     if (!csvRes.ok) throw new Error(`Failed to fetch CSV: ${csvRes.status}`);
     const csvText = await csvRes.text();

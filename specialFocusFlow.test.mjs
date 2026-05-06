@@ -17,8 +17,8 @@ test("special focus step exists after style and is free text only", () => {
 
   assert.ok(styleSource.includes('navigate(`/project/${projectId}/special-focus`'));
   assert.ok(appSource.includes('path="/project/:projectId/special-focus"'));
-  assert.ok(stepperSource.includes('const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "CTA"]'));
-  assert.ok(stepperSource.includes('const TRENDY_STEPS = ["סגנון", "פוקוס", "קונספט", "CTA"]'));
+  assert.ok(stepperSource.includes('const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "סיטיאיי", "בריף"]'));
+  assert.ok(stepperSource.includes('const TRENDY_STEPS = ["סגנון", "פוקוס", "קונספט", "סיטיאיי", "בריף"]'));
   assert.ok(focusSource.includes("יש משהו מיוחד שנכניס לסרטון?"));
   assert.ok(focusSource.includes("מה חשוב להכניס?"));
   assert.ok(focusSource.includes("לא, להמשיך רגיל"));
@@ -28,42 +28,14 @@ test("special focus step exists after style and is free text only", () => {
   assert.ok(!focusSource.includes("VIDEO_STYLES"));
 });
 
-test("style picker stays non-UGC and regular flow stays non-trendy", () => {
-  const styleSource = read("src/pages/VideoStylePicker.jsx");
-  const stepperSource = read("src/components/briefi/BriefiStepper.jsx");
-
-  assert.ok(!styleSource.includes('id: "ugc"'));
-  assert.ok(!styleSource.includes("UGC / המלצה"));
-  assert.ok(!styleSource.includes("לא לשכוח קוד קופון!"));
-  assert.ok(styleSource.includes('isTrendy={selected === "trendy" || selected === "טרנדי"}'));
-  const trendyIndex = styleSource.indexOf('id: "טרנדי"');
-  assert.ok(trendyIndex > -1);
-
-  assert.ok(stepperSource.includes('const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "CTA"]'));
-  assert.ok(stepperSource.includes('"הוק"'));
-});
 test("special focus is saved into state and sent to concept generation", () => {
   const focusSource = read("src/pages/SpecialFocus.jsx");
   const conceptSource = read("src/pages/GrokConceptPicker.jsx");
   const grokSource = read("base44/functions/grokBriefiFlow/entry.ts");
 
-  assert.ok(focusSource.includes("const incomingState = state || {};"));
-  assert.ok(focusSource.includes("const selectedVideoStyle = incomingState.selectedVideoStyle || incomingState.selectedStyle || incomingState.videoStyle;"));
-  assert.ok(focusSource.includes("const buildFocusState = (value) => {"));
-  assert.ok(focusSource.includes("const trimmed = value.trim();"));
-  assert.ok(focusSource.includes("...incomingState,"));
   assert.ok(focusSource.includes("specialFocusText: trimmed"));
-  assert.ok(focusSource.includes("specialFocusEnabled: false"));
-  assert.ok(focusSource.includes("specialFocusEnabled: true"));
-  assert.ok(focusSource.includes("const navigateToConcept = (value) => {"));
-  assert.ok(focusSource.includes("navigate(`/project/${projectId}/grok-concepts`, {"));
-  assert.ok(focusSource.includes("state: buildFocusState(value),"));
-  assert.ok(focusSource.includes("onClick={() => navigateToConcept(specialFocusText)}"));
-  assert.ok(focusSource.includes("onClick={() => navigateToConcept(\"\")}"));
+  assert.ok(focusSource.includes("specialFocusEnabled: Boolean(trimmed)"));
   assert.ok(conceptSource.includes("const specialFocusText = state?.specialFocusText || \"\";"));
-  assert.ok(conceptSource.includes("function normalizeSelectedVideoStyle(value) {"));
-  assert.ok(conceptSource.includes('const selectedVideoStyle = normalizeSelectedVideoStyle('));
-  assert.ok(conceptSource.includes("state?.selectedVideoStyle || state?.selectedStyle || state?.videoStyle"));
   assert.ok(conceptSource.includes("specialFocusEnabled,"));
   assert.ok(grokSource.includes("specialFocusText"));
   assert.ok(grokSource.includes("specialFocusEnabled"));
@@ -118,14 +90,4 @@ test("new flow remains gender-neutral and OpenAI stays unused", () => {
     }
     assert.ok(!source.includes("npm:openai"), `${file} should not import OpenAI`);
   }
-});
-
-test("final brief hides the stepper while earlier creation pages keep it", () => {
-  const finalBriefSource = read("src/pages/FinalBrief.jsx");
-  const focusSource = read("src/pages/SpecialFocus.jsx");
-  const conceptSource = read("src/pages/GrokConceptPicker.jsx");
-
-  assert.ok(!finalBriefSource.includes("BriefiStepper"));
-  assert.ok(focusSource.includes("BriefiStepper"));
-  assert.ok(conceptSource.includes("BriefiStepper"));
 });

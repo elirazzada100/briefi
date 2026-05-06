@@ -1,49 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
 import BriefiLoader from "@/components/shared/BriefiLoader";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
 import BriefiStepper from "@/components/briefi/BriefiStepper";
-
-const SUPPORTED_BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
-
-function normalizeSelectedVideoStyle(value) {
-  const normalized = (value || "").trim();
-  if (normalized === "trendy") return "טרנדי";
-  return normalized;
-}
-
-function extractInvokePayload(result) {
-  return result?.data ?? result ?? {};
-}
-
-function extractReadableError(error, fallbackMessage) {
-  const payload =
-    error?.response?.data ??
-    error?.data ??
-    error?.body ??
-    error?.cause?.data ??
-    null;
-
-  if (payload?.message) return payload.message;
-  if (payload?.error === "UNSUPPORTED_VIDEO_STYLE") {
-    return "הסגנון שנבחר לא נתמך כרגע. חזרו לבחירת סגנון ונסו שוב.";
-  }
-  if (payload?.error === "MISSING_PROJECT_CONTEXT") {
-    return "חסר מידע על הפרויקט. חזרו רגע אחורה ונסו שוב.";
-  }
-  if (payload?.error === "CONCEPT_RETRIEVAL_FAILED") {
-    return payload.message || "לא נמצאו קונספטים מתאימים לבנק הקונספטים. צריך לבדוק קטגוריה/סגנון או לוודא שהבנק נטען.";
-  }
-  if (payload?.error === "GROK_CONCEPT_SELECTION_VALIDATION_FAILED") {
-    return payload.message || "הצלחנו למצוא קונספטים, אבל העיבוד נתקע. נסו שוב בעוד רגע.";
-  }
-  if (typeof error?.message === "string" && error.message.trim()) {
-    return error.message;
-  }
-  return fallbackMessage;
-}
 
 // Remove leading number patterns like "57. " or "12. " and trailing dashes/spaces
 function cleanConceptTitle(title) {
@@ -62,9 +23,7 @@ export default function GrokConceptPicker() {
   const { project, loading: guardLoading } = useProjectGuard(projectId);
 
   // Receive video style from VideoStylePicker
-  const selectedVideoStyle = normalizeSelectedVideoStyle(
-    state?.selectedVideoStyle || state?.selectedStyle || state?.videoStyle
-  );
+  const selectedVideoStyle = state?.selectedVideoStyle;
   const businessFromState = state?.business;
   const businessAnalysis = state?.businessAnalysis;
   const specialFocusText = state?.specialFocusText || "";
@@ -75,7 +34,6 @@ export default function GrokConceptPicker() {
   const [error, setError] = useState(null);
   const [selectingIdx, setSelectingIdx] = useState(null);
   const [resolvedAnalysis, setResolvedAnalysis] = useState(businessAnalysis);
-  const requestedFlowKeyRef = useRef(null);
 
   useEffect(() => {
     if (!selectedVideoStyle) {
@@ -83,49 +41,38 @@ export default function GrokConceptPicker() {
       navigate(`/project/${projectId}/video-style`);
       return;
     }
-    const flowKey = JSON.stringify({
-      projectId,
-      selectedVideoStyle,
-      hasProject: Boolean(project),
-      hasBusinessFromState: Boolean(businessFromState),
-      specialFocusText,
-      specialFocusEnabled,
-    });
-    if ((project || businessFromState) && requestedFlowKeyRef.current !== flowKey) {
-      requestedFlowKeyRef.current = flowKey;
+    if (project || businessFromState) {
       loadConcepts();
     }
-  }, [project, selectedVideoStyle, businessFromState, projectId, specialFocusText, specialFocusEnabled]);
+  }, [project, selectedVideoStyle]);
 
   const loadConcepts = async () => {
     setLoading(true);
     setError(null);
     try {
       const proj = project;
-      if (!selectedVideoStyle) {
-        setError("הסגנון שנבחר לא נתמך כרגע. חזרו לבחירת סגנון ונסו שוב.");
-        return;
-      }
-
-      if (selectedVideoStyle !== "טרנדי" && !SUPPORTED_BANK_STYLES.includes(selectedVideoStyle)) {
-        setError("הסגנון שנבחר לא נתמך כרגע. חזרו לבחירת סגנון ונסו שוב.");
-        return;
-      }
-
-      if (!businessFromState && !proj) {
-        setError("חסר מידע על הפרויקט. חזרו רגע אחורה ונסו שוב.");
-        return;
-      }
-
       const business = businessFromState || {
         business_name: proj?.client_name || "",
         business_description: proj?.raw_notes || "",
         main_goal: proj?.main_goal || "",
       };
 
-      if (!business.business_name && !business.business_description && !business.main_goal) {
-        setError("חסר מידע על הפרויקט. חזרו רגע אחורה ונסו שוב.");
-        return;
+      // Ensure industry classification is available (required for strict ConceptBank retrieval)
+      // classifyBusinessCategory now returns industry_order + industry_name directly
+      let resolvedAnalysis = businessAnalysis;
+      if (selectedVideoStyle !== "טרנדי" && (!resolvedAnalysis?.industry_order || !resolvedAnalysis?.industry_name)) {
+        const classifyRes = await base44.functions.invoke("classifyBusinessCategory", {
+          businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
+        });
+        const clf = classifyRes.data;
+        resolvedAnalysis = {
+          ...(resolvedAnalysis || {}),
+          industry_order: clf?.industry_order || null,
+          industry_name: clf?.industry_name || clf?.category_name_he || "",
+          confidence: clf?.confidence || 0,
+          category_id: clf?.category_id || "",
+        };
+        setResolvedAnalysis(resolvedAnalysis);
       }
 
       const res = await base44.functions.invoke("grokBriefiFlow", {
@@ -133,33 +80,20 @@ export default function GrokConceptPicker() {
         business,
         selectedVideoStyle,
         project_id: projectId,
-        businessAnalysis,
+        businessAnalysis: resolvedAnalysis,
         specialFocusText,
         specialFocusEnabled,
       });
-      const payload = extractInvokePayload(res);
 
-      if (payload?.error) {
-        setError(payload.message || payload.error);
+      if (res.data?.error) {
+        setError(res.data.error);
         return;
       }
 
-      if (payload?.classifiedIndustry) {
-        setResolvedAnalysis((prev) => ({
-          ...(prev || {}),
-          ...payload.classifiedIndustry,
-        }));
-      }
-
-      if (!Array.isArray(payload?.concepts)) {
-        setError("הצלחנו למצוא קונספטים, אבל העיבוד נתקע. נסו שוב בעוד רגע.");
-        return;
-      }
-
-      setConcepts(payload.concepts);
+      setConcepts(res.data?.concepts || []);
     } catch (err) {
       console.error("Failed to load concepts:", err);
-      setError(extractReadableError(err, "הצלחנו למצוא קונספטים, אבל העיבוד נתקע. נסו שוב בעוד רגע."));
+      setError("משהו נתקע בדרך. נסו שוב בעוד רגע.");
     } finally {
       setLoading(false);
     }

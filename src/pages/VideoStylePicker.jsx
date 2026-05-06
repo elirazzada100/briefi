@@ -90,7 +90,7 @@ export default function VideoStylePicker() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={1} isTrendy={selected === "trendy" || selected === "טרנדי"} />
+          <BriefiStepper currentStep={1} isTrendy={selected === "טרנדי"} />
         </div>
       </div>
 

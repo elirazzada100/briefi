@@ -7,34 +7,22 @@ export default function SpecialFocus() {
   const { projectId } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
-  const incomingState = state || {};
   const [specialFocusText, setSpecialFocusText] = useState(state?.specialFocusText || "");
 
-  const business = incomingState.business;
-  const businessAnalysis = incomingState.businessAnalysis;
-  const selectedVideoStyle = incomingState.selectedVideoStyle || incomingState.selectedStyle || incomingState.videoStyle;
+  const business = state?.business;
+  const businessAnalysis = state?.businessAnalysis;
+  const selectedVideoStyle = state?.selectedVideoStyle;
 
-  const buildFocusState = (value) => {
-    const trimmed = value.trim();
-    return {
-      ...incomingState,
-      selectedVideoStyle,
-      business,
-      businessAnalysis,
-      specialFocusText: trimmed,
-      specialFocusEnabled: false,
-      ...(trimmed
-        ? {
-            specialFocusText: trimmed,
-            specialFocusEnabled: true,
-          }
-        : {}),
-    };
-  };
-
-  const navigateToConcept = (value) => {
+  const handleContinue = () => {
+    const trimmed = specialFocusText.trim();
     navigate(`/project/${projectId}/grok-concepts`, {
-      state: buildFocusState(value),
+      state: {
+        selectedVideoStyle,
+        business,
+        businessAnalysis,
+        specialFocusText: trimmed,
+        specialFocusEnabled: Boolean(trimmed),
+      },
     });
   };
 
@@ -75,12 +63,23 @@ export default function SpecialFocus() {
         </div>
 
         <div className="space-y-2">
-          <button onClick={() => navigateToConcept(specialFocusText)} className="briefi-btn-primary w-full">
+          <button onClick={handleContinue} className="briefi-btn-primary w-full">
             <Sparkles className="h-4 w-4" />
             להמשיך לקונספטים
           </button>
           <button
-            onClick={() => navigateToConcept("")}
+            onClick={() => {
+              setSpecialFocusText("");
+              navigate(`/project/${projectId}/grok-concepts`, {
+                state: {
+                  selectedVideoStyle,
+                  business,
+                  businessAnalysis,
+                  specialFocusText: "",
+                  specialFocusEnabled: false,
+                },
+              });
+            }}
             className="briefi-btn-secondary w-full"
           >
             לא, להמשיך רגיל

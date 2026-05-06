@@ -99,111 +99,16 @@ const INDUSTRY_MAP = {
   "food_restaurants":     { order: 1,  name: "מסעדנות ואוכל" },
   "beauty_aesthetics":    { order: 2,  name: "יופי ואסתטיקה" },
   "fitness_nutrition":    { order: 3,  name: "פיטנס ותזונה" },
-  "coaches_consultants":  { order: 4,  name: "מאמנים / יועצים / נותני ידע" },
-  "local_services":       { order: 5,  name: "שירותים מקומיים ובעלי מקצוע" },
-  "real_estate_interiors":{ order: 6,  name: "נדל״ן / עיצוב / שיפוצים" },
-  "fashion_boutiques":    { order: 7,  name: "אופנה / לייפסטייל / מוצרים" },
-  "events_nightlife":     { order: 8,  name: "בילוי / ברים / חיי לילה" },
-  "parenting_family":     { order: 9,  name: "חינוך / ילדים / חוגים" },
-  "health_wellness":      { order: 10, name: "בריאות / טיפולים / קליניקות" },
+  "coaches_consultants":  { order: 4,  name: "מאמנים, יועצים ונותני ידע" },
+  "local_services":       { order: 5,  name: "עסקים מקומיים ושירותים לבית" },
+  "real_estate_interiors":{ order: 6,  name: "נדל״ן, עיצוב פנים ושיפוצים" },
+  "events_nightlife":     { order: 7,  name: "אירועים, לילה וחוויות" },
+  "fashion_boutiques":    { order: 8,  name: "אופנה, תכשיטים ובוטיקים" },
+  "parenting_family":     { order: 9,  name: "הורות, ילדים ומשפחה" },
+  "health_wellness":      { order: 10, name: "בריאות, טיפול ו-Wellness" },
 };
 
 const BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
-
-function normalizeText(value) {
-  return (value || "")
-    .toString()
-    .toLowerCase()
-    .replace(/[״"'`]/g, "")
-    .replace(/[–—-]/g, " ")
-    .replace(/[^\p{L}\p{N}\s/]/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-const INDUSTRY_BY_ORDER = new Map(
-  Object.values(INDUSTRY_MAP).map((industry) => [industry.order, industry])
-);
-
-const INDUSTRY_ALIASES = new Map([
-  ["מסעדנות ואוכל", "food_restaurants"],
-  ["יופי ואסתטיקה", "beauty_aesthetics"],
-  ["פיטנס ותזונה", "fitness_nutrition"],
-  ["מאמנים / יועצים / נותני ידע", "coaches_consultants"],
-  ["מאמנים, יועצים ונותני ידע", "coaches_consultants"],
-  ["שירותים מקומיים ובעלי מקצוע", "local_services"],
-  ["עסקים מקומיים ושירותים לבית", "local_services"],
-  ["נדל״ן / עיצוב / שיפוצים", "real_estate_interiors"],
-  ["נדל״ן, עיצוב פנים ושיפוצים", "real_estate_interiors"],
-  ["אופנה / לייפסטייל / מוצרים", "fashion_boutiques"],
-  ["אופנה, תכשיטים ובוטיקים", "fashion_boutiques"],
-  ["בילוי / ברים / חיי לילה", "events_nightlife"],
-  ["אירועים, לילה וחוויות", "events_nightlife"],
-  ["חינוך / ילדים / חוגים", "parenting_family"],
-  ["הורות, ילדים ומשפחה", "parenting_family"],
-  ["בריאות / טיפולים / קליניקות", "health_wellness"],
-  ["בריאות, טיפול ו-Wellness", "health_wellness"],
-  ["בריאות, טיפול ו wellness", "health_wellness"],
-].map(([label, id]) => [normalizeText(label), id]));
-
-function normalizeVideoStyle(value) {
-  const normalized = (value || "").trim();
-  if (normalized === "trendy") return "טרנדי";
-  return normalized;
-}
-
-function normalizeIndustryResult(raw) {
-  if (!raw || typeof raw !== "object") return null;
-
-  const candidates = [
-    raw.industry_order,
-    raw.category_id,
-    raw.category_name_he,
-    raw.industry_name,
-    raw.category,
-    raw.category_name,
-    raw.id,
-    raw.name,
-  ];
-
-  for (const candidate of candidates) {
-    if (typeof candidate === "number" && Number.isInteger(candidate)) {
-      const byOrder = INDUSTRY_BY_ORDER.get(candidate);
-      if (byOrder) {
-        return { industry_order: byOrder.order, industry_name: byOrder.name, category_id: Object.keys(INDUSTRY_MAP).find((key) => INDUSTRY_MAP[key].order === byOrder.order) };
-      }
-    }
-
-    const normalized = normalizeText(candidate);
-    if (!normalized) continue;
-
-    if (/^\d+$/.test(normalized)) {
-      const byOrder = INDUSTRY_BY_ORDER.get(Number(normalized));
-      if (byOrder) {
-        return { industry_order: byOrder.order, industry_name: byOrder.name, category_id: Object.keys(INDUSTRY_MAP).find((key) => INDUSTRY_MAP[key].order === byOrder.order) };
-      }
-    }
-
-    if (INDUSTRY_MAP[normalized]) {
-      return {
-        industry_order: INDUSTRY_MAP[normalized].order,
-        industry_name: INDUSTRY_MAP[normalized].name,
-        category_id: normalized,
-      };
-    }
-
-    const aliasId = INDUSTRY_ALIASES.get(normalized);
-    if (aliasId && INDUSTRY_MAP[aliasId]) {
-      return {
-        industry_order: INDUSTRY_MAP[aliasId].order,
-        industry_name: INDUSTRY_MAP[aliasId].name,
-        category_id: aliasId,
-      };
-    }
-  }
-
-  return null;
-}
 
 // ── SYSTEM PROMPTS ─────────────────────────────────────────────────────────────
 
@@ -347,13 +252,10 @@ Analyze this business. Fill all 5 cards with specific, actionable insights. Prov
     // ── generateConcepts ────────────────────────────────────────────────────────
     if (action === "generateConcepts") {
       if (!business) {
-        return Response.json({
-          error: "MISSING_PROJECT_CONTEXT",
-          message: "חסר מידע על הפרויקט. חזרו רגע אחורה ונסו שוב.",
-        }, { status: 400 });
+        return Response.json({ error: "business is required" }, { status: 400 });
       }
 
-      const videoStyle = normalizeVideoStyle(selectedVideoStyle || "מצחיק");
+      const videoStyle = selectedVideoStyle || "מצחיק";
 
       // ── טרנדי: TrendPatterns only — never queries ConceptBank ──────────────
       if (videoStyle === "טרנדי") {
@@ -405,46 +307,39 @@ Return ONLY valid JSON. No markdown.
 
       // ── ConceptBank strict retrieval (non-trendy styles only) ──────────────
       if (!BANK_STYLES.includes(videoStyle)) {
-        return Response.json({
-          error: "UNSUPPORTED_VIDEO_STYLE",
-          message: "הסגנון שנבחר לא נתמך כרגע. חזרו לבחירת סגנון ונסו שוב.",
-          selected_video_style: videoStyle,
-        }, { status: 400 });
+        return Response.json({ error: `Unknown video style: ${videoStyle}` }, { status: 400 });
       }
 
       // ── STEP 1: Resolve industry_order ──────────────────────────────────────
       // industry_order is the ONLY key used for retrieval — prevents Hebrew string mismatches
-      const normalizedAnalysisIndustry = normalizeIndustryResult(businessAnalysis || {});
-      let industryOrder = normalizedAnalysisIndustry?.industry_order || (businessAnalysis?.industry_order ? Number(businessAnalysis.industry_order) : null);
-      let industryName = normalizedAnalysisIndustry?.industry_name || businessAnalysis?.industry_name || "";
+      let industryOrder = businessAnalysis?.industry_order
+        ? Number(businessAnalysis.industry_order)
+        : null;
+      let industryName = businessAnalysis?.industry_name || "";
 
       // If not provided, classify now
       if (!industryOrder) {
-        const businessTextForClassification = [
-          business.business_name,
-          business.business_description,
-          business.main_goal,
-          specialFocusEnabled ? specialFocusText : "",
-          businessAnalysis?.main_angle,
-          businessAnalysis?.what_is_interesting,
-          ...(Array.isArray(businessAnalysis?.recommended_content_directions) ? businessAnalysis.recommended_content_directions : []),
-        ].filter(Boolean).join(". ");
-
-        const classifyRes = await base44.asServiceRole.functions.invoke("classifyBusinessCategory", {
-          businessDescription: businessTextForClassification,
+        const classifyRaw = await fetch(`${req.url.replace(/\/[^/]+$/, "")}/classifyBusinessCategory`, {
+          method: "POST",
+          headers: { "Authorization": req.headers.get("Authorization") || "", "Content-Type": "application/json" },
+          body: JSON.stringify({ businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}` }),
         });
-        const clf = classifyRes?.data ?? classifyRes ?? {};
-        const normalizedClassification = normalizeIndustryResult(clf);
-        if (normalizedClassification) {
-          industryOrder = normalizedClassification.industry_order;
-          industryName = normalizedClassification.industry_name;
+        // Inline classify via Grok directly (avoid cross-function call issues)
+        const classifyRes = await base44.asServiceRole.functions.invoke("classifyBusinessCategory", {
+          businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
+        });
+        const clf = classifyRes;
+        const mapped = INDUSTRY_MAP[clf?.category_id];
+        if (mapped) {
+          industryOrder = mapped.order;
+          industryName = mapped.name;
         }
       }
 
       if (!industryOrder || industryOrder < 1 || industryOrder > 10) {
         return Response.json({
-          error: "CLASSIFICATION_UNDETERMINED",
-          message: "לא הצלחנו לזהות את קטגוריית העסק. נסו להוסיף עוד כמה מילים על סוג העסק.",
+          error: "CONCEPT_RETRIEVAL_FAILED",
+          message: "לא הצלחנו לסווג את העסק. נסו שוב.",
           details: "industry_order missing or out of range",
         }, { status: 400 });
       }
@@ -482,11 +377,10 @@ Return ONLY valid JSON. No markdown.
       if (candidates.length < 4) {
         return Response.json({
           error: "CONCEPT_RETRIEVAL_FAILED",
-          message: "לא נמצאו קונספטים מתאימים לבנק הקונספטים. צריך לבדוק קטגוריה/סגנון או לוודא שהבנק נטען.",
+          message: "משהו השתבש בשליפת הרעיונות. נסו שוב בעוד רגע.",
           industry_order: industryOrder,
           selected_video_style: videoStyle,
           candidate_count: candidates.length,
-          source_batch: ACTIVE_CONCEPT_SOURCE_BATCH,
           _debug: debugData,
         }, { status: 422 });
       }
@@ -582,7 +476,7 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
           // Both attempts failed — return debug error, do not show bad concepts
           return Response.json({
             error: "GROK_CONCEPT_SELECTION_VALIDATION_FAILED",
-            message: "הצלחנו למצוא קונספטים, אבל העיבוד נתקע. נסו שוב בעוד רגע.",
+            message: "משהו השתבש בשליפת הרעיונות. נסו שוב בעוד רגע.",
             validation_errors: retry.validationErrors,
             _debug: { ...debugData, grok_selected_concept_ids: retry.mapped.map(c => c.concept_bank_id) },
           }, { status: 422 });
@@ -594,7 +488,6 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
 
       return Response.json({
         concepts,
-        classifiedIndustry: { industry_order: industryOrder, industry_name: industryName },
         source: "concept_bank",
         candidates_count: candidates.length,
         pool_sent_to_grok: pool.length,
@@ -655,14 +548,14 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
         { desc: "חנות צעצועים גדולה ביבנה. הורים, ילדים, מתנות יום הולדת, משחקים, התלבטויות, לחץ של הורים בקופה.", expected_order: 9, expected_name: "הורות, ילדים ומשפחה", test_style: "לימודי", label: "toy_store_limdi" },
         { desc: "חנות צעצועים גדולה ביבנה. הורים, ילדים, מתנות יום הולדת, משחקים, התלבטויות, לחץ של הורים בקופה.", expected_order: 9, expected_name: "הורות, ילדים ומשפחה", test_style: "מכירתי", label: "toy_store_sales" },
         { desc: "שווארמיה שכונתית בנתניה עם פיתות, לאפות, תור בצהריים, לקוחות קבועים, הרבה רעש וצחוקים.", expected_order: 1, expected_name: "מסעדנות ואוכל", test_style: "מצחיק", label: "shawarma_funny" },
-        { desc: "משרד יח״צ שמלווה מותגים, יזמים וחברות ומייצר להם חשיפה תקשורתית, נרטיב וסיפור.", expected_order: 4, expected_name: "מאמנים / יועצים / נותני ידע", test_style: "תדמית", label: "pr_agency_image" },
+        { desc: "משרד יח״צ שמלווה מותגים, יזמים וחברות ומייצר להם חשיפה תקשורתית, נרטיב וסיפור.", expected_order: 4, expected_name: "מאמנים, יועצים ונותני ידע", test_style: "תדמית", label: "pr_agency_image" },
       ];
 
       const testResults = {};
       for (const tc of testCases) {
         // Classification via inline Grok call (reuse callGrok)
         const classifySystem = `You are Briefi Category Classifier. Classify into exactly one of these industry_order numbers:
-1=מסעדנות ואוכל, 2=יופי ואסתטיקה, 3=פיטנס ותזונה, 4=מאמנים יועצים נותני ידע, 5=שירותים מקומיים ובעלי מקצוע, 6=נדל״ן עיצוב שיפוצים, 7=אופנה לייפסטייל מוצרים, 8=בילוי ברים חיי לילה, 9=חינוך ילדים חוגים (toy stores ALWAYS here), 10=בריאות טיפולים קליניקות.
+1=מסעדנות ואוכל, 2=יופי ואסתטיקה, 3=פיטנס ותזונה, 4=מאמנים יועצים ונותני ידע, 5=עסקים מקומיים ושירותים לבית, 6=נדל״ן עיצוב פנים ושיפוצים, 7=אירועים לילה וחוויות, 8=אופנה תכשיטים ובוטיקים, 9=הורות ילדים ומשפחה (toy stores ALWAYS here), 10=בריאות טיפול ו-Wellness.
 Return ONLY: {"industry_order":number,"industry_name":""}`;
         const classifyUser = `Business: ${tc.desc}`;
         const rawClf = await callGrok(classifySystem, classifyUser, 0.1);
