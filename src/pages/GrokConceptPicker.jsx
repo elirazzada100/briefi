@@ -61,8 +61,24 @@ export default function GrokConceptPicker() {
         main_goal: proj?.main_goal || "",
       };
 
-      // Classification is handled by the backend (OpenAI) — pass whatever we have,
-      // backend will classify if industry_order is missing.
+      // Ensure industry classification is available (required for strict ConceptBank retrieval)
+      // classifyBusinessCategory now returns industry_order + industry_name directly
+      let resolvedAnalysis = businessAnalysis;
+      if (selectedVideoStyle !== "טרנדי" && (!resolvedAnalysis?.industry_order || !resolvedAnalysis?.industry_name)) {
+        const classifyRes = await base44.functions.invoke("classifyBusinessCategory", {
+          businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
+        });
+        const clf = classifyRes.data;
+        resolvedAnalysis = {
+          ...(resolvedAnalysis || {}),
+          industry_order: clf?.industry_order || null,
+          industry_name: clf?.industry_name || clf?.category_name_he || "",
+          confidence: clf?.confidence || 0,
+          category_id: clf?.category_id || "",
+        };
+        setResolvedAnalysis(resolvedAnalysis);
+      }
+
       const res = await base44.functions.invoke("grokBriefiFlow", {
         action: "generateConcepts",
         business,
