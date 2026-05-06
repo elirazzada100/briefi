@@ -17,6 +17,43 @@ test("business analysis page blocks duplicate generation and has no artificial d
   assert.ok(!source.includes("setTimeout"));
 });
 
+test("concept flow keeps backend classify invoke and removes unused raw classify fetch", () => {
+  const source = read("base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.ok(source.includes('const classifyRes = await base44.asServiceRole.functions.invoke("classifyBusinessCategory"'));
+  assert.ok(!source.includes("const classifyRaw = await fetch"));
+  assert.ok(source.includes('source_batch: ACTIVE_CONCEPT_SOURCE_BATCH'));
+  assert.ok(source.includes("industry_order: industryOrder"));
+  assert.ok(source.includes("user_facing_video_style: videoStyle"));
+});
+
+test("concept, hook, CTA, and final brief add duplicate request guards without changing state handoff", () => {
+  const conceptPicker = read("src/pages/GrokConceptPicker.jsx");
+  const openingPicker = read("src/pages/GrokOpeningPicker.jsx");
+  const ctaPicker = read("src/pages/GrokCTAPicker.jsx");
+  const finalBrief = read("src/pages/FinalBrief.jsx");
+
+  assert.ok(conceptPicker.includes("initialLoadStartedRef"));
+  assert.ok(conceptPicker.includes("requestInFlightRef"));
+  assert.ok(conceptPicker.includes("selectedVideoStyle,"));
+  assert.ok(conceptPicker.includes("businessAnalysis: resolvedAnalysis"));
+
+  assert.ok(openingPicker.includes("initialLoadStartedRef"));
+  assert.ok(openingPicker.includes("requestInFlightRef"));
+
+  assert.ok(ctaPicker.includes("initialLoadStartedRef"));
+  assert.ok(ctaPicker.includes("requestInFlightRef"));
+  assert.ok(ctaPicker.includes("if (generatingBrief) return;"));
+
+  assert.ok(finalBrief.includes("initialLoadStartedRef"));
+});
+
+test("FinalBrief post-save timer is at most 100ms", () => {
+  const source = read("src/pages/FinalBrief.jsx");
+  assert.ok(source.includes("setTimeout(() => setSaved(false), 100)"));
+  assert.ok(!source.includes("setTimeout(() => setSaved(false), 2000)"));
+});
+
 test("loading components rotate at 3 seconds and keep text narrow/centered", () => {
   const sharedLoader = read("src/components/shared/BriefiLoader.jsx");
   const sharedState = read("src/components/shared/LoadingState.jsx");

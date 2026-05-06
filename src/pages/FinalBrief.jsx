@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Pencil, Check, X, Plus, RefreshCw } from "lucide-react";
@@ -89,13 +89,15 @@ export default function FinalBrief() {
   const [feedbackFreeText, setFeedbackFreeText] = useState("");
   const [feedbackSaved, setFeedbackSaved] = useState(false);
   const [improving, setImproving] = useState(false);
+  const initialLoadStartedRef = useRef(false);
 
   const { project, loading } = useProjectGuard(projectId);
 
   useEffect(() => {
     if (finalBriefFromState) {
       setBrief({ adapted_brief: finalBriefFromState, id: briefId });
-    } else if (briefId) {
+    } else if (briefId && !initialLoadStartedRef.current) {
+      initialLoadStartedRef.current = true;
       base44.entities.VideoBrief.filter({ id: briefId }).then(r => {
         if (r[0]) setBrief(r[0]);
       });
@@ -144,7 +146,7 @@ export default function FinalBrief() {
     }
     setSaving(false);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), 100);
   };
 
   const handleSaveFeedback = async () => {

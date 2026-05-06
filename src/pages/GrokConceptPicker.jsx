@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
@@ -32,6 +32,8 @@ export default function GrokConceptPicker() {
   const [error, setError] = useState(null);
   const [selectingIdx, setSelectingIdx] = useState(null);
   const [resolvedAnalysis, setResolvedAnalysis] = useState(businessAnalysis);
+  const initialLoadStartedRef = useRef(false);
+  const requestInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!selectedVideoStyle) {
@@ -39,12 +41,16 @@ export default function GrokConceptPicker() {
       navigate(`/project/${projectId}/video-style`);
       return;
     }
-    if (project || businessFromState) {
+    if ((project || businessFromState) && !initialLoadStartedRef.current) {
+      initialLoadStartedRef.current = true;
       loadConcepts();
     }
   }, [project, selectedVideoStyle]);
 
   const loadConcepts = async () => {
+    if (requestInFlightRef.current) return;
+
+    requestInFlightRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -91,6 +97,7 @@ export default function GrokConceptPicker() {
       console.error("Failed to load concepts:", err);
       setError("משהו נתקע בדרך. נסו שוב בעוד רגע.");
     } finally {
+      requestInFlightRef.current = false;
       setLoading(false);
     }
   };

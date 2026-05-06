@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
@@ -19,16 +19,24 @@ export default function GrokOpeningPicker() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectingIdx, setSelectingIdx] = useState(null);
+  const initialLoadStartedRef = useRef(false);
+  const requestInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!selectedConcept || !business) {
       navigate(`/project/${projectId}/grok-concepts`);
       return;
     }
-    loadOpeningOptions();
+    if (!initialLoadStartedRef.current) {
+      initialLoadStartedRef.current = true;
+      loadOpeningOptions();
+    }
   }, []);
 
   const loadOpeningOptions = async () => {
+    if (requestInFlightRef.current) return;
+
+    requestInFlightRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -50,6 +58,7 @@ export default function GrokOpeningPicker() {
       console.error("Failed to load opening options:", err);
       setError("משהו נתקע בדרך. נסו שוב בעוד רגע.");
     } finally {
+      requestInFlightRef.current = false;
       setLoading(false);
     }
   };
