@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
-import BriefiStepper from "@/components/briefi/BriefiStepper";
 
 // 6 user-facing styles. Order: מצחיק, תדמית, סרטון הכרות, מכירתי, לימודי, טרנדי
 // Removed from UI: סרטון אווירה, כאב / פתרון, חינוכי, השוואה, מיתוס / ניפוץ
@@ -69,7 +68,7 @@ export default function VideoStylePicker() {
 
   const handleContinue = () => {
     if (!selected) return;
-    navigate(`/project/${projectId}/special-focus`, {
+    navigate(`/project/${projectId}/grok-concepts`, {
       state: {
         selectedVideoStyle: selected,
         business,
@@ -89,14 +88,11 @@ export default function VideoStylePicker() {
             <p className="text-xs font-bold text-foreground">בחרו סגנון סרטון</p>
           </div>
         </div>
-        <div className="mt-2">
-          <BriefiStepper currentStep={1} isTrendy={selected === "טרנדי"} />
-        </div>
       </div>
 
       <div className="briefi-page-container space-y-3">
         <div>
-          <h1 className="text-xl font-black text-foreground">בחירת סגנון</h1>
+          <h1 className="text-xl font-black text-foreground">איזה סוג סרטון?</h1>
           <p className="text-sm text-muted-foreground mt-0.5">בחרו סגנון ונייצר 4 קונספטים מותאמים לעסק.</p>
         </div>
 
@@ -155,7 +151,7 @@ export default function VideoStylePicker() {
             className="briefi-btn-primary w-full"
           >
             <Sparkles className="h-4 w-4" />
-            המשך
+            תנו לי 4 קונספטים
           </button>
           <button onClick={() => navigate(-1)} className="briefi-btn-ghost w-full">
             <ArrowRight className="h-4 w-4" />

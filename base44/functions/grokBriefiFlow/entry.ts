@@ -200,19 +200,7 @@ Deno.serve(async (req) => {
     if (!XAI_API_KEY) return Response.json({ error: "XAI_API_KEY is not set" }, { status: 500 });
 
     const body = await req.json();
-    const {
-      action,
-      project_id,
-      business,
-      selectedConcept,
-      selectedOpening,
-      selectedBody,
-      selectedCTA,
-      selectedVideoStyle,
-      businessAnalysis,
-      specialFocusText,
-      specialFocusEnabled,
-    } = body;
+    const { action, project_id, business, selectedConcept, selectedOpening, selectedBody, selectedCTA, selectedVideoStyle, businessAnalysis } = body;
 
     // ── generateCreativeDNA ─────────────────────────────────────────────────────
     if (action === "generateCreativeDNA") {
@@ -268,22 +256,16 @@ Analyze this business. Fill all 5 cards with specific, actionable insights. Prov
             contextRows += `\nPattern ${i + 1}:\n  Mechanic: ${t.core_mechanic}\n  Why it works: ${t.why_it_works}\n  Adaptation guide: ${t.briefi_adaptation}\n`;
           });
         }
-        const specialFocusContext = specialFocusEnabled && specialFocusText
-          ? `\nSpecial focus to weave in naturally: ${specialFocusText}\nDo not turn every concept into a direct ad. Use this as situational context.\n`
-          : "";
-
         const trendyPrompt = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
 Goal: ${business.main_goal}
 
 Requested video style: טרנדי
-${specialFocusContext}
 ${contextRows}
 
 Generate 4 strong, original video concepts in the "טרנדי" style for this specific business.
 Each must clearly reflect one of the trend patterns above.
-Each concept must include: trend_name, opening_line, business_fit, why_it_fits, body_direction.
 Do NOT start any description with: "סרטון שמציג", "נציג את", "נראה את", "לקוחות נהנים".`;
 
         const TRENDY_SYSTEM = `You are Briefi Concept Generator for Israeli social media — Trendy style.
@@ -291,13 +273,10 @@ Generate exactly 4 video concept options based on the trend patterns provided.
 Write in natural Israeli Hebrew. Immediately shootable with a phone.
 ${FORBIDDEN_PHRASES}
 Return ONLY valid JSON. No markdown.
-{"concepts":[{"concept_title":"","short_description":"","why_it_works":"","idea_tags":[],"trend_name":"","opening_line":"","business_fit":"","body_direction":""}]}`;
+{"concepts":[{"concept_title":"","short_description":"","why_it_works":"","idea_tags":[]}]}`;
 
         const { parsed, provider } = await callWithFallback(TRENDY_SYSTEM, trendyPrompt, 0.85);
-        const concepts = (parsed.concepts || []).slice(0, 4).map((concept) => ({
-          ...concept,
-          source_type: "grok_generated",
-        }));
+        const concepts = (parsed.concepts || []).slice(0, 4);
         return Response.json({
           concepts,
           source: "grok_generated",
@@ -319,6 +298,12 @@ Return ONLY valid JSON. No markdown.
 
       // If not provided, classify now
       if (!industryOrder) {
+        const classifyRaw = await fetch(`${req.url.replace(/\/[^/]+$/, "")}/classifyBusinessCategory`, {
+          method: "POST",
+          headers: { "Authorization": req.headers.get("Authorization") || "", "Content-Type": "application/json" },
+          body: JSON.stringify({ businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}` }),
+        });
+        // Inline classify via Grok directly (avoid cross-function call issues)
         const classifyRes = await base44.asServiceRole.functions.invoke("classifyBusinessCategory", {
           businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
         });
@@ -371,7 +356,7 @@ Return ONLY valid JSON. No markdown.
       if (candidates.length < 4) {
         return Response.json({
           error: "CONCEPT_RETRIEVAL_FAILED",
-          message: "לא נמצאו קונספטים מתאימים בבנק הקונספטים. צריך לבדוק שהבנק נטען ושיש התאמה בין קטגוריה לסגנון.",
+          message: "משהו השתבש בשליפת הרעיונות. נסו שוב בעוד רגע.",
           industry_order: industryOrder,
           selected_video_style: videoStyle,
           candidate_count: candidates.length,
@@ -402,17 +387,12 @@ ${FORBIDDEN_PHRASES}
 Return ONLY valid JSON. No markdown.
 {"concepts":[{"concept_title":"","short_description":"","why_it_works":"","idea_tags":[],"source_concept_id":"exact-id-from-pool"}]}`;
 
-      const specialFocusContext = specialFocusEnabled && specialFocusText
-        ? `\nSpecial focus to weave in naturally: ${specialFocusText}\nUse it as situational context, not as a forced sales line.\n`
-        : "";
-
       const grokSelectionUser = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
 Goal: ${business.main_goal}
 Industry: ${industryName} (industry_order=${industryOrder})
 Video style: ${videoStyle}
-${specialFocusContext}
 
 CANDIDATE POOL — select 4 from these ${pool.length} only (IDs are mandatory in output):
 ${candidateList}`;
@@ -626,16 +606,11 @@ Return ONLY: {"industry_order":number,"industry_name":""}`;
       const videoStyle = selectedVideoStyle || "מצחיק";
       const classifiedIndustry = businessAnalysis?.industry_name || businessAnalysis?.classified_industry || "";
 
-      const specialFocusContext = specialFocusEnabled && specialFocusText
-        ? `Special focus to weave in naturally: ${specialFocusText}\n`
-        : "";
-
       const userPrompt = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
 Goal: ${business.main_goal}
 Industry: ${classifiedIndustry}
-${specialFocusContext}
 
 Video style: ${videoStyle}
 
@@ -664,61 +639,6 @@ Do NOT explain the concept. Do NOT use generic phrases. Sound like a real Israel
       });
     }
 
-    // ── generateBodyOptions ─────────────────────────────────────────────────────
-    if (action === "generateBodyOptions") {
-      if (!business || !selectedConcept) {
-        return Response.json({ error: "business and selectedConcept required" }, { status: 400 });
-      }
-
-      const openingLineText = selectedOpening?.opening_line || selectedConcept?.opening_line || "";
-      const specialFocusContext = specialFocusEnabled && specialFocusText
-        ? `Special focus to weave in naturally: ${specialFocusText}\n`
-        : "";
-
-      const BODY_SYSTEM = `You are Briefi Body Generator for Israeli social media.
-
-Generate exactly 4 body directions for the selected concept.
-Each option must feel filmable tomorrow with a phone.
-If an opening line is provided, continue naturally from it.
-If no opening line is provided, build a strong body without failing.
-
-${FORBIDDEN_PHRASES}
-
-Return ONLY valid JSON. No markdown.
-{"body_options":[{"body_title":"","scene_preview":"","practical_note":"","shot_sequence":[],"spoken_lines":[],"on_screen_text":[],"visual_shots_needed":[],"why_this_works":"","script_format":"person_to_camera"}]}`;
-
-      const userPrompt = `Business:
-Name: ${business.business_name}
-Description: ${business.business_description}
-Goal: ${business.main_goal}
-${specialFocusContext}
-Video style: ${selectedVideoStyle || ""}
-
-Selected concept:
-${JSON.stringify(selectedConcept, null, 2)}
-
-Opening line:
-${openingLineText || "(no opening selected)"}
-
-Generate 4 body options. Each must include:
-- body_title
-- scene_preview
-- practical_note
-- shot_sequence (3-5 short bullets)
-- spoken_lines
-- on_screen_text
-- visual_shots_needed
-- why_this_works
-- script_format`;
-
-      const { parsed, provider } = await callWithFallback(BODY_SYSTEM, userPrompt, 0.75);
-
-      return Response.json({
-        body_options: parsed.body_options || [],
-        provider_log: { provider_used: provider, step_name: "body", success: true },
-      });
-    }
-
     // ── generateCTAOptions ──────────────────────────────────────────────────────
     if (action === "generateCTAOptions") {
       if (!business || !selectedConcept) {
@@ -727,15 +647,10 @@ Generate 4 body options. Each must include:
 
       const opening = selectedOpening || selectedBody;
 
-      const specialFocusContext = specialFocusEnabled && specialFocusText
-        ? `Special focus to keep in mind: ${specialFocusText}\n`
-        : "";
-
       const userPrompt = `Business:
 Name: ${business.business_name}
 Description: ${business.business_description}
 Goal: ${business.main_goal}
-${specialFocusContext}
 
 Selected concept:
 ${JSON.stringify(selectedConcept, null, 2)}
@@ -765,7 +680,7 @@ Match the tone of the concept and opening line.`;
       }
       const ownedProject = ownedProjectResult.project;
 
-      const opening = selectedOpening || selectedBody || selectedConcept;
+      const opening = selectedOpening || selectedBody;
       // Support both new schema (opening_line) and old schema (filled_opening_line)
       const openingLineText = opening?.opening_line || opening?.filled_opening_line || "";
 

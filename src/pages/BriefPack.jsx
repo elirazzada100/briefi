@@ -64,15 +64,13 @@ export default function BriefPack() {
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    const response = await base44.functions.invoke("secureBriefPack", {
-      action: "deleteOwnedVideoBrief",
-      project_id: projectId,
-      video_brief_id: deleteTarget.id,
+    await base44.entities.VideoBrief.delete(deleteTarget.id);
+    const updated = briefs.filter(b => b.id !== deleteTarget.id);
+    setBriefs(updated);
+    // Update project count
+    await base44.entities.Project.update(projectId, {
+      completed_briefs_count: updated.length,
     });
-    if (response.data?.success) {
-      const updated = briefs.filter(b => b.id !== deleteTarget.id);
-      setBriefs(updated);
-    }
     setDeleting(false);
     setDeleteTarget(null);
   };
@@ -88,11 +86,10 @@ export default function BriefPack() {
     setBriefs(newBriefs);
     setDragIdx(null);
     setDragOverIdx(null);
-    await base44.functions.invoke("secureBriefPack", {
-      action: "reorderOwnedVideoBriefs",
-      project_id: projectId,
-      ordered_video_ids: newBriefs.map((b) => b.id),
-    });
+    // Persist order
+    await Promise.all(newBriefs.map((b, i) =>
+      base44.entities.VideoBrief.update(b.id, { video_order: i + 1 })
+    ));
   };
 
   // Up/Down buttons fallback for mobile
@@ -101,11 +98,9 @@ export default function BriefPack() {
     const newBriefs = [...briefs];
     [newBriefs[idx - 1], newBriefs[idx]] = [newBriefs[idx], newBriefs[idx - 1]];
     setBriefs(newBriefs);
-    await base44.functions.invoke("secureBriefPack", {
-      action: "reorderOwnedVideoBriefs",
-      project_id: projectId,
-      ordered_video_ids: newBriefs.map((b) => b.id),
-    });
+    await Promise.all(newBriefs.map((b, i) =>
+      base44.entities.VideoBrief.update(b.id, { video_order: i + 1 })
+    ));
   };
 
   const moveDown = async (idx) => {
@@ -113,11 +108,9 @@ export default function BriefPack() {
     const newBriefs = [...briefs];
     [newBriefs[idx], newBriefs[idx + 1]] = [newBriefs[idx + 1], newBriefs[idx]];
     setBriefs(newBriefs);
-    await base44.functions.invoke("secureBriefPack", {
-      action: "reorderOwnedVideoBriefs",
-      project_id: projectId,
-      ordered_video_ids: newBriefs.map((b) => b.id),
-    });
+    await Promise.all(newBriefs.map((b, i) =>
+      base44.entities.VideoBrief.update(b.id, { video_order: i + 1 })
+    ));
   };
 
   if (loading) return (

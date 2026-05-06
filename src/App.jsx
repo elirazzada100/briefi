@@ -34,7 +34,6 @@ import GrokBodyPicker from './pages/GrokBodyPicker';
 import GrokOpeningPicker from './pages/GrokOpeningPicker';
 import GrokCTAPicker from './pages/GrokCTAPicker';
 import VideoStylePicker from './pages/VideoStylePicker';
-import SpecialFocus from './pages/SpecialFocus';
 import Settings from './pages/Settings';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
@@ -85,7 +84,6 @@ const AuthenticatedApp = () => {
       <Route path="/new-project" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
       <Route path="/project/:projectId/creative-dna" element={<ProtectedRoute><CreativeDNA /></ProtectedRoute>} />
       <Route path="/project/:projectId/video-style" element={<ProtectedRoute><VideoStylePicker /></ProtectedRoute>} />
-      <Route path="/project/:projectId/special-focus" element={<ProtectedRoute><SpecialFocus /></ProtectedRoute>} />
       <Route path="/project/:projectId/grok-concepts" element={<ProtectedRoute><GrokConceptPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/grok-body" element={<ProtectedRoute><GrokBodyPicker /></ProtectedRoute>} />
       <Route path="/project/:projectId/grok-opening" element={<ProtectedRoute><GrokOpeningPicker /></ProtectedRoute>} />

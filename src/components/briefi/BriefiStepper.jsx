@@ -1,12 +1,12 @@
-const REGULAR_STEPS = ["סגנון", "פוקוס", "קונספט", "הוק", "סיטיאיי", "בריף"];
-const TRENDY_STEPS = ["סגנון", "פוקוס", "קונספט", "סיטיאיי", "בריף"];
+// Steps shown only from concept selection onward:
+// 1=קונספט, 2=פתיחה, 3=CTA, 4=סרטון
+const STEPS = ["קונספט", "פתיחה", "CTA", "סרטון"];
 
-export default function BriefiStepper({ currentStep, isTrendy = false }) {
-  const steps = isTrendy ? TRENDY_STEPS : REGULAR_STEPS;
-
+export default function BriefiStepper({ currentStep }) {
+  // currentStep: 1=קונספט, 2=פתיחה, 3=CTA, 4=סרטון
   return (
     <div className="flex items-center justify-center gap-0 w-full">
-      {steps.map((label, i) => {
+      {STEPS.map((label, i) => {
         const stepNum = i + 1;
         const isDone = stepNum < currentStep;
         const isActive = stepNum === currentStep;
@@ -25,16 +25,16 @@ export default function BriefiStepper({ currentStep, isTrendy = false }) {
                 {isDone ? "✓" : stepNum}
               </div>
               <span
-                className={`text-[9px] font-semibold leading-none whitespace-nowrap ${
+                className={`text-[9px] font-semibold leading-none ${
                   isActive ? "text-primary" : isDone ? "text-primary/60" : "text-muted-foreground"
                 }`}
               >
                 {label}
               </span>
             </div>
-            {i < steps.length - 1 && (
+            {i < STEPS.length - 1 && (
               <div
-                className={`h-px w-6 md:w-8 mx-1 mt-[-8px] transition-all ${
+                className={`h-px w-8 mx-1 mt-[-8px] transition-all ${
                   isDone ? "bg-primary/40" : "bg-border"
                 }`}
               />

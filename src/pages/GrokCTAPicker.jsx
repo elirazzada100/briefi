@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
@@ -24,17 +24,12 @@ export default function GrokCTAPicker() {
   const selectedVideoStyle = state?.selectedVideoStyle;
   const business = state?.business;
   const businessAnalysis = state?.businessAnalysis;
-  const specialFocusText = state?.specialFocusText || "";
-  const specialFocusEnabled = Boolean(state?.specialFocusEnabled && specialFocusText.trim());
 
   const [ctaOptions, setCtaOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generatingBrief, setGeneratingBrief] = useState(false);
   const [error, setError] = useState(null);
   const [selectingIdx, setSelectingIdx] = useState(null);
-  const stepNumber = selectedVideoStyle === "טרנדי" ? 4 : 5;
-  const initialLoadStartedRef = useRef(false);
-  const requestInFlightRef = useRef(false);
 
   // Guard
   useEffect(() => {
@@ -42,16 +37,10 @@ export default function GrokCTAPicker() {
       navigate(`/project/${projectId}/grok-concepts`);
       return;
     }
-    if (!initialLoadStartedRef.current) {
-      initialLoadStartedRef.current = true;
-      loadCTAOptions();
-    }
+    loadCTAOptions();
   }, []);
 
   const loadCTAOptions = async () => {
-    if (requestInFlightRef.current) return;
-
-    requestInFlightRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -60,10 +49,6 @@ export default function GrokCTAPicker() {
         business,
         selectedConcept,
         selectedOpening: selectedOpening || selectedBody,
-        selectedVideoStyle,
-        businessAnalysis,
-        specialFocusText,
-        specialFocusEnabled,
       });
 
       if (res.data?.error) {
@@ -76,13 +61,11 @@ export default function GrokCTAPicker() {
       console.error("Failed to load CTA options:", err);
       setError("משהו נתקע בדרך. נסו שוב בעוד רגע.");
     } finally {
-      requestInFlightRef.current = false;
       setLoading(false);
     }
   };
 
   const handleSelectCTA = async (ctaOption, idx) => {
-    if (generatingBrief) return;
     setSelectingIdx(idx);
     setGeneratingBrief(true);
     setError(null);
@@ -114,10 +97,6 @@ export default function GrokCTAPicker() {
           selectedOpening: selectedOpening || selectedBody,
           selectedCTA: ctaOption,
           selectedVideoStyle,
-          selectedBody,
-          businessAnalysis,
-          specialFocusText,
-          specialFocusEnabled,
         },
       });
     } catch (err) {
@@ -158,7 +137,7 @@ export default function GrokCTAPicker() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={stepNumber} isTrendy={selectedVideoStyle === "טרנדי"} />
+          <BriefiStepper currentStep={3} />
         </div>
       </div>
 

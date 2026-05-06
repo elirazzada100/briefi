@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Pencil, Check, X, Plus, RefreshCw } from "lucide-react";
@@ -79,7 +79,6 @@ export default function FinalBrief() {
   const selectedOpening = state?.selectedOpening || state?.selectedBody;
   const selectedCTA = state?.selectedCTA;
   const selectedVideoStyle = state?.selectedVideoStyle;
-  const stepNumber = selectedVideoStyle === "טרנדי" ? 5 : 6;
 
   const [brief, setBrief] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -90,15 +89,13 @@ export default function FinalBrief() {
   const [feedbackFreeText, setFeedbackFreeText] = useState("");
   const [feedbackSaved, setFeedbackSaved] = useState(false);
   const [improving, setImproving] = useState(false);
-  const initialLoadStartedRef = useRef(false);
 
   const { project, loading } = useProjectGuard(projectId);
 
   useEffect(() => {
     if (finalBriefFromState) {
       setBrief({ adapted_brief: finalBriefFromState, id: briefId });
-    } else if (briefId && !initialLoadStartedRef.current) {
-      initialLoadStartedRef.current = true;
+    } else if (briefId) {
       base44.functions.invoke("secureFinalBrief", {
         action: "getOwnedVideoBrief",
         project_id: projectId,
@@ -175,17 +172,20 @@ export default function FinalBrief() {
     }
     setSaving(false);
     setSaved(true);
-    setTimeout(() => setSaved(false), 100);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const handleSaveFeedback = async () => {
     if (!feedbackScore) return;
-    await base44.functions.invoke("secureVideoFeedback", {
-      action: "submitVideoFeedback",
+    const label = SMILEY_OPTIONS.find(s => s.score === feedbackScore)?.label || "";
+    await base44.entities.UserBriefFeedback.create({
       project_id: projectId,
       video_brief_id: briefId,
-      rating: feedbackScore,
-      comment: feedbackFreeText,
+      rating_label: label,
+      video_feedback_score: feedbackScore,
+      video_feedback_label: label,
+      free_text_negative: feedbackFreeText,
+      video_feedback_created_at: new Date().toISOString(),
     });
     setFeedbackSaved(true);
   };
@@ -193,12 +193,15 @@ export default function FinalBrief() {
   const handleImproveWithFeedback = async () => {
     if (!feedbackFreeText) return;
     setImproving(true);
-    await base44.functions.invoke("secureVideoFeedback", {
-      action: "submitVideoFeedback",
+    const label = SMILEY_OPTIONS.find(s => s.score === feedbackScore)?.label || "";
+    await base44.entities.UserBriefFeedback.create({
       project_id: projectId,
       video_brief_id: briefId,
-      rating: feedbackScore || 3,
-      comment: feedbackFreeText,
+      rating_label: label,
+      video_feedback_score: feedbackScore,
+      video_feedback_label: label,
+      free_text_negative: feedbackFreeText,
+      video_feedback_created_at: new Date().toISOString(),
     });
 
     const currentBrief = brief?.adapted_brief || brief?.final_brief || {};
@@ -277,7 +280,7 @@ export default function FinalBrief() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={stepNumber} isTrendy={selectedVideoStyle === "טרנדי"} />
+          <BriefiStepper currentStep={4} />
         </div>
       </div>
 
