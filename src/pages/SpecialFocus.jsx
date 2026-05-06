@@ -13,16 +13,26 @@ export default function SpecialFocus() {
   const businessAnalysis = state?.businessAnalysis;
   const selectedVideoStyle = state?.selectedVideoStyle;
 
+  const buildFocusState = (value) => {
+    const trimmed = value.trim();
+    return {
+      selectedVideoStyle,
+      business,
+      businessAnalysis,
+      specialFocusText: trimmed,
+      specialFocusEnabled: false,
+      ...(trimmed
+        ? {
+            specialFocusText: trimmed,
+            specialFocusEnabled: true,
+          }
+        : {}),
+    };
+  };
+
   const handleContinue = () => {
-    const trimmed = specialFocusText.trim();
     navigate(`/project/${projectId}/grok-concepts`, {
-      state: {
-        selectedVideoStyle,
-        business,
-        businessAnalysis,
-        specialFocusText: trimmed,
-        specialFocusEnabled: Boolean(trimmed),
-      },
+      state: buildFocusState(specialFocusText),
     });
   };
 
@@ -69,15 +79,8 @@ export default function SpecialFocus() {
           </button>
           <button
             onClick={() => {
-              setSpecialFocusText("");
               navigate(`/project/${projectId}/grok-concepts`, {
-                state: {
-                  selectedVideoStyle,
-                  business,
-                  businessAnalysis,
-                  specialFocusText: "",
-                  specialFocusEnabled: false,
-                },
+                state: buildFocusState(""),
               });
             }}
             className="briefi-btn-secondary w-full"

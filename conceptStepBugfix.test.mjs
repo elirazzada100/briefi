@@ -15,10 +15,11 @@ test("focus to concept preserves selected style and handles empty or non-empty f
 
   assert.ok(focusSource.includes("selectedVideoStyle,"));
   assert.ok(focusSource.includes("businessAnalysis,"));
+  assert.ok(focusSource.includes("const buildFocusState = (value) => {"));
   assert.ok(focusSource.includes("specialFocusText: trimmed"));
-  assert.ok(focusSource.includes("specialFocusEnabled: Boolean(trimmed)"));
-  assert.ok(focusSource.includes("specialFocusText: \"\""));
   assert.ok(focusSource.includes("specialFocusEnabled: false"));
+  assert.ok(focusSource.includes("specialFocusEnabled: true"));
+  assert.ok(focusSource.includes("state: buildFocusState(\"\")"));
 
   assert.ok(conceptSource.includes('const specialFocusText = state?.specialFocusText || "";'));
   assert.ok(conceptSource.includes("const specialFocusEnabled = Boolean(state?.specialFocusEnabled && specialFocusText.trim());"));
@@ -37,7 +38,7 @@ test("concept retrieval no longer uses the extra classify fetch hop and keeps ba
   assert.ok(source.includes('if (videoStyle === "טרנדי") {'));
 });
 
-test("creation-flow UI files do not keep artificial delays above 500ms", () => {
+test("creation-flow UI files do not keep artificial delays above 250ms", () => {
   const files = [
     "src/pages/VideoStylePicker.jsx",
     "src/pages/SpecialFocus.jsx",
@@ -51,7 +52,7 @@ test("creation-flow UI files do not keep artificial delays above 500ms", () => {
     const source = read(file);
     const matches = [...source.matchAll(/setTimeout\s*\([^,]+,\s*(\d+)\s*\)/g)];
     for (const match of matches) {
-      assert.ok(Number(match[1]) <= 500, `${file} has artificial delay above 500ms: ${match[1]}`);
+      assert.ok(Number(match[1]) <= 250, `${file} has artificial delay above 250ms: ${match[1]}`);
     }
   }
 });
