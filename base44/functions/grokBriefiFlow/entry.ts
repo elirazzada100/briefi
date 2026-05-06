@@ -620,16 +620,10 @@ Do NOT explain the concept. Do NOT use generic phrases. Sound like a real Israel
 
       const opening = selectedOpening || selectedBody;
 
-      const userPrompt = `Business:
-Name: ${business.business_name}
-Description: ${business.business_description}
-Goal: ${business.main_goal}
-
-Selected concept:
-${JSON.stringify(selectedConcept, null, 2)}
-
-Selected opening line:
-${opening ? JSON.stringify(opening, null, 2) : "(not provided)"}
+      const userPrompt = `Business: ${business.business_name}. ${business.business_description}. Goal: ${business.main_goal}.
+Concept: ${selectedConcept.concept_title || ""} — ${selectedConcept.short_description || selectedConcept.core_situation || ""}
+Video style: ${selectedVideoStyle || ""}
+Opening line: "${opening?.opening_line || opening?.filled_opening_line || ""}"
 
 Generate 4 CTA options that are natural, specific to this video, and feel Israeli.
 Match the tone of the concept and opening line.`;
@@ -683,7 +677,11 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
       // Save VideoBrief to DB
       let savedBrief = null;
       if (project_id) {
-        const existingBriefs = await base44.asServiceRole.entities.VideoBrief.filter({ project_id });
+        // Get current count from Project (single doc read) instead of listing all briefs
+        const projectData = await base44.asServiceRole.entities.Project.filter({ id: project_id });
+        const currentCount = projectData[0]?.completed_briefs_count || 0;
+        const nextNumber = currentCount + 1;
+
         savedBrief = await base44.asServiceRole.entities.VideoBrief.create({
           project_id,
           category: selectedVideoStyle || "",
@@ -702,12 +700,12 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
           script_format: parsed.script_format || "person_to_camera",
           adapted_brief: parsed,
           status: "draft",
-          video_number: (existingBriefs.length || 0) + 1,
-          video_order: (existingBriefs.length || 0) + 1,
+          video_number: nextNumber,
+          video_order: nextNumber,
         });
 
         await base44.asServiceRole.entities.Project.update(project_id, {
-          completed_briefs_count: (existingBriefs.length || 0) + 1,
+          completed_briefs_count: nextNumber,
           status: "in_progress",
         });
       }
