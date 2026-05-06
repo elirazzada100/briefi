@@ -56,25 +56,6 @@ function parseJSON(raw) {
   return JSON.parse(cleaned);
 }
 
-async function requireOwnedProject(base44, userId, projectId) {
-  if (!projectId) {
-    return { error: "project_id is required", status: 400 };
-  }
-
-  const projects = await base44.asServiceRole.entities.Project.filter({ id: projectId });
-  const project = projects[0];
-
-  if (!project) {
-    return { error: "Project not found", status: 404 };
-  }
-
-  if (!project.owner_id || project.owner_id !== userId) {
-    return { error: "Forbidden", status: 403 };
-  }
-
-  return { project };
-}
-
 // ── Call Grok with retry (Grok-only, no OpenAI fallback) ───────────────────────
 async function callWithFallback(systemPrompt, userPrompt, temperature = 0.7) {
   let lastErr;
@@ -205,10 +186,6 @@ Deno.serve(async (req) => {
     // ── generateCreativeDNA ─────────────────────────────────────────────────────
     if (action === "generateCreativeDNA") {
       const { project_id: pid, client_name, main_goal, raw_notes } = body;
-      const ownedProjectResult = await requireOwnedProject(base44, user.id, pid);
-      if (ownedProjectResult.error) {
-        return Response.json({ error: ownedProjectResult.error }, { status: ownedProjectResult.status });
-      }
 
       const DNA_SYSTEM = `You are Briefi Business Analyst for Israeli social media.
 Analyze the business and produce a creative content strategy.
@@ -229,10 +206,12 @@ Analyze this business. Fill all 5 cards with specific, actionable insights. Prov
       const { parsed: dna } = await callWithFallback(DNA_SYSTEM, dnaUser, 0.7);
 
       // Save to project
-      await base44.asServiceRole.entities.Project.update(ownedProjectResult.project.id, {
-        creative_dna: dna,
-        status: "in_progress",
-      });
+      if (pid) {
+        await base44.asServiceRole.entities.Project.update(pid, {
+          creative_dna: dna,
+          status: "in_progress",
+        });
+      }
 
       return Response.json({ creative_dna: dna, provider: "grok" });
     }
@@ -674,11 +653,6 @@ Match the tone of the concept and opening line.`;
       if (!business || !selectedConcept || !selectedCTA) {
         return Response.json({ error: "business, selectedConcept, selectedCTA required" }, { status: 400 });
       }
-      const ownedProjectResult = await requireOwnedProject(base44, user.id, project_id);
-      if (ownedProjectResult.error) {
-        return Response.json({ error: ownedProjectResult.error }, { status: ownedProjectResult.status });
-      }
-      const ownedProject = ownedProjectResult.project;
 
       const opening = selectedOpening || selectedBody;
       // Support both new schema (opening_line) and old schema (filled_opening_line)
@@ -714,33 +688,35 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
 
       // Save VideoBrief to DB
       let savedBrief = null;
-      const existingBriefs = await base44.asServiceRole.entities.VideoBrief.filter({ project_id: ownedProject.id });
-      savedBrief = await base44.asServiceRole.entities.VideoBrief.create({
-        project_id: ownedProject.id,
-        category: selectedVideoStyle || "",
-        video_style: selectedVideoStyle || "",
-        brief_title: parsed.brief_title,
-        video_concept: parsed.video_concept,
-        hook: parsed.hook,
-        script_text: parsed.script_text,
-        shot_structure: parsed.shot_structure || [],
-        cta: parsed.cta,
-        caption_suggestion: parsed.caption_suggestion || parsed.video_description || "",
-        production_notes: parsed.production_notes || "",
-        visual_must_haves: parsed.visual_must_haves || [],
-        risk_notes: parsed.why_it_works || "",
-        idea_tags: selectedConcept.idea_tags || selectedConcept.tone_tags || [],
-        script_format: parsed.script_format || "person_to_camera",
-        adapted_brief: parsed,
-        status: "draft",
-        video_number: (existingBriefs.length || 0) + 1,
-        video_order: (existingBriefs.length || 0) + 1,
-      });
+      if (project_id) {
+        const existingBriefs = await base44.asServiceRole.entities.VideoBrief.filter({ project_id });
+        savedBrief = await base44.asServiceRole.entities.VideoBrief.create({
+          project_id,
+          category: selectedVideoStyle || "",
+          video_style: selectedVideoStyle || "",
+          brief_title: parsed.brief_title,
+          video_concept: parsed.video_concept,
+          hook: parsed.hook,
+          script_text: parsed.script_text,
+          shot_structure: parsed.shot_structure || [],
+          cta: parsed.cta,
+          caption_suggestion: parsed.caption_suggestion || parsed.video_description || "",
+          production_notes: parsed.production_notes || "",
+          visual_must_haves: parsed.visual_must_haves || [],
+          risk_notes: parsed.why_it_works || "",
+          idea_tags: selectedConcept.idea_tags || selectedConcept.tone_tags || [],
+          script_format: parsed.script_format || "person_to_camera",
+          adapted_brief: parsed,
+          status: "draft",
+          video_number: (existingBriefs.length || 0) + 1,
+          video_order: (existingBriefs.length || 0) + 1,
+        });
 
-      await base44.asServiceRole.entities.Project.update(ownedProject.id, {
-        completed_briefs_count: (existingBriefs.length || 0) + 1,
-        status: "in_progress",
-      });
+        await base44.asServiceRole.entities.Project.update(project_id, {
+          completed_briefs_count: (existingBriefs.length || 0) + 1,
+          status: "in_progress",
+        });
+      }
 
       return Response.json({
         final_brief: parsed,
@@ -754,10 +730,6 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
       const { original_brief, feedback_text, client_name: cname, main_goal: cgoal } = body;
       if (!original_brief || !feedback_text) {
         return Response.json({ error: "original_brief and feedback_text required" }, { status: 400 });
-      }
-      const ownedProjectResult = await requireOwnedProject(base44, user.id, project_id);
-      if (ownedProjectResult.error) {
-        return Response.json({ error: ownedProjectResult.error }, { status: ownedProjectResult.status });
       }
 
       const IMPROVE_SYSTEM = `You are Briefi Brief Improver. You receive an existing video brief and user feedback.
