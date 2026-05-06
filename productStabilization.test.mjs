@@ -38,6 +38,6 @@ test("loading components use centered narrow text", () => {
 
   [sharedLoader, sharedLoading, briefiLoading].forEach((source) => {
     assert.match(source, /text-center/);
-    assert.match(source, /max-w-\[220px\]/);
+    assert.match(source, /max-w-\[260px\]/);
   });
 });
