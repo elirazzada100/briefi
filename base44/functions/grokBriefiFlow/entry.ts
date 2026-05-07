@@ -741,17 +741,22 @@ Match the tone of the concept and opening line.`;
       });
     }
 
-    // ── assembleFinalBrief ──────────────────────────────────────────────────────
+    // ── assembleFinalBrief (OpenAI) ─────────────────────────────────────────────
     if (action === "assembleFinalBrief") {
       if (!business || !selectedConcept || !selectedCTA) {
         return Response.json({ error: "business, selectedConcept, selectedCTA required" }, { status: 400 });
       }
+      if (!OPENAI_API_KEY) {
+        return Response.json({ error: "OPENAI_API_KEY is not set — finalBrief unavailable", message: "שגיאת הגדרה. פנו לתמיכה." }, { status: 500 });
+      }
 
       const opening = selectedOpening || selectedBody;
       const openingLineText = opening?.opening_line || opening?.filled_opening_line || "";
-
       const isLimdi = (selectedVideoStyle || "") === "לימודי";
-      const finalBriefSystemPrompt = isLimdi ? FINAL_BRIEF_LIMDI_SYSTEM : FINAL_BRIEF_SYSTEM;
+
+      const finalBriefSystemPrompt = isLimdi
+        ? FINAL_BRIEF_LIMDI_SYSTEM
+        : FINAL_BRIEF_SYSTEM;
 
       const userPrompt = `Business: ${business.business_name}. ${business.business_description}. Goal: ${business.main_goal}.
 Style: ${selectedVideoStyle || ""}
@@ -761,8 +766,40 @@ CTA: "${selectedCTA.cta_text || selectedCTA}"
 
 Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. script max 80 words.`;
 
-      const { parsed, provider } = await callWithFallback(finalBriefSystemPrompt, userPrompt, 0.6);
+      const t0 = Date.now();
+      const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: OPENAI_CONCEPT_MODEL,
+          messages: [
+            { role: "system", content: finalBriefSystemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.6,
+          response_format: { type: "json_object" },
+        }),
+      });
 
+      if (!apiRes.ok) {
+        const errText = await apiRes.text();
+        return Response.json({ error: `OpenAI error: ${apiRes.status}`, message: "הבנייה נכשלה. נסו שוב.", details: errText }, { status: 502 });
+      }
+
+      const aiData = await apiRes.json();
+      const rawContent = aiData?.choices?.[0]?.message?.content;
+      if (!rawContent) {
+        return Response.json({ error: "Empty response from OpenAI", message: "משהו השתבש בבנייה. נסו שוב." }, { status: 502 });
+      }
+
+      const parsed = parseJSON(rawContent);
+      const totalMs = Date.now() - t0;
+      console.log(`[assembleFinalBrief] openai total=${totalMs}ms`);
+
+      // Ensure caption_suggestion is populated
       if (parsed.video_description && !parsed.caption_suggestion) {
         parsed.caption_suggestion = parsed.video_description;
       }
@@ -771,7 +808,7 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
       const missing = required.filter(f => !parsed[f]);
       if (missing.length > 0) {
         return Response.json({
-          error: `Incomplete brief from AI — missing: ${missing.join(", ")}. Please try again.`,
+          error: `Incomplete brief from AI — missing: ${missing.join(", ")}. נסו שוב.`,
           partial: parsed,
         }, { status: 422 });
       }
@@ -810,7 +847,8 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
       return Response.json({
         final_brief: parsed,
         brief_id: savedBrief?.id || null,
-        provider_log: { provider_used: provider, step_name: "final_brief", success: true },
+        provider_log: { provider_used: "openai", step_name: "final_brief", success: true },
+        _debug: { total_ms: totalMs },
       });
     }
 
