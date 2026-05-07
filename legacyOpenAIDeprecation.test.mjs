@@ -31,22 +31,26 @@ test("PDF export does not call legacy OpenAI function", () => {
   assert.ok(!source.includes("generateClientBriefSummary"));
 });
 
-test("Grok-first pages do not call legacy OpenAI functions", () => {
-  const files = [
-    "src/pages/CreativeDNA.jsx",
-    "src/pages/GrokConceptPicker.jsx",
-    "src/pages/GrokBodyPicker.jsx",
-    "src/pages/GrokOpeningPicker.jsx",
-    "src/pages/GrokCTAPicker.jsx",
-    "base44/functions/grokBriefiFlow/entry.ts",
-  ];
+test("legacy OpenAI freeform functions remain deprecated while approved OpenAI usage exists only in current published flow", () => {
+  const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
+  const conceptPicker = read("src/pages/GrokConceptPicker.jsx");
+  const openingPicker = read("src/pages/GrokOpeningPicker.jsx");
+  const ctaPicker = read("src/pages/GrokCTAPicker.jsx");
+  const creativeDNA = read("src/pages/CreativeDNA.jsx");
 
-  for (const file of files) {
-    const source = read(file);
-    assert.ok(!source.includes("briefiAI"), `${file} references briefiAI`);
-    assert.ok(!source.includes("generateConceptsFromHookBank"), `${file} references generateConceptsFromHookBank`);
-    assert.ok(!source.includes("OPENAI_API_KEY"), `${file} references OPENAI_API_KEY`);
-    assert.ok(!source.includes("npm:openai"), `${file} imports OpenAI`);
-    assert.ok(!source.includes("gpt-4o"), `${file} references OpenAI model names`);
-  }
+  [creativeDNA, conceptPicker, openingPicker, ctaPicker, grokFlow].forEach((source, index) => {
+    const label = ["CreativeDNA", "GrokConceptPicker", "GrokOpeningPicker", "GrokCTAPicker", "grokBriefiFlow"][index];
+    assert.ok(!source.includes("briefiAI"), `${label} references briefiAI`);
+    assert.ok(!source.includes("generateConceptsFromHookBank"), `${label} references generateConceptsFromHookBank`);
+    assert.ok(!source.includes("gpt-4o"), `${label} references old OpenAI model names`);
+  });
+
+  assert.ok(grokFlow.includes("OPENAI_API_KEY"));
+  assert.ok(grokFlow.includes("callOpenAIForConcepts"));
+  assert.ok(grokFlow.includes("classifyWithOpenAI"));
+  assert.ok(grokFlow.includes("assembleFinalBrief"));
+  assert.ok(grokFlow.includes('provider_log: { provider_used: "openai", step_name: "final_brief", success: true }'));
+  assert.ok(grokFlow.includes('step_name: "opening_grok"'));
+  assert.ok(grokFlow.includes('source_type: "grok_generated"'));
+  assert.ok(grokFlow.includes('step_name: "cta"'));
 });

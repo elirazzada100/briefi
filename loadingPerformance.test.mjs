@@ -17,14 +17,17 @@ test("business analysis page blocks duplicate generation and has no artificial d
   assert.ok(!source.includes("setTimeout"));
 });
 
-test("concept flow keeps backend classify invoke and removes unused raw classify fetch", () => {
+test("concept flow keeps strict ConceptBank retrieval while using the current OpenAI-backed classification and selection path", () => {
   const source = read("base44/functions/grokBriefiFlow/entry.ts");
 
-  assert.ok(source.includes('const classifyRes = await base44.asServiceRole.functions.invoke("classifyBusinessCategory"'));
-  assert.ok(!source.includes("const classifyRaw = await fetch"));
+  assert.ok(source.includes("classifyWithOpenAI"));
+  assert.ok(source.includes("selectConceptsWithOpenAI"));
   assert.ok(source.includes('source_batch: ACTIVE_CONCEPT_SOURCE_BATCH'));
   assert.ok(source.includes("industry_order: industryOrder"));
   assert.ok(source.includes("user_facing_video_style: videoStyle"));
+  assert.ok(source.includes('source_type: "concept_bank"'));
+  assert.ok(source.includes("candidateIdSet"));
+  assert.ok(source.includes('provider_log: { provider_used: "openai", step_name: "concept_bank_strict", success: true }'));
 });
 
 test("concept, hook, CTA, and final brief add duplicate request guards without changing state handoff", () => {

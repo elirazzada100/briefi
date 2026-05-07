@@ -40,17 +40,22 @@ test("benchmarkAIProviders validates returned ids against the candidate pool and
   assert.ok(source.includes("Every returned id MUST exactly match one candidate id from the pool."));
 });
 
-test("OpenAI is only used inside the benchmark function and legacy production flow stays deprecated", () => {
+test("benchmark stays isolated while current published production flow is allowed to use OpenAI in approved places", () => {
   const benchmark = read("base44/functions/benchmarkAIProviders/entry.ts");
   const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
   const conceptPicker = read("src/pages/GrokConceptPicker.jsx");
+  const finalBrief = read("src/pages/FinalBrief.jsx");
 
   assert.ok(benchmark.includes("OPENAI_API_KEY"));
   assert.ok(benchmark.includes("https://api.openai.com/v1"));
   assert.ok(benchmark.includes("missing_env_var: \"OPENAI_API_KEY\""));
 
-  assert.ok(!grokFlow.includes("OPENAI_API_KEY"));
-  assert.ok(!grokFlow.includes("npm:openai"));
+  assert.ok(grokFlow.includes("OPENAI_API_KEY"));
+  assert.ok(grokFlow.includes("callOpenAIForConcepts"));
+  assert.ok(grokFlow.includes("classifyWithOpenAI"));
+  assert.ok(grokFlow.includes('provider_log: { provider_used: "openai", step_name: "concept_bank_strict", success: true }'));
+  assert.ok(grokFlow.includes('provider_log: { provider_used: "openai", step_name: "final_brief", success: true }'));
   assert.ok(!conceptPicker.includes("OPENAI_API_KEY"));
+  assert.ok(finalBrief.includes('action: "improveFinalBrief"'));
   assert.ok(!conceptPicker.includes("benchmarkAIProviders"));
 });

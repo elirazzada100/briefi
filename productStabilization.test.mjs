@@ -41,3 +41,18 @@ test("loading components use centered narrow text", () => {
     assert.match(source, /max-w-\[260px\]/);
   });
 });
+
+test("published flow safety boundaries remain intact", () => {
+  const app = read("./src/App.jsx");
+  const dashboard = read("./src/pages/Dashboard.jsx");
+  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.match(app, /project\/:projectId\/grok-concepts/);
+  assert.match(app, /project\/:projectId\/grok-opening/);
+  assert.match(app, /project\/:projectId\/grok-cta/);
+  assert.doesNotMatch(app, /ClientDetail/);
+  assert.match(dashboard, /Project\.filter/);
+  assert.match(grokFlow, /1000_Concepts_Briefi_10_display_clean/);
+  assert.doesNotMatch(grokFlow, /1000_UGC_Briefi_10_display_clean/);
+  assert.doesNotMatch(grokFlow, /briefi_ugc_conceptbank/);
+});
