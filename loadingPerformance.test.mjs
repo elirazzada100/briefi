@@ -57,6 +57,20 @@ test("FinalBrief post-save timer is at most 100ms", () => {
   assert.ok(!source.includes("setTimeout(() => setSaved(false), 2000)"));
 });
 
+test("FinalBrief uses OpenAI assembly plus bounded Grok polish fallback", () => {
+  const source = read("base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.ok(source.includes("FINAL_BRIEF_POLISH_SYSTEM"));
+  assert.ok(source.includes("callWithFallbackTimeout"));
+  assert.ok(source.includes("const polishTimeoutMs = 12000"));
+  assert.ok(source.includes("openai_assemble_used: true"));
+  assert.ok(source.includes("grok_polish_attempted"));
+  assert.ok(source.includes("grok_polish_applied"));
+  assert.ok(source.includes("grok_polish_failed_reason"));
+  assert.ok(source.includes("finalBrief = parsed"));
+  assert.ok(source.includes("final_brief: finalBrief"));
+});
+
 test("loading components rotate at 3 seconds and keep text narrow/centered", () => {
   const sharedLoader = read("src/components/shared/BriefiLoader.jsx");
   const sharedState = read("src/components/shared/LoadingState.jsx");

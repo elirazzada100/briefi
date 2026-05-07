@@ -54,7 +54,10 @@ test("benchmark stays isolated while current published production flow is allowe
   assert.ok(grokFlow.includes("callOpenAIForConcepts"));
   assert.ok(grokFlow.includes("classifyWithOpenAI"));
   assert.ok(grokFlow.includes('provider_log: { provider_used: "openai", step_name: "concept_bank_strict", success: true }'));
-  assert.ok(grokFlow.includes('provider_log: { provider_used: "openai", step_name: "final_brief", success: true }'));
+  assert.ok(grokFlow.includes('provider_used: "openai"'));
+  assert.ok(grokFlow.includes('step_name: "final_brief"'));
+  assert.ok(grokFlow.includes("openai_assemble_used: true"));
+  assert.ok(grokFlow.includes("grok_polish_applied"));
   assert.ok(!conceptPicker.includes("OPENAI_API_KEY"));
   assert.ok(finalBrief.includes('action: "improveFinalBrief"'));
   assert.ok(!conceptPicker.includes("benchmarkAIProviders"));

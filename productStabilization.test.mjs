@@ -56,3 +56,29 @@ test("published flow safety boundaries remain intact", () => {
   assert.doesNotMatch(grokFlow, /1000_UGC_Briefi_10_display_clean/);
   assert.doesNotMatch(grokFlow, /briefi_ugc_conceptbank/);
 });
+
+test("hybrid final brief preserves exported field structure while adding provider polish metadata", () => {
+  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
+  const pdfExport = read("./src/pages/PDFExport.jsx");
+
+  assert.match(grokFlow, /"brief_title"/);
+  assert.match(grokFlow, /"video_concept"/);
+  assert.match(grokFlow, /"hook"/);
+  assert.match(grokFlow, /"script_format"/);
+  assert.match(grokFlow, /"script_text"/);
+  assert.match(grokFlow, /"shot_structure"/);
+  assert.match(grokFlow, /"text_overlays"/);
+  assert.match(grokFlow, /"cta"/);
+  assert.match(grokFlow, /"video_description"/);
+  assert.match(grokFlow, /"caption_suggestion"/);
+  assert.match(grokFlow, /"visual_must_haves"/);
+  assert.match(grokFlow, /"production_notes"/);
+  assert.match(grokFlow, /"why_it_works"/);
+  assert.match(grokFlow, /openai_assemble_used: true/);
+  assert.match(grokFlow, /grok_polish_attempted/);
+  assert.match(grokFlow, /grok_polish_applied/);
+  assert.match(grokFlow, /grok_polish_failed_reason/);
+
+  assert.match(pdfExport, /adapted_brief \|\| brief\.final_brief/);
+  assert.match(pdfExport, /caption_suggestion \|\| fb\.video_description/);
+});

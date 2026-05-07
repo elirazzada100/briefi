@@ -49,7 +49,9 @@ test("legacy OpenAI freeform functions remain deprecated while approved OpenAI u
   assert.ok(grokFlow.includes("callOpenAIForConcepts"));
   assert.ok(grokFlow.includes("classifyWithOpenAI"));
   assert.ok(grokFlow.includes("assembleFinalBrief"));
-  assert.ok(grokFlow.includes('provider_log: { provider_used: "openai", step_name: "final_brief", success: true }'));
+  assert.ok(grokFlow.includes('provider_used: "openai"'));
+  assert.ok(grokFlow.includes('step_name: "final_brief"'));
+  assert.ok(grokFlow.includes("openai_assemble_used: true"));
   assert.ok(grokFlow.includes('step_name: "opening_grok"'));
   assert.ok(grokFlow.includes('source_type: "grok_generated"'));
   assert.ok(grokFlow.includes('step_name: "cta"'));

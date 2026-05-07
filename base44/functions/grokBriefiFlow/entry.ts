@@ -75,6 +75,15 @@ async function callWithFallback(systemPrompt, userPrompt, temperature = 0.7) {
   throw lastErr;
 }
 
+async function callWithFallbackTimeout(systemPrompt, userPrompt, temperature = 0.7, timeoutMs = 12000) {
+  return await Promise.race([
+    callWithFallback(systemPrompt, userPrompt, temperature),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`GROK_TIMEOUT_${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
+
 // ── OpenAI caller (concept step only: classification + selection) ─────────────
 async function callOpenAIForConcepts(systemPrompt, userPrompt, temperature = 0.7) {
   if (!OPENAI_API_KEY) {
@@ -251,6 +260,84 @@ ${FORBIDDEN_PHRASES}
 Return ONLY valid JSON. No markdown.
 
 {"brief_title":"","video_concept":"","hook":"opening line verbatim","script_format":"person_to_camera|voiceover|dialogue|text_only","script_text":"","shot_structure":[{"step":1,"visual":"","spoken_or_overlay_text":""}],"text_overlays":[],"cta":"","video_description":"","visual_must_haves":[],"production_notes":"","why_it_works":""}`;
+
+const FINAL_BRIEF_POLISH_SYSTEM = `You are Briefi Final Brief Copy Polisher for Israeli social media managers.
+
+You receive only a few text fields from a final brief that already works structurally.
+Your job is to polish wording only.
+
+Rules:
+- Write natural, sharp, practical Israeli Hebrew.
+- Make the copy feel more human and social-first.
+- Less generic. Less corporate. Less American-marketing.
+- Keep it concise and shootable.
+- Do NOT invent a new concept.
+- Do NOT change the hook meaning.
+- Do NOT change the CTA meaning.
+- Do NOT change structure.
+- Do NOT make the text longer than the original.
+- Return ONLY the same fields you received.
+
+${FORBIDDEN_PHRASES}
+
+Return ONLY valid JSON. No markdown.
+
+{"script_text":"","video_description":"","caption_suggestion":"","production_notes":"","why_it_works":""}`;
+
+function buildFinalBriefPolishPayload(brief) {
+  return {
+    script_text: brief?.script_text || "",
+    video_description: brief?.video_description || "",
+    caption_suggestion: brief?.caption_suggestion || "",
+    production_notes: brief?.production_notes || "",
+    why_it_works: brief?.why_it_works || "",
+  };
+}
+
+function validatePolishedBriefFields(originalFields, polishedFields) {
+  const allowedKeys = ["script_text", "video_description", "caption_suggestion", "production_notes", "why_it_works"];
+  const originalKeys = Object.keys(originalFields);
+  const polishedKeys = Object.keys(polishedFields || {});
+
+  if (originalKeys.length !== allowedKeys.length) {
+    return { valid: false, reason: "ORIGINAL_POLISH_FIELDS_INVALID" };
+  }
+
+  if (polishedKeys.length !== allowedKeys.length || !allowedKeys.every(key => polishedKeys.includes(key))) {
+    return { valid: false, reason: "POLISH_FIELDS_SHAPE_INVALID" };
+  }
+
+  for (const key of allowedKeys) {
+    const originalValue = String(originalFields[key] || "").trim();
+    const polishedValue = polishedFields[key];
+
+    if (typeof polishedValue !== "string") {
+      return { valid: false, reason: `POLISH_FIELD_NOT_STRING:${key}` };
+    }
+
+    const trimmedPolished = polishedValue.trim();
+    if (originalValue && !trimmedPolished) {
+      return { valid: false, reason: `POLISH_FIELD_EMPTY:${key}` };
+    }
+
+    if (trimmedPolished.length > originalValue.length && originalValue.length > 0) {
+      return { valid: false, reason: `POLISH_FIELD_LONGER:${key}` };
+    }
+  }
+
+  return { valid: true, reason: null };
+}
+
+function mergePolishedFinalBrief(openAIBrief, polishedFields) {
+  return {
+    ...openAIBrief,
+    script_text: polishedFields.script_text.trim(),
+    video_description: polishedFields.video_description.trim(),
+    caption_suggestion: polishedFields.caption_suggestion.trim(),
+    production_notes: polishedFields.production_notes.trim(),
+    why_it_works: polishedFields.why_it_works.trim(),
+  };
+}
 
 Deno.serve(async (req) => {
   try {
@@ -796,8 +883,8 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
       }
 
       const parsed = parseJSON(rawContent);
-      const totalMs = Date.now() - t0;
-      console.log(`[assembleFinalBrief] openai total=${totalMs}ms`);
+      const openAiMs = Date.now() - t0;
+      console.log(`[assembleFinalBrief] openai total=${openAiMs}ms`);
 
       // Ensure caption_suggestion is populated
       if (parsed.video_description && !parsed.caption_suggestion) {
@@ -813,6 +900,54 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
         }, { status: 422 });
       }
 
+      const polishTimeoutMs = 12000;
+      let finalBrief = parsed;
+      const polishProviderLog = {
+        openai_assemble_used: true,
+        grok_polish_attempted: false,
+        grok_polish_applied: false,
+        grok_polish_failed_reason: null,
+      };
+
+      const polishPayload = buildFinalBriefPolishPayload(parsed);
+      const hasPolishableContent = Object.values(polishPayload).some(value => String(value || "").trim().length > 0);
+
+      if (hasPolishableContent) {
+        polishProviderLog.grok_polish_attempted = true;
+        const polishUserPrompt = `Business: ${business.business_name}. ${business.business_description}. Goal: ${business.main_goal}.
+Style: ${selectedVideoStyle || ""}
+Concept title: ${selectedConcept.concept_title || ""}
+Concept description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
+Hook (meaning must stay the same): "${parsed.hook || openingLineText}"
+CTA (meaning must stay the same): "${parsed.cta || selectedCTA.cta_text || selectedCTA}"
+
+Polish only these fields and return the same JSON keys:
+${JSON.stringify(polishPayload, null, 2)}`;
+
+        try {
+          const polishStart = Date.now();
+          const { parsed: polishedFields } = await callWithFallbackTimeout(
+            FINAL_BRIEF_POLISH_SYSTEM,
+            polishUserPrompt,
+            0.45,
+            polishTimeoutMs
+          );
+          const polishMs = Date.now() - polishStart;
+          const polishValidation = validatePolishedBriefFields(polishPayload, polishedFields);
+
+          if (!polishValidation.valid) {
+            polishProviderLog.grok_polish_failed_reason = polishValidation.reason;
+          } else {
+            finalBrief = mergePolishedFinalBrief(parsed, polishedFields);
+            polishProviderLog.grok_polish_applied = true;
+            console.log(`[assembleFinalBrief] grok polish total=${polishMs}ms`);
+          }
+        } catch (err) {
+          polishProviderLog.grok_polish_failed_reason = err.message;
+          console.error("[assembleFinalBrief] grok polish failed:", err.message);
+        }
+      }
+
       let savedBrief = null;
       if (project_id) {
         const existingBriefs = await base44.asServiceRole.entities.VideoBrief.filter({ project_id });
@@ -820,19 +955,19 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
           project_id,
           category: selectedVideoStyle || "",
           video_style: selectedVideoStyle || "",
-          brief_title: parsed.brief_title,
-          video_concept: parsed.video_concept,
-          hook: parsed.hook,
-          script_text: parsed.script_text,
-          shot_structure: parsed.shot_structure || [],
-          cta: parsed.cta,
-          caption_suggestion: parsed.caption_suggestion || parsed.video_description || "",
-          production_notes: parsed.production_notes || "",
-          visual_must_haves: parsed.visual_must_haves || [],
-          risk_notes: parsed.why_it_works || "",
+          brief_title: finalBrief.brief_title,
+          video_concept: finalBrief.video_concept,
+          hook: finalBrief.hook,
+          script_text: finalBrief.script_text,
+          shot_structure: finalBrief.shot_structure || [],
+          cta: finalBrief.cta,
+          caption_suggestion: finalBrief.caption_suggestion || finalBrief.video_description || "",
+          production_notes: finalBrief.production_notes || "",
+          visual_must_haves: finalBrief.visual_must_haves || [],
+          risk_notes: finalBrief.why_it_works || "",
           idea_tags: selectedConcept.idea_tags || selectedConcept.tone_tags || [],
-          script_format: parsed.script_format || "person_to_camera",
-          adapted_brief: parsed,
+          script_format: finalBrief.script_format || "person_to_camera",
+          adapted_brief: finalBrief,
           status: "draft",
           video_number: (existingBriefs.length || 0) + 1,
           video_order: (existingBriefs.length || 0) + 1,
@@ -844,11 +979,18 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
         });
       }
 
+      const totalMs = Date.now() - t0;
+
       return Response.json({
-        final_brief: parsed,
+        final_brief: finalBrief,
         brief_id: savedBrief?.id || null,
-        provider_log: { provider_used: "openai", step_name: "final_brief", success: true },
-        _debug: { total_ms: totalMs },
+        provider_log: {
+          provider_used: "openai",
+          step_name: "final_brief",
+          success: true,
+          ...polishProviderLog,
+        },
+        _debug: { total_ms: totalMs, openai_assemble_ms: openAiMs, grok_polish_timeout_ms: polishTimeoutMs },
       });
     }
 
