@@ -54,3 +54,12 @@ test("concept screen remains reachable with preserved special focus state", () =
   assert.ok(ctaPicker.includes("const specialFocus = state?.specialFocus;"));
   assert.ok(ctaPicker.includes("...(state || {})"));
 });
+
+test("special focus is passed into concept selection context only when non-empty", () => {
+  const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.ok(grokFlow.includes("const { action, project_id, business, selectedConcept, selectedOpening, selectedBody, selectedCTA, selectedVideoStyle, businessAnalysis, specialFocus } = body;"));
+  assert.ok(grokFlow.includes("const normalizedSpecialFocusText = specialFocus?.enabled && String(specialFocus?.text || \"\").trim()"));
+  assert.ok(grokFlow.includes("Special focus: ${normalizedSpecialFocusText}"));
+  assert.ok(grokFlow.includes("אם יש פוקוס מיוחד, התחשב בו בבחירת הקונספטים ובהסבר ההתאמה, אבל אל תמציא קונספטים מחוץ לבנק."));
+});

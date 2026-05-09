@@ -348,7 +348,7 @@ Deno.serve(async (req) => {
     if (!XAI_API_KEY) return Response.json({ error: "XAI_API_KEY is not set" }, { status: 500 });
 
     const body = await req.json();
-    const { action, project_id, business, selectedConcept, selectedOpening, selectedBody, selectedCTA, selectedVideoStyle, businessAnalysis } = body;
+    const { action, project_id, business, selectedConcept, selectedOpening, selectedBody, selectedCTA, selectedVideoStyle, businessAnalysis, specialFocus } = body;
 
     // ── generateCreativeDNA ─────────────────────────────────────────────────────
     if (action === "generateCreativeDNA") {
@@ -539,15 +539,21 @@ Return ONLY valid JSON. No markdown.
 RULES — ALL MANDATORY:
 1. Select EXACTLY 4 concepts from the provided pool.
 2. You may lightly adapt concept_title and short_description to fit the business — preserve the core idea.
-3. Do NOT invent new concepts. Do NOT use concepts from outside the pool.
-4. source_concept_id MUST be an exact ID from the pool list provided.
-5. No leading numbers in concept_title.
-6. source_type must always be "concept_bank".
+3. If there is a special focus, use it only as context for choosing/adapting concepts and explaining fit.
+4. If there is a special focus, consider it in concept choice and adapted explanation, but do NOT invent concepts outside the bank.
+5. Do NOT invent new concepts. Do NOT use concepts from outside the pool.
+6. source_concept_id MUST be an exact ID from the pool list provided.
+7. No leading numbers in concept_title.
+8. source_type must always be "concept_bank".
 
 ${FORBIDDEN_PHRASES}
 
 Return ONLY valid JSON. No markdown.
 {"concepts":[{"concept_title":"","short_description":"","why_it_works":"","idea_tags":[],"source_concept_id":"exact-id-from-pool"}]}`;
+
+      const normalizedSpecialFocusText = specialFocus?.enabled && String(specialFocus?.text || "").trim()
+        ? String(specialFocus.text).trim()
+        : "";
 
       const openaiSelectionUser = `Business:
 Name: ${business.business_name}
@@ -555,6 +561,9 @@ Description: ${business.business_description}
 Goal: ${business.main_goal}
 Industry: ${industryName} (industry_order=${industryOrder})
 Video style: ${videoStyle}
+${normalizedSpecialFocusText ? `Special focus: ${normalizedSpecialFocusText}
+Instruction: אם יש פוקוס מיוחד, התחשב בו בבחירת הקונספטים ובהסבר ההתאמה, אבל אל תמציא קונספטים מחוץ לבנק.
+` : ""}
 
 CANDIDATE POOL — select 4 from these ${pool.length} only (IDs are mandatory in output):
 ${candidateList}`;
