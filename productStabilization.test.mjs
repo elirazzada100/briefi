@@ -82,3 +82,14 @@ test("hybrid final brief preserves exported field structure while adding provide
   assert.match(pdfExport, /adapted_brief \|\| brief\.final_brief/);
   assert.match(pdfExport, /caption_suggestion \|\| fb\.video_description/);
 });
+
+test("stepper polish keeps only concept hook and CTA, and final brief does not render it", () => {
+  const stepper = read("./src/components/briefi/BriefiStepper.jsx");
+  const finalBrief = read("./src/pages/FinalBrief.jsx");
+
+  assert.match(stepper, /const STEPS = \["קונספט", "הוק", "CTA"\]/);
+  assert.doesNotMatch(stepper, /פתיחה/);
+  assert.doesNotMatch(stepper, /סרטון/);
+  assert.doesNotMatch(stepper, /בריף/);
+  assert.doesNotMatch(finalBrief, /BriefiStepper/);
+});

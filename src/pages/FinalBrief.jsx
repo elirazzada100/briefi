@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { ArrowRight, Pencil, Check, X, Plus, RefreshCw } from "lucide-react";
-import BriefiStepper from "@/components/briefi/BriefiStepper";
 import LoadingState from "@/components/briefi/LoadingState";
 import { useProjectGuard } from "@/hooks/useProjectGuard";
 
@@ -233,9 +232,6 @@ export default function FinalBrief() {
             <h1 className="text-base font-black text-foreground">הסרטון מוכן ✓</h1>
             {selectedVideoStyle && <p className="text-[10px] text-muted-foreground">{selectedVideoStyle}</p>}
           </div>
-        </div>
-        <div className="mt-2">
-          <BriefiStepper currentStep={4} />
         </div>
       </div>
 
