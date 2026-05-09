@@ -11,8 +11,9 @@ Deno.serve(async (req) => {
   // Verify ownership
   const projects = await base44.asServiceRole.entities.Project.filter({ id: project_id });
   const project = projects[0];
-  if (!project) return Response.json({ error: "Project not found" }, { status: 404 });
-  if (project.owner_id !== user.id) return Response.json({ error: "אין לך הרשאה למחוק את הפרויקט הזה." }, { status: 403 });
+  if (!project || project.owner_id !== user.id) {
+    return Response.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   // Delete related records first
   const [briefs, generations, choices, feedback, qchecks] = await Promise.all([

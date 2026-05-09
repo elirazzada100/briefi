@@ -33,11 +33,15 @@ export default function PDFExport() {
   useEffect(() => {
     const load = async () => {
       const user = await base44.auth.me();
-      const [p, b, br] = await Promise.all([
-        base44.entities.Project.filter({ id: projectId }).then(r => r[0]),
-        base44.entities.VideoBrief.filter({ project_id: projectId }),
+      const [packRes, br] = await Promise.all([
+        base44.functions.invoke("secureBriefPack", {
+          action: "getOwnedBriefPack",
+          project_id: projectId,
+        }),
         base44.entities.UserBranding.filter({ user_id: user.id }).then(r => r[0] || null),
       ]);
+      const p = packRes.data?.project;
+      const b = packRes.data?.briefs || [];
       // Ownership check — block if project not found OR owner mismatch
       if (!p || p.owner_id !== user.id) {
         navigate("/dashboard");
@@ -305,7 +309,10 @@ export default function PDFExport() {
     const url = URL.createObjectURL(blob);
     const win = window.open(url, "_blank");
     if (!win) alert("אנא אפשרו חלון קופץ בדפדפן ונסו שנית.");
-    await base44.entities.Project.update(projectId, { status: "exported" });
+    await base44.functions.invoke("secureBriefPack", {
+      action: "markProjectExported",
+      project_id: projectId,
+    });
   };
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl"><LoadingState message="מסדרים את הבריף" /></div>;

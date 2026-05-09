@@ -98,8 +98,12 @@ export default function FinalBrief() {
       setBrief({ adapted_brief: finalBriefFromState, id: briefId });
     } else if (briefId && !initialLoadStartedRef.current) {
       initialLoadStartedRef.current = true;
-      base44.entities.VideoBrief.filter({ id: briefId }).then(r => {
-        if (r[0]) setBrief(r[0]);
+      base44.functions.invoke("secureFinalBrief", {
+        action: "getOwnedVideoBrief",
+        project_id: projectId,
+        brief_id: briefId,
+      }).then(res => {
+        if (res.data?.brief) setBrief(res.data.brief);
       });
     }
   }, [briefId, finalBriefFromState]);
@@ -135,14 +139,24 @@ export default function FinalBrief() {
     const updated = { ...(brief?.adapted_brief || {}), [field]: value };
     setBrief(prev => ({ ...prev, adapted_brief: updated }));
     if (briefId) {
-      await base44.entities.VideoBrief.update(briefId, { adapted_brief: updated });
+      await base44.functions.invoke("secureFinalBrief", {
+        action: "updateOwnedVideoBrief",
+        project_id: projectId,
+        brief_id: briefId,
+        patch: { adapted_brief: updated },
+      });
     }
   };
 
   const handleSave = async () => {
     setSaving(true);
     if (briefId) {
-      await base44.entities.VideoBrief.update(briefId, { status: "approved" });
+      await base44.functions.invoke("secureFinalBrief", {
+        action: "updateOwnedVideoBrief",
+        project_id: projectId,
+        brief_id: briefId,
+        patch: { status: "approved" },
+      });
     }
     setSaving(false);
     setSaved(true);
@@ -152,14 +166,17 @@ export default function FinalBrief() {
   const handleSaveFeedback = async () => {
     if (!feedbackScore) return;
     const label = SMILEY_OPTIONS.find(s => s.score === feedbackScore)?.label || "";
-    await base44.entities.UserBriefFeedback.create({
+    await base44.functions.invoke("secureFinalBrief", {
+      action: "submitOwnedVideoFeedback",
       project_id: projectId,
-      video_brief_id: briefId,
-      rating_label: label,
-      video_feedback_score: feedbackScore,
-      video_feedback_label: label,
-      free_text_negative: feedbackFreeText,
-      video_feedback_created_at: new Date().toISOString(),
+      brief_id: briefId,
+      feedback: {
+        rating_label: label,
+        video_feedback_score: feedbackScore,
+        video_feedback_label: label,
+        free_text_negative: feedbackFreeText,
+        video_feedback_created_at: new Date().toISOString(),
+      },
     });
     setFeedbackSaved(true);
   };
@@ -168,14 +185,17 @@ export default function FinalBrief() {
     if (!feedbackFreeText) return;
     setImproving(true);
     const label = SMILEY_OPTIONS.find(s => s.score === feedbackScore)?.label || "";
-    await base44.entities.UserBriefFeedback.create({
+    await base44.functions.invoke("secureFinalBrief", {
+      action: "submitOwnedVideoFeedback",
       project_id: projectId,
-      video_brief_id: briefId,
-      rating_label: label,
-      video_feedback_score: feedbackScore,
-      video_feedback_label: label,
-      free_text_negative: feedbackFreeText,
-      video_feedback_created_at: new Date().toISOString(),
+      brief_id: briefId,
+      feedback: {
+        rating_label: label,
+        video_feedback_score: feedbackScore,
+        video_feedback_label: label,
+        free_text_negative: feedbackFreeText,
+        video_feedback_created_at: new Date().toISOString(),
+      },
     });
 
     const currentBrief = brief?.adapted_brief || brief?.final_brief || {};
@@ -192,7 +212,12 @@ export default function FinalBrief() {
     if (improved) {
       setBrief(prev => ({ ...prev, adapted_brief: improved }));
       if (briefId) {
-        await base44.entities.VideoBrief.update(briefId, { adapted_brief: improved });
+        await base44.functions.invoke("secureFinalBrief", {
+          action: "updateOwnedVideoBrief",
+          project_id: projectId,
+          brief_id: briefId,
+          patch: { adapted_brief: improved },
+        });
       }
     }
     setImproving(false);
