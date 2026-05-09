@@ -67,7 +67,8 @@ test("FinalBrief uses OpenAI assembly plus bounded Grok polish fallback", () => 
   assert.ok(source.includes("grok_polish_attempted"));
   assert.ok(source.includes("grok_polish_applied"));
   assert.ok(source.includes("grok_polish_failed_reason"));
-  assert.ok(source.includes("finalBrief = parsed"));
+  assert.ok(source.includes("let finalBrief = sanitizeFinalBriefUserFacingFields(parsed);"));
+  assert.ok(source.includes("finalBrief = sanitizeFinalBriefUserFacingFields(mergePolishedFinalBrief(finalBrief, polishedFields));"));
   assert.ok(source.includes("final_brief: finalBrief"));
 });
 

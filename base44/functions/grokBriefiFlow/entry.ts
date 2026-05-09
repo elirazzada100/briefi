@@ -26,6 +26,97 @@ Forbidden phrases (NEVER use these):
 - "כשהקריאייטיב מצלם" → use "כשהצלם מצלם" or "כשמצלמים"
 `;
 
+function sanitizeUserFacingHebrewCopy(value) {
+  if (typeof value !== "string") return value;
+  return value
+    .replace(/\s*[-–—־]+\s*/g, ". ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.:;!?])/g, "$1")
+    .replace(/([,.:;!?])(?=\S)/g, "$1 ")
+    .replace(/([.?!])\s*([,.:;!?])/g, "$1")
+    .replace(/\.\s*\./g, ". ")
+    .replace(/^\s*[.,:;!?]+\s*/g, "")
+    .trim();
+}
+
+function sanitizeStringArray(values) {
+  if (!Array.isArray(values)) return [];
+  return values.map((value) => sanitizeUserFacingHebrewCopy(String(value || "")));
+}
+
+function sanitizeConceptCards(concepts) {
+  if (!Array.isArray(concepts)) return [];
+  return concepts.map((concept) => ({
+    ...concept,
+    concept_title: sanitizeUserFacingHebrewCopy(concept?.concept_title || ""),
+    short_description: sanitizeUserFacingHebrewCopy(concept?.short_description || concept?.concept_raw_text || ""),
+    why_it_works: sanitizeUserFacingHebrewCopy(concept?.why_it_works || ""),
+    idea_tags: sanitizeStringArray(concept?.idea_tags || []),
+  }));
+}
+
+function sanitizeOpeningOptions(openingOptions) {
+  if (!Array.isArray(openingOptions)) return [];
+  return openingOptions.map((option) => ({
+    ...option,
+    opening_line: sanitizeUserFacingHebrewCopy(option?.opening_line || ""),
+    why_it_fits: sanitizeUserFacingHebrewCopy(option?.why_it_fits || ""),
+    mechanic_tag: sanitizeUserFacingHebrewCopy(option?.mechanic_tag || ""),
+  }));
+}
+
+function sanitizeCTAOptions(ctaOptions) {
+  if (!Array.isArray(ctaOptions)) return [];
+  return ctaOptions.map((option) => ({
+    ...option,
+    cta_text: sanitizeUserFacingHebrewCopy(option?.cta_text || ""),
+    why_it_fits: sanitizeUserFacingHebrewCopy(option?.why_it_fits || ""),
+  }));
+}
+
+function sanitizeShotStructure(shotStructure) {
+  if (!Array.isArray(shotStructure)) return [];
+  return shotStructure.map((item) => ({
+    ...item,
+    visual: sanitizeUserFacingHebrewCopy(item?.visual || ""),
+    spoken_or_overlay_text: sanitizeUserFacingHebrewCopy(item?.spoken_or_overlay_text || ""),
+  }));
+}
+
+function sanitizeTextOverlays(textOverlays) {
+  if (!Array.isArray(textOverlays)) return [];
+  return textOverlays.map((item) => {
+    if (typeof item === "string") return sanitizeUserFacingHebrewCopy(item);
+    if (!item || typeof item !== "object") return item;
+    return Object.fromEntries(
+      Object.entries(item).map(([key, value]) => [
+        key,
+        typeof value === "string" ? sanitizeUserFacingHebrewCopy(value) : value,
+      ])
+    );
+  });
+}
+
+function sanitizeFinalBriefUserFacingFields(finalBrief) {
+  if (!finalBrief || typeof finalBrief !== "object") return finalBrief;
+  return {
+    ...finalBrief,
+    brief_title: sanitizeUserFacingHebrewCopy(finalBrief?.brief_title || ""),
+    video_concept: sanitizeUserFacingHebrewCopy(finalBrief?.video_concept || ""),
+    hook: sanitizeUserFacingHebrewCopy(finalBrief?.hook || ""),
+    script_format: finalBrief?.script_format || "",
+    script_text: sanitizeUserFacingHebrewCopy(finalBrief?.script_text || ""),
+    shot_structure: sanitizeShotStructure(finalBrief?.shot_structure || []),
+    text_overlays: sanitizeTextOverlays(finalBrief?.text_overlays || []),
+    cta: sanitizeUserFacingHebrewCopy(finalBrief?.cta || ""),
+    video_description: sanitizeUserFacingHebrewCopy(finalBrief?.video_description || ""),
+    caption_suggestion: sanitizeUserFacingHebrewCopy(finalBrief?.caption_suggestion || ""),
+    visual_must_haves: sanitizeStringArray(finalBrief?.visual_must_haves || []),
+    production_notes: sanitizeUserFacingHebrewCopy(finalBrief?.production_notes || ""),
+    why_it_works: sanitizeUserFacingHebrewCopy(finalBrief?.why_it_works || ""),
+  };
+}
+
 // ── Grok caller ────────────────────────────────────────────────────────────────
 async function callGrok(systemPrompt, userPrompt, temperature = 0.7) {
   const apiRes = await fetch(`${XAI_BASE_URL}/chat/completions`, {
@@ -247,6 +338,7 @@ Do not use "-", "–", or "—" as a stylistic separator.
 Prefer normal Hebrew punctuation: comma, period, colon, question mark, or a new sentence.
 Use short natural Hebrew sentences.
 Do not make the copy feel like an AI-generated marketing template.
+אין להשתמש במקפים בכלל בטקסט שמוצג למשתמש. לא "-", לא "–", לא "—", ולא "־". השתמש בפסיק, נקודה או משפט חדש.
 
 ${FORBIDDEN_PHRASES}
 
@@ -264,6 +356,7 @@ Do not use "-", "–", or "—" as a stylistic separator.
 Prefer normal Hebrew punctuation: comma, period, colon, question mark, or a new sentence.
 Use short natural Hebrew sentences.
 Do not make the copy feel like an AI-generated marketing template.
+אין להשתמש במקפים בכלל בטקסט שמוצג למשתמש. לא "-", לא "–", לא "—", ולא "־". השתמש בפסיק, נקודה או משפט חדש.
 
 ${FORBIDDEN_PHRASES}
 
@@ -560,6 +653,7 @@ RULES — ALL MANDATORY:
 11. Prefer normal Hebrew punctuation: comma, period, colon, question mark, or a new sentence.
 12. Use short natural Hebrew sentences.
 13. Do not make the copy feel like an AI-generated marketing template.
+14. אין להשתמש במקפים בכלל בטקסט שמוצג למשתמש. לא "-", לא "–", לא "—", ולא "־". השתמש בפסיק, נקודה או משפט חדש.
 
 ${FORBIDDEN_PHRASES}
 
@@ -603,17 +697,18 @@ ${candidateList}`;
             internal_concept_type: poolEntry?.internal_concept_type || "",
           };
         });
+        const sanitizedMapped = sanitizeConceptCards(mapped);
 
         const validationErrors = [];
-        if (mapped.length !== 4) validationErrors.push(`Expected 4 concepts, got ${mapped.length}`);
-        mapped.forEach((c, i) => {
+        if (sanitizedMapped.length !== 4) validationErrors.push(`Expected 4 concepts, got ${sanitizedMapped.length}`);
+        sanitizedMapped.forEach((c, i) => {
           if (c.source_type !== "concept_bank") validationErrors.push(`[${i}] source_type not concept_bank`);
           if (!c.concept_bank_id || !candidateIdSet.has(c.concept_bank_id)) validationErrors.push(`[${i}] concept_bank_id "${c.concept_bank_id}" not in candidate pool`);
           if (c.industry_order !== industryOrder) validationErrors.push(`[${i}] wrong industry_order`);
           if (c.user_facing_video_style !== videoStyle) validationErrors.push(`[${i}] wrong video style`);
         });
 
-        return { mapped, validationErrors };
+        return { mapped: sanitizedMapped, validationErrors };
       }
 
       // First attempt
@@ -808,12 +903,12 @@ Each must use a DIFFERENT emotional mechanic.
 Do NOT explain the concept. Do NOT use generic phrases. Sound like a real Israeli person speaking.`;
 
       const { parsed, provider } = await callWithFallback(OPENING_GEN_GROK_SYSTEM, userPrompt, 0.85);
-      const options = (parsed.opening_options || []).slice(0, 4).map(opt => ({
+      const options = sanitizeOpeningOptions((parsed.opening_options || []).slice(0, 4).map(opt => ({
         opening_line: opt.opening_line || "",
         why_it_fits: opt.why_it_fits || "",
         mechanic_tag: opt.mechanic_tag || "",
         source_type: "grok_generated",
-      }));
+      })));
 
       return Response.json({
         opening_options: options,
@@ -847,7 +942,7 @@ Match the tone of the concept and opening line.`;
       const { parsed, provider } = await callWithFallback(CTA_GEN_SYSTEM, userPrompt, 0.7);
 
       return Response.json({
-        cta_options: parsed.cta_options || [],
+        cta_options: sanitizeCTAOptions(parsed.cta_options || []),
         provider_log: { provider_used: provider, step_name: "cta", success: true },
       });
     }
@@ -925,7 +1020,7 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
       }
 
       const polishTimeoutMs = 12000;
-      let finalBrief = parsed;
+      let finalBrief = sanitizeFinalBriefUserFacingFields(parsed);
       const polishProviderLog = {
         openai_assemble_used: true,
         grok_polish_attempted: false,
@@ -933,7 +1028,7 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
         grok_polish_failed_reason: null,
       };
 
-      const polishPayload = buildFinalBriefPolishPayload(parsed);
+      const polishPayload = buildFinalBriefPolishPayload(finalBrief);
       const hasPolishableContent = Object.values(polishPayload).some(value => String(value || "").trim().length > 0);
 
       if (hasPolishableContent) {
@@ -942,8 +1037,8 @@ Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. s
 Style: ${selectedVideoStyle || ""}
 Concept title: ${selectedConcept.concept_title || ""}
 Concept description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
-Hook (meaning must stay the same): "${parsed.hook || openingLineText}"
-CTA (meaning must stay the same): "${parsed.cta || selectedCTA.cta_text || selectedCTA}"
+Hook (meaning must stay the same): "${finalBrief.hook || openingLineText}"
+CTA (meaning must stay the same): "${finalBrief.cta || selectedCTA.cta_text || selectedCTA}"
 
 Polish only these fields and return the same JSON keys:
 ${JSON.stringify(polishPayload, null, 2)}`;
@@ -962,7 +1057,7 @@ ${JSON.stringify(polishPayload, null, 2)}`;
           if (!polishValidation.valid) {
             polishProviderLog.grok_polish_failed_reason = polishValidation.reason;
           } else {
-            finalBrief = mergePolishedFinalBrief(parsed, polishedFields);
+            finalBrief = sanitizeFinalBriefUserFacingFields(mergePolishedFinalBrief(finalBrief, polishedFields));
             polishProviderLog.grok_polish_applied = true;
             console.log(`[assembleFinalBrief] grok polish total=${polishMs}ms`);
           }
@@ -1039,7 +1134,7 @@ ${JSON.stringify(original_brief, null, 2)}
 Improve the brief based on the feedback. Keep all fields. Adjust only what the feedback indicates.`;
 
       const { parsed } = await callWithFallback(IMPROVE_SYSTEM, improveUser, 0.65);
-      return Response.json({ final_brief: parsed, provider: "grok" });
+      return Response.json({ final_brief: sanitizeFinalBriefUserFacingFields(parsed), provider: "grok" });
     }
 
     return Response.json({ error: "Unknown action" }, { status: 400 });

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import vm from "node:vm";
 
 function read(filePath) {
   return fs.readFileSync(new URL(filePath, import.meta.url), "utf8");
@@ -91,6 +92,7 @@ test("openai-facing Hebrew copy prompts instruct the model to avoid dash punctua
   assert.match(grokFlow, /Do not use "-", "–", or "—" as a stylistic separator\./);
   assert.match(grokFlow, /Prefer normal Hebrew punctuation: comma, period, colon, question mark, or a new sentence\./);
   assert.match(grokFlow, /Do not make the copy feel like an AI-generated marketing template\./);
+  assert.match(grokFlow, /אין להשתמש במקפים בכלל בטקסט שמוצג למשתמש/);
 });
 
 test("stepper polish keeps only concept hook and CTA, and final brief does not render it", () => {
@@ -102,4 +104,34 @@ test("stepper polish keeps only concept hook and CTA, and final brief does not r
   assert.doesNotMatch(stepper, /סרטון/);
   assert.doesNotMatch(stepper, /בריף/);
   assert.doesNotMatch(finalBrief, /BriefiStepper/);
+});
+
+test("deterministic dash sanitizer exists and applies only to user-facing copy fields", () => {
+  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.match(grokFlow, /function sanitizeUserFacingHebrewCopy\(value\)/);
+  assert.match(grokFlow, /replace\(\/\\s\*\[-–—־\]\+\\s\*\/g, "\. "\)/);
+  assert.match(grokFlow, /function sanitizeConceptCards\(concepts\)/);
+  assert.match(grokFlow, /function sanitizeOpeningOptions\(openingOptions\)/);
+  assert.match(grokFlow, /function sanitizeCTAOptions\(ctaOptions\)/);
+  assert.match(grokFlow, /function sanitizeFinalBriefUserFacingFields\(finalBrief\)/);
+  assert.match(grokFlow, /script_format: finalBrief\?\.script_format \|\| ""/);
+  assert.match(grokFlow, /cta_options: sanitizeCTAOptions\(parsed\.cta_options \|\| \[\]\)/);
+});
+
+test("dash sanitizer replaces user-facing Hebrew dashes with natural punctuation", () => {
+  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
+  const match = grokFlow.match(/function sanitizeUserFacingHebrewCopy\(value\) \{[\s\S]*?\n\}/);
+
+  assert.ok(match, "sanitizeUserFacingHebrewCopy function not found");
+
+  const sanitize = vm.runInNewContext(`(${match[0]})`);
+  const input = "הסבר קצר על בחירת החומרים והתכנון המדויק - איכות, עמידות, נוחות וסטייל.";
+  const output = sanitize(input);
+
+  assert.equal(
+    output,
+    "הסבר קצר על בחירת החומרים והתכנון המדויק. איכות, עמידות, נוחות וסטייל."
+  );
+  assert.doesNotMatch(output, /[-–—־]/);
 });
