@@ -14,6 +14,7 @@ export default function GrokOpeningPicker() {
   const selectedVideoStyle = state?.selectedVideoStyle;
   const business = state?.business;
   const businessAnalysis = state?.businessAnalysis;
+  const specialFocus = state?.specialFocus;
 
   const [openingOptions, setOpeningOptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,11 +68,13 @@ export default function GrokOpeningPicker() {
     setSelectingIdx(idx);
     navigate(`/project/${projectId}/grok-cta`, {
       state: {
+        ...(state || {}),
         selectedConcept,
         selectedOpening: option,
         selectedVideoStyle,
         business,
         businessAnalysis,
+        specialFocus,
       },
     });
   };
@@ -99,7 +102,7 @@ export default function GrokOpeningPicker() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={2} />
+          <BriefiStepper currentStep={3} />
         </div>
       </div>
 

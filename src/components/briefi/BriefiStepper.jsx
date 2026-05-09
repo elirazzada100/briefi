@@ -1,9 +1,9 @@
-// Steps shown only from concept selection onward:
-// 1=קונספט, 2=הוק, 3=CTA
-const STEPS = ["קונספט", "הוק", "CTA"];
+// Steps shown only from special focus onward:
+// 1=פוקוס, 2=קונספט, 3=הוק, 4=CTA
+const STEPS = ["פוקוס", "קונספט", "הוק", "CTA"];
 
 export default function BriefiStepper({ currentStep }) {
-  // currentStep: 1=קונספט, 2=הוק, 3=CTA
+  // currentStep: 1=פוקוס, 2=קונספט, 3=הוק, 4=CTA
   return (
     <div className="flex items-center justify-center gap-0 w-full">
       {STEPS.map((label, i) => {

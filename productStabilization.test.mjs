@@ -47,6 +47,7 @@ test("published flow safety boundaries remain intact", () => {
   const dashboard = read("./src/pages/Dashboard.jsx");
   const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
 
+  assert.match(app, /project\/:projectId\/special-focus/);
   assert.match(app, /project\/:projectId\/grok-concepts/);
   assert.match(app, /project\/:projectId\/grok-opening/);
   assert.match(app, /project\/:projectId\/grok-cta/);
@@ -87,7 +88,7 @@ test("stepper polish keeps only concept hook and CTA, and final brief does not r
   const stepper = read("./src/components/briefi/BriefiStepper.jsx");
   const finalBrief = read("./src/pages/FinalBrief.jsx");
 
-  assert.match(stepper, /const STEPS = \["קונספט", "הוק", "CTA"\]/);
+  assert.match(stepper, /const STEPS = \["פוקוס", "קונספט", "הוק", "CTA"\]/);
   assert.doesNotMatch(stepper, /פתיחה/);
   assert.doesNotMatch(stepper, /סרטון/);
   assert.doesNotMatch(stepper, /בריף/);

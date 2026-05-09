@@ -24,6 +24,7 @@ export default function GrokCTAPicker() {
   const selectedVideoStyle = state?.selectedVideoStyle;
   const business = state?.business;
   const businessAnalysis = state?.businessAnalysis;
+  const specialFocus = state?.specialFocus;
 
   const [ctaOptions, setCtaOptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,12 +102,14 @@ export default function GrokCTAPicker() {
 
       navigate(`/project/${projectId}/final-brief`, {
         state: {
+          ...(state || {}),
           briefId,
           finalBrief,
           selectedConcept,
           selectedOpening: selectedOpening || selectedBody,
           selectedCTA: ctaOption,
           selectedVideoStyle,
+          specialFocus,
         },
       });
     } catch (err) {
@@ -147,7 +150,7 @@ export default function GrokCTAPicker() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={3} />
+          <BriefiStepper currentStep={4} />
         </div>
       </div>
 

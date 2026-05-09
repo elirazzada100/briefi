@@ -26,6 +26,7 @@ export default function GrokConceptPicker() {
   const selectedVideoStyle = state?.selectedVideoStyle;
   const businessFromState = state?.business;
   const businessAnalysis = state?.businessAnalysis;
+  const specialFocus = state?.specialFocus;
 
   const [concepts, setConcepts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -85,6 +86,7 @@ export default function GrokConceptPicker() {
         selectedVideoStyle,
         project_id: projectId,
         businessAnalysis: resolvedAnalysis,
+        specialFocus,
       });
 
       if (res.data?.error) {
@@ -114,10 +116,12 @@ export default function GrokConceptPicker() {
 
     navigate(`/project/${projectId}/grok-opening`, {
       state: {
+        ...(state || {}),
         selectedConcept: concept,
         selectedVideoStyle,
         business,
         businessAnalysis: resolvedAnalysis,
+        specialFocus,
       },
     });
   };
@@ -145,7 +149,7 @@ export default function GrokConceptPicker() {
           </div>
         </div>
         <div className="mt-2">
-          <BriefiStepper currentStep={1} />
+          <BriefiStepper currentStep={2} />
         </div>
       </div>
 

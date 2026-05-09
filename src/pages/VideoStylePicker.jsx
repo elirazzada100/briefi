@@ -68,8 +68,9 @@ export default function VideoStylePicker() {
 
   const handleContinue = () => {
     if (!selected) return;
-    navigate(`/project/${projectId}/grok-concepts`, {
+    navigate(`/project/${projectId}/special-focus`, {
       state: {
+        ...(state || {}),
         selectedVideoStyle: selected,
         business,
         businessAnalysis,
