@@ -242,6 +242,11 @@ const FINAL_BRIEF_SYSTEM = `You are Briefi Final Brief Assembler. Assemble a sho
 STRICT LIMITS: shot_structure 4-5 shots. text_overlays 3-4 items. script_text max 80 words. video_description max 2 sentences. production_notes 1 sentence.
 
 Use ONLY the inputs given. Do NOT invent concepts or hooks. Use the opening line verbatim in "hook".
+Avoid using dash punctuation in Hebrew output.
+Do not use "-", "–", or "—" as a stylistic separator.
+Prefer normal Hebrew punctuation: comma, period, colon, question mark, or a new sentence.
+Use short natural Hebrew sentences.
+Do not make the copy feel like an AI-generated marketing template.
 
 ${FORBIDDEN_PHRASES}
 
@@ -254,6 +259,11 @@ const FINAL_BRIEF_LIMDI_SYSTEM = `You are Briefi Final Brief Assembler — Educa
 STRICT LIMITS: shot_structure 4-5 shots. text_overlays 3-4 items. script_text max 80 words. video_description max 2 sentences. production_notes 1 sentence.
 
 Use ONLY the inputs given. Do NOT invent concepts or hooks. Use the opening line verbatim in "hook". NOT a lecture. NOT salesy.
+Avoid using dash punctuation in Hebrew output.
+Do not use "-", "–", or "—" as a stylistic separator.
+Prefer normal Hebrew punctuation: comma, period, colon, question mark, or a new sentence.
+Use short natural Hebrew sentences.
+Do not make the copy feel like an AI-generated marketing template.
 
 ${FORBIDDEN_PHRASES}
 
@@ -545,6 +555,11 @@ RULES — ALL MANDATORY:
 6. source_concept_id MUST be an exact ID from the pool list provided.
 7. No leading numbers in concept_title.
 8. source_type must always be "concept_bank".
+9. Avoid using dash punctuation in Hebrew output values.
+10. Do not use "-", "–", or "—" as a stylistic separator in Hebrew copy.
+11. Prefer normal Hebrew punctuation: comma, period, colon, question mark, or a new sentence.
+12. Use short natural Hebrew sentences.
+13. Do not make the copy feel like an AI-generated marketing template.
 
 ${FORBIDDEN_PHRASES}
 

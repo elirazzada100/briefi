@@ -84,6 +84,15 @@ test("hybrid final brief preserves exported field structure while adding provide
   assert.match(pdfExport, /caption_suggestion \|\| fb\.video_description/);
 });
 
+test("openai-facing Hebrew copy prompts instruct the model to avoid dash punctuation", () => {
+  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.match(grokFlow, /Avoid using dash punctuation in Hebrew output\./);
+  assert.match(grokFlow, /Do not use "-", "–", or "—" as a stylistic separator\./);
+  assert.match(grokFlow, /Prefer normal Hebrew punctuation: comma, period, colon, question mark, or a new sentence\./);
+  assert.match(grokFlow, /Do not make the copy feel like an AI-generated marketing template\./);
+});
+
 test("stepper polish keeps only concept hook and CTA, and final brief does not render it", () => {
   const stepper = read("./src/components/briefi/BriefiStepper.jsx");
   const finalBrief = read("./src/pages/FinalBrief.jsx");
