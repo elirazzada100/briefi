@@ -339,13 +339,6 @@ function mergePolishedFinalBrief(openAIBrief, polishedFields) {
   };
 }
 
-async function getOwnedProject(base44, userId, projectId) {
-  const projects = await base44.asServiceRole.entities.Project.filter({ id: projectId });
-  const project = projects[0];
-  if (!project || project.owner_id !== userId) return null;
-  return project;
-}
-
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -360,10 +353,6 @@ Deno.serve(async (req) => {
     // ── generateCreativeDNA ─────────────────────────────────────────────────────
     if (action === "generateCreativeDNA") {
       const { project_id: pid, client_name, main_goal, raw_notes } = body;
-      if (pid) {
-        const ownedProject = await getOwnedProject(base44, user.id, pid);
-        if (!ownedProject) return Response.json({ error: "Forbidden" }, { status: 403 });
-      }
 
       const DNA_SYSTEM = `You are Briefi Business Analyst for Israeli social media.
 Analyze the business and produce a creative content strategy.
@@ -844,10 +833,6 @@ Match the tone of the concept and opening line.`;
       if (!business || !selectedConcept || !selectedCTA) {
         return Response.json({ error: "business, selectedConcept, selectedCTA required" }, { status: 400 });
       }
-      if (project_id) {
-        const ownedProject = await getOwnedProject(base44, user.id, project_id);
-        if (!ownedProject) return Response.json({ error: "Forbidden" }, { status: 403 });
-      }
       if (!OPENAI_API_KEY) {
         return Response.json({ error: "OPENAI_API_KEY is not set — finalBrief unavailable", message: "שגיאת הגדרה. פנו לתמיכה." }, { status: 500 });
       }
@@ -1014,10 +999,6 @@ ${JSON.stringify(polishPayload, null, 2)}`;
       const { original_brief, feedback_text, client_name: cname, main_goal: cgoal } = body;
       if (!original_brief || !feedback_text) {
         return Response.json({ error: "original_brief and feedback_text required" }, { status: 400 });
-      }
-      if (project_id) {
-        const ownedProject = await getOwnedProject(base44, user.id, project_id);
-        if (!ownedProject) return Response.json({ error: "Forbidden" }, { status: 403 });
       }
 
       const IMPROVE_SYSTEM = `You are Briefi Brief Improver. You receive an existing video brief and user feedback.
