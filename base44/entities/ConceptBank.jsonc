@@ -2,78 +2,116 @@
   "name": "ConceptBank",
   "type": "object",
   "properties": {
-    "category_id": {
+    "source_file": {
       "type": "string",
-      "description": "\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d9\u05ea \u05d4\u05e2\u05e1\u05e7"
+      "default": "1000_Concepts_Briefi_10.txt"
     },
-    "concept_name": {
+    "source_batch": {
       "type": "string",
-      "description": "\u05e9\u05dd \u05d4\u05e7\u05d5\u05e0\u05e1\u05e4\u05d8"
+      "default": "1000_Concepts_Briefi_10"
     },
-    "core_situation": {
+    "industry_id": {
       "type": "string",
-      "description": "\u05d4\u05e1\u05d9\u05d8\u05d5\u05d0\u05e6\u05d9\u05d4 \u05d4\u05d1\u05e1\u05d9\u05e1\u05d9\u05ea"
+      "description": "\u05de\u05d6\u05d4\u05d4 \u05d4\u05ea\u05e2\u05e9\u05d9\u05d9\u05d4 \u05de-BusinessIndustries"
     },
-    "natural_opening_line": {
+    "industry_order": {
+      "type": "number",
+      "description": "\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 \u05e9\u05dc \u05d4\u05ea\u05e2\u05e9\u05d9\u05d9\u05d4 (1-10)"
+    },
+    "industry_name": {
       "type": "string",
-      "description": "\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d8\u05d1\u05e2\u05d9\u05ea"
+      "description": "\u05e9\u05dd \u05d4\u05ea\u05e2\u05e9\u05d9\u05d9\u05d4"
     },
-    "human_tension": {
+    "internal_concept_type": {
       "type": "string",
-      "description": "\u05d4\u05de\u05ea\u05d7 \u05d4\u05d0\u05e0\u05d5\u05e9\u05d9"
+      "enum": [
+        "\u05de\u05e6\u05d7\u05d9\u05e7",
+        "\u05ea\u05d3\u05de\u05d9\u05ea\u05d9",
+        "\u05d4\u05d9\u05db\u05e8\u05d5\u05ea\u05d9",
+        "\u05de\u05db\u05d9\u05e8\u05ea\u05d9",
+        "\u05dc\u05d9\u05de\u05d5\u05d3\u05d9"
+      ],
+      "description": "\u05e1\u05d5\u05d2 \u05d4\u05e7\u05d5\u05e0\u05e1\u05e4\u05d8 \u05d4\u05e4\u05e0\u05d9\u05de\u05d9 \u05de\u05d4\u05e7\u05d5\u05d1\u05e5"
     },
-    "scene_logic": {
+    "user_facing_video_style": {
+      "type": "string",
+      "enum": [
+        "\u05de\u05e6\u05d7\u05d9\u05e7",
+        "\u05ea\u05d3\u05de\u05d9\u05ea",
+        "\u05e1\u05e8\u05d8\u05d5\u05df \u05d4\u05db\u05e8\u05d5\u05ea",
+        "\u05de\u05db\u05d9\u05e8\u05ea\u05d9"
+      ],
+      "description": "\u05e1\u05d2\u05e0\u05d5\u05df \u05d4\u05e1\u05e8\u05d8\u05d5\u05df \u05d4\u05d2\u05dc\u05d5\u05d9 \u05dc\u05de\u05e9\u05ea\u05de\u05e9"
+    },
+    "concept_number_in_section": {
+      "type": "number",
+      "description": "\u05de\u05e1\u05e4\u05e8 \u05d4\u05e7\u05d5\u05e0\u05e1\u05e4\u05d8 \u05d1\u05ea\u05d5\u05da \u05d4\u05e1\u05e7\u05e6\u05d9\u05d4 (1-20)"
+    },
+    "global_concept_number": {
+      "type": "number",
+      "description": "\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 \u05d2\u05dc\u05d5\u05d1\u05dc\u05d9 (1-1000)"
+    },
+    "concept_title": {
+      "type": "string",
+      "description": "\u05e9\u05dd \u05d4\u05e7\u05d5\u05e0\u05e1\u05e4\u05d8 \u05d1\u05d2\u05e8\u05e9\u05d9\u05d9\u05dd \u05db\u05e4\u05d9 \u05e9\u05de\u05d5\u05e4\u05d9\u05e2 \u05d1\u05e7\u05d5\u05d1\u05e5"
+    },
+    "concept_raw_text": {
+      "type": "string",
+      "description": "\u05d4\u05d8\u05e7\u05e1\u05d8 \u05d4\u05de\u05e7\u05d5\u05e8\u05d9 \u05d4\u05de\u05dc\u05d0 \u05e9\u05dc \u05d4\u05e7\u05d5\u05e0\u05e1\u05e4\u05d8 \u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9"
+    },
+    "concept_description": {
+      "type": "string",
+      "description": "\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e7\u05d5\u05e0\u05e1\u05e4\u05d8"
+    },
+    "best_for_business_types": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "\u05dc\u05d5\u05d2\u05d9\u05e7\u05ea \u05d4\u05e1\u05e6\u05e0\u05d4"
+      "description": "\u05e1\u05d5\u05d2\u05d9 \u05e2\u05e1\u05e7\u05d9\u05dd \u05e9\u05de\u05ea\u05d0\u05d9\u05de\u05d9\u05dd \u05dc\u05e7\u05d5\u05e0\u05e1\u05e4\u05d8"
     },
-    "punchline": {
+    "shooting_format": {
       "type": "string",
-      "description": "\u05d4\u05e4\u05d0\u05e0\u05e6\u05f3\u05dc\u05d9\u05d9\u05df"
-    },
-    "visual_proofs": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "\u05d4\u05d5\u05db\u05d7\u05d5\u05ea \u05d5\u05d9\u05d6\u05d5\u05d0\u05dc\u05d9\u05d5\u05ea"
-    },
-    "best_for": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "\u05de\u05ea\u05d0\u05d9\u05dd \u05dc"
-    },
-    "tone_tags": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "\u05ea\u05d2\u05d9\u05d5\u05ea \u05d8\u05d5\u05df"
-    },
-    "cta_options": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "\u05d0\u05d5\u05e4\u05e6\u05d9\u05d5\u05ea CTA"
-    },
-    "risk_notes": {
-      "type": "string",
-      "description": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05e1\u05d9\u05db\u05d5\u05df"
+      "enum": [
+        "talking_head",
+        "scene",
+        "montage",
+        "dialogue",
+        "pov",
+        "list",
+        "challenge",
+        "reveal",
+        "other"
+      ],
+      "description": "\u05e4\u05d5\u05e8\u05de\u05d8 \u05d4\u05e6\u05d9\u05dc\u05d5\u05dd"
     },
     "is_active": {
       "type": "boolean",
-      "default": true,
-      "description": "\u05e4\u05e2\u05d9\u05dc"
+      "default": true
     }
   },
   "required": [
-    "category_id",
-    "concept_name",
-    "core_situation"
-  ]
+    "industry_name",
+    "concept_title",
+    "concept_raw_text",
+    "internal_concept_type"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }
