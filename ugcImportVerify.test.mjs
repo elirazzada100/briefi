@@ -127,17 +127,18 @@ test("flat UGC v2 CSV artifact exists and matches the import contract", () => {
   }
 });
 
-test("UGC import and verify code stay isolated from active UI and regular runtime", () => {
+test("UGC import and verify code stay isolated from active runtime batches while UI/runtime use the v2 UGC path", () => {
   const stylePicker = read("src/pages/VideoStylePicker.jsx");
   const app = read("src/App.jsx");
   const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
   const importer = read("base44/functions/importConceptBank/entry.ts");
   const verifier = read("base44/functions/verifyUGCConceptBankIntegrity/entry.ts");
 
-  assert.ok(!stylePicker.includes("UGC / המלצה"));
+  assert.ok(stylePicker.includes("UGC / המלצה"));
+  assert.ok(stylePicker.includes('id: "ugc"'));
   assert.ok(!app.includes('ugc'));
-  assert.ok(!grokFlow.includes(UGC_V2_BATCH));
-  assert.ok(!grokFlow.includes(OLD_UGC_BATCH));
+  assert.ok(grokFlow.includes(UGC_V2_BATCH));
+  assert.ok(!grokFlow.includes(`${OLD_UGC_BATCH}"`));
   assert.ok(importer.includes(`const REGULAR_CSV_URL = "${REGULAR_CSV_URL}"`));
   assert.ok(importer.includes(`const UGC_V2_REMOTE_CSV_URL = "${UGC_V2_REMOTE_CSV_URL}"`));
   assert.ok(importer.includes('await fetch(UGC_V2_REMOTE_CSV_URL)'));

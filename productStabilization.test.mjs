@@ -47,6 +47,7 @@ test("published flow safety boundaries remain intact", () => {
   const app = read("./src/App.jsx");
   const dashboard = read("./src/pages/Dashboard.jsx");
   const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
+  const stylePicker = read("./src/pages/VideoStylePicker.jsx");
 
   assert.match(app, /project\/:projectId\/special-focus/);
   assert.match(app, /project\/:projectId\/grok-concepts/);
@@ -55,8 +56,25 @@ test("published flow safety boundaries remain intact", () => {
   assert.doesNotMatch(app, /ClientDetail/);
   assert.match(dashboard, /Project\.filter/);
   assert.match(grokFlow, /1000_Concepts_Briefi_10_display_clean/);
-  assert.doesNotMatch(grokFlow, /1000_UGC_Briefi_10_display_clean/);
+  assert.match(grokFlow, /1000_UGC_Briefi_10_display_clean_v2/);
+  assert.doesNotMatch(grokFlow, /1000_UGC_Briefi_10_display_clean"/);
   assert.doesNotMatch(grokFlow, /briefi_ugc_conceptbank/);
+  assert.match(stylePicker, /UGC \/ המלצה/);
+});
+
+test("UGC runtime uses only the v2 batch while regular styles stay on the regular batch", () => {
+  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.match(grokFlow, /const ACTIVE_CONCEPT_SOURCE_BATCH = "1000_Concepts_Briefi_10_display_clean"/);
+  assert.match(grokFlow, /const UGC_CONCEPT_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean_v2"/);
+  assert.match(grokFlow, /const UGC_STYLE = "ugc"/);
+  assert.match(grokFlow, /const conceptSourceBatch = videoStyle === UGC_STYLE/);
+  assert.match(grokFlow, /const conceptStyle = videoStyle === UGC_STYLE \? UGC_STYLE : videoStyle/);
+  assert.match(grokFlow, /source_batch: conceptSourceBatch/);
+  assert.match(grokFlow, /user_facing_video_style: conceptStyle/);
+  assert.match(grokFlow, /candidateIdSet/);
+  assert.match(grokFlow, /wrong video style/);
+  assert.doesNotMatch(grokFlow, /1000_UGC_Briefi_10_display_clean"/);
 });
 
 test("hybrid final brief preserves exported field structure while adding provider polish metadata", () => {

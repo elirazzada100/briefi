@@ -6,6 +6,8 @@ const XAI_MODEL = Deno.env.get("XAI_MODEL") || "grok-3";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const OPENAI_CONCEPT_MODEL = "gpt-4.1-mini-2025-04-14";
+const ACTIVE_CONCEPT_SOURCE_BATCH = "1000_Concepts_Briefi_10_display_clean";
+const UGC_CONCEPT_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean_v2";
 
 const FORBIDDEN_PHRASES = `
 Forbidden phrases (NEVER use these):
@@ -252,9 +254,6 @@ async function classifyWithOpenAI(businessDescription) {
   return { industry_order: order, industry_name: canonical.name };
 }
 
-// ── CONSTANTS ──────────────────────────────────────────────────────────────────
-const ACTIVE_CONCEPT_SOURCE_BATCH = "1000_Concepts_Briefi_10_display_clean";
-
 // Canonical industry map — industry_order is the single source of truth for retrieval
 const INDUSTRY_MAP = {
   "food_restaurants":      { order: 1,  name: "מסעדנות ואוכל" },
@@ -269,7 +268,9 @@ const INDUSTRY_MAP = {
   "health_wellness":       { order: 10, name: "בריאות, טיפול ו-Wellness" },
 };
 
-const BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
+const REGULAR_BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
+const UGC_STYLE = "ugc";
+const BANK_STYLES = [...REGULAR_BANK_STYLES, UGC_STYLE];
 
 // ── SYSTEM PROMPTS ─────────────────────────────────────────────────────────────
 
@@ -537,6 +538,11 @@ Return ONLY valid JSON. No markdown.
         return Response.json({ error: `Unknown video style: ${videoStyle}` }, { status: 400 });
       }
 
+      const conceptSourceBatch = videoStyle === UGC_STYLE
+        ? UGC_CONCEPT_SOURCE_BATCH
+        : ACTIVE_CONCEPT_SOURCE_BATCH;
+      const conceptStyle = videoStyle === UGC_STYLE ? UGC_STYLE : videoStyle;
+
       // ── STEP 1: Resolve industry_order ──────────────────────────────────────
       const t0 = Date.now();
       let industryOrder = businessAnalysis?.industry_order
@@ -564,7 +570,7 @@ Return ONLY valid JSON. No markdown.
         // industry_order already known — query ConceptBank directly, no classification needed
         const t1 = Date.now();
         candidates = await base44.asServiceRole.entities.ConceptBank.filter(
-          { is_active: true, source_batch: ACTIVE_CONCEPT_SOURCE_BATCH, industry_order: industryOrder, user_facing_video_style: videoStyle },
+          { is_active: true, source_batch: conceptSourceBatch, industry_order: industryOrder, user_facing_video_style: conceptStyle },
           "concept_number_in_section",
           20
         );
@@ -590,7 +596,7 @@ Return ONLY valid JSON. No markdown.
 
         const t2 = Date.now();
         candidates = await base44.asServiceRole.entities.ConceptBank.filter(
-          { is_active: true, source_batch: ACTIVE_CONCEPT_SOURCE_BATCH, industry_order: industryOrder, user_facing_video_style: videoStyle },
+          { is_active: true, source_batch: conceptSourceBatch, industry_order: industryOrder, user_facing_video_style: conceptStyle },
           "concept_number_in_section",
           20
         );
@@ -609,7 +615,7 @@ Return ONLY valid JSON. No markdown.
       const debugData = {
         classifiedIndustry: { industry_order: industryOrder, industry_name: industryName },
         selected_video_style: videoStyle,
-        retrieval_query: { source_batch: ACTIVE_CONCEPT_SOURCE_BATCH, industry_order: industryOrder, user_facing_video_style: videoStyle },
+        retrieval_query: { source_batch: conceptSourceBatch, industry_order: industryOrder, user_facing_video_style: conceptStyle },
         candidate_count: candidates.length,
         candidate_concept_ids: candidates.map(c => c.id),
         grok_selected_concept_ids: [],
@@ -637,7 +643,7 @@ Return ONLY valid JSON. No markdown.
         `[${i + 1}] ID: ${c.id}\n  Title: ${c.concept_title}\n  Text: ${c.concept_raw_text}`
       ).join("\n---\n");
 
-      const OPENAI_SELECTION_SYSTEM = `You are Briefi Concept Selector. You receive exactly ${pool.length} ConceptBank candidates for industry_order=${industryOrder} and style="${videoStyle}".
+const OPENAI_SELECTION_SYSTEM = `You are Briefi Concept Selector. You receive exactly ${pool.length} ConceptBank candidates for industry_order=${industryOrder} and style="${conceptStyle}".
 
 RULES — ALL MANDATORY:
 1. Select EXACTLY 4 concepts from the provided pool.
@@ -670,6 +676,7 @@ Description: ${business.business_description}
 Goal: ${business.main_goal}
 Industry: ${industryName} (industry_order=${industryOrder})
 Video style: ${videoStyle}
+ConceptBank style key: ${conceptStyle}
 ${normalizedSpecialFocusText ? `Special focus: ${normalizedSpecialFocusText}
 Instruction: אם יש פוקוס מיוחד, התחשב בו בבחירת הקונספטים ובהסבר ההתאמה, אבל אל תמציא קונספטים מחוץ לבנק.
 ` : ""}
@@ -693,7 +700,7 @@ ${candidateList}`;
             concept_bank_id: poolEntry?.id || c.source_concept_id || "",
             industry_order: industryOrder,
             industry_name: industryName,
-            user_facing_video_style: videoStyle,
+            user_facing_video_style: conceptStyle,
             internal_concept_type: poolEntry?.internal_concept_type || "",
           };
         });
@@ -705,7 +712,7 @@ ${candidateList}`;
           if (c.source_type !== "concept_bank") validationErrors.push(`[${i}] source_type not concept_bank`);
           if (!c.concept_bank_id || !candidateIdSet.has(c.concept_bank_id)) validationErrors.push(`[${i}] concept_bank_id "${c.concept_bank_id}" not in candidate pool`);
           if (c.industry_order !== industryOrder) validationErrors.push(`[${i}] wrong industry_order`);
-          if (c.user_facing_video_style !== videoStyle) validationErrors.push(`[${i}] wrong video style`);
+          if (c.user_facing_video_style !== conceptStyle) validationErrors.push(`[${i}] wrong video style`);
         });
 
         return { mapped: sanitizedMapped, validationErrors };

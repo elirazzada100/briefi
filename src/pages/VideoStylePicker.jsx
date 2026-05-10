@@ -3,7 +3,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 
-// 6 user-facing styles. Order: מצחיק, תדמית, סרטון הכרות, מכירתי, לימודי, טרנדי
+// 7 user-facing styles. Order: מצחיק, תדמית, סרטון הכרות, מכירתי, לימודי, UGC / המלצה, טרנדי
 // Removed from UI: סרטון אווירה, כאב / פתרון, חינוכי, השוואה, מיתוס / ניפוץ
 // (those remain as internal AI routing mechanics only)
 const VIDEO_STYLES = [
@@ -46,6 +46,15 @@ const VIDEO_STYLES = [
     desc: "טיפ, הסבר, טעות נפוצה או משהו שהלקוח לא ידע.",
     color: "#0EA5E9",
     bg: "#E0F2FE",
+  },
+  {
+    id: "ugc",
+    emoji: "📱",
+    label: "UGC / המלצה",
+    desc: "סרטון שנראה כמו המלצה אמיתית, עדות אישית או חוויה טבעית עם המוצר.",
+    note: "לא לשכוח קוד קופון אם יש.",
+    color: "#EC4899",
+    bg: "#FCE7F3",
   },
   {
     id: "טרנדי",
@@ -131,6 +140,9 @@ export default function VideoStylePicker() {
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-foreground text-sm">{style.label}</p>
                   <p className="text-xs text-muted-foreground leading-snug">{style.desc}</p>
+                  {style.note && (
+                    <p className="text-[11px] text-foreground/70 leading-snug mt-1">{style.note}</p>
+                  )}
                 </div>
                 {isSelected && (
                   <div

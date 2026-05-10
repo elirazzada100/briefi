@@ -21,25 +21,25 @@ test("regular ConceptBank batch stays isolated while future UGC batch contract i
   const benchmark = read("base44/functions/benchmarkAIProviders/entry.ts");
 
   assert.ok(grokFlow.includes(REGULAR_BATCH));
+  assert.ok(grokFlow.includes(FUTURE_UGC_BATCH));
   assert.ok(benchmark.includes(REGULAR_BATCH));
-  assert.ok(!grokFlow.includes(OLD_UGC_BATCH));
+  assert.ok(!grokFlow.includes(`${OLD_UGC_BATCH}"`));
   assert.ok(!benchmark.includes(OLD_UGC_BATCH));
   assert.notEqual(FUTURE_UGC_BATCH, REGULAR_BATCH);
   assert.notEqual(FUTURE_UGC_BATCH, OLD_UGC_BATCH);
 });
 
-test("current UI and runtime keep UGC inactive and invisible", () => {
+test("UGC is active only through the new v2 style path and stays isolated from old batch reuse", () => {
   const stylePicker = read("src/pages/VideoStylePicker.jsx");
   const app = read("src/App.jsx");
   const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
 
-  assert.ok(!stylePicker.includes(FUTURE_UGC_LABEL));
-  assert.ok(!stylePicker.includes('id: "ugc"'));
-  assert.ok(!stylePicker.includes(`id: "${FUTURE_UGC_STYLE_KEY}"`));
+  assert.ok(stylePicker.includes(FUTURE_UGC_LABEL));
+  assert.ok(stylePicker.includes(`id: "${FUTURE_UGC_STYLE_KEY}"`));
   assert.ok(!app.includes("ugc"));
-  assert.ok(!grokFlow.includes(`"${FUTURE_UGC_STYLE_KEY}"`));
-  assert.ok(!grokFlow.includes(FUTURE_UGC_BATCH));
-  assert.ok(!grokFlow.includes(OLD_UGC_BATCH));
+  assert.ok(grokFlow.includes(`const UGC_STYLE = "${FUTURE_UGC_STYLE_KEY}"`));
+  assert.ok(grokFlow.includes(FUTURE_UGC_BATCH));
+  assert.ok(!grokFlow.includes(`${OLD_UGC_BATCH}"`));
 });
 
 test("future UGC contract is locked in tests without enabling runtime yet", () => {

@@ -57,15 +57,18 @@ test("active user flow files remain untouched by admin-only security scope", () 
   assert.ok(dashboard.includes('base44.functions.invoke("deleteProject"'));
 });
 
-test("conceptbank contract, UGC inactivity, and provider split remain unchanged", () => {
+test("conceptbank contract, UGC isolation, and provider split remain unchanged", () => {
   const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
   const benchmarkAIProviders = read("base44/functions/benchmarkAIProviders/entry.ts");
 
-  [grokFlow, benchmarkAIProviders].forEach((source) => {
-    assert.ok(source.includes("1000_Concepts_Briefi_10_display_clean"));
-    assert.ok(!source.includes("1000_UGC_Briefi_10_display_clean"));
-    assert.ok(!source.includes("briefi_ugc_conceptbank"));
-  });
+  assert.ok(grokFlow.includes("1000_Concepts_Briefi_10_display_clean"));
+  assert.ok(grokFlow.includes("1000_UGC_Briefi_10_display_clean_v2"));
+  assert.ok(!grokFlow.includes('1000_UGC_Briefi_10_display_clean"'));
+  assert.ok(!grokFlow.includes("briefi_ugc_conceptbank"));
+
+  assert.ok(benchmarkAIProviders.includes("1000_Concepts_Briefi_10_display_clean"));
+  assert.ok(!benchmarkAIProviders.includes("1000_UGC_Briefi_10_display_clean_v2"));
+  assert.ok(!benchmarkAIProviders.includes("briefi_ugc_conceptbank"));
 
   assert.ok(grokFlow.includes('source_type: "concept_bank"'));
   assert.ok(grokFlow.includes("candidateIdSet"));
