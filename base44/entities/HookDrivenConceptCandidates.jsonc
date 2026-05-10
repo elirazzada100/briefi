@@ -1,0 +1,94 @@
+{
+  "name": "HookDrivenConceptCandidates",
+  "type": "object",
+  "properties": {
+    "generation_run_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "source_hook_template_id": {
+      "type": "string"
+    },
+    "source_hook_category": {
+      "type": "string"
+    },
+    "source_hook_mechanic": {
+      "type": "string"
+    },
+    "hebrew_hook_template": {
+      "type": "string"
+    },
+    "filled_hook": {
+      "type": "string"
+    },
+    "concept_title": {
+      "type": "string"
+    },
+    "short_description": {
+      "type": "string"
+    },
+    "video_style": {
+      "type": "string"
+    },
+    "talking_head": {
+      "type": "boolean",
+      "default": true
+    },
+    "speaker_type": {
+      "type": "string",
+      "enum": [
+        "business_owner",
+        "employee",
+        "expert",
+        "customer",
+        "narrator",
+        "creator"
+      ]
+    },
+    "main_claim": {
+      "type": "string"
+    },
+    "human_tension": {
+      "type": "string"
+    },
+    "payoff": {
+      "type": "string"
+    },
+    "why_it_works": {
+      "type": "string"
+    },
+    "how_to_shoot_short": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "idea_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "generation_run_id",
+    "project_id",
+    "concept_title"
+  ],
+  "rls": {
+    "create": {
+      "data.owner_id": "{{user.id}}"
+    },
+    "read": {
+      "data.owner_id": "{{user.id}}"
+    },
+    "update": {
+      "data.owner_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.owner_id": "{{user.id}}"
+    }
+  }
+}
