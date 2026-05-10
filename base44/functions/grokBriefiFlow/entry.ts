@@ -272,6 +272,16 @@ const REGULAR_BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות"
 const UGC_STYLE = "ugc";
 const BANK_STYLES = [...REGULAR_BANK_STYLES, UGC_STYLE];
 
+function buildUGCPovInstruction() {
+  return `UGC POV RULES — MANDATORY:
+- Write from the point of view of a customer, user, creator, or someone outside the business who tried it.
+- The voice must feel like personal experience, trial, recommendation, or real-world use.
+- It must NOT sound like the owner, employee, brand, or business speaking about itself.
+- Forbidden business POV phrases: "אנחנו", "אצלנו", "הכנו לכם", "בואו אלינו", "המוצר שלנו", "השירות שלנו", "הצוות שלנו", "לקוחות שלנו" unless clearly quoted as an outside customer.
+- Preferred framing: "ניסיתי את...", "לקחתי את...", "הגעתי ל...", "לא ציפיתי ש...", "אחרי יום עם זה...", "זה הרגיש לי...", "מה שאהבתי בזה...", "אם אתם מחפשים... שווה לבדוק", "לא פרסומת, פשוט חוויה שעבדה לי".
+- Keep it natural, specific, and clearly outside-the-business recommendation language.`;
+}
+
 // ── SYSTEM PROMPTS ─────────────────────────────────────────────────────────────
 
 const OPENING_GEN_GROK_SYSTEM = `You are Briefi Opening Line Generator for Israeli social media.
@@ -542,6 +552,7 @@ Return ONLY valid JSON. No markdown.
         ? UGC_CONCEPT_SOURCE_BATCH
         : ACTIVE_CONCEPT_SOURCE_BATCH;
       const conceptStyle = videoStyle === UGC_STYLE ? UGC_STYLE : videoStyle;
+      const ugcPovInstruction = videoStyle === UGC_STYLE ? buildUGCPovInstruction() : "";
 
       // ── STEP 1: Resolve industry_order ──────────────────────────────────────
       const t0 = Date.now();
@@ -662,6 +673,7 @@ RULES — ALL MANDATORY:
 14. אין להשתמש במקפים בכלל בטקסט שמוצג למשתמש. לא "-", לא "–", לא "—", ולא "־". השתמש בפסיק, נקודה או משפט חדש.
 
 ${FORBIDDEN_PHRASES}
+${ugcPovInstruction ? `\n${ugcPovInstruction}\n` : ""}
 
 Return ONLY valid JSON. No markdown.
 {"concepts":[{"concept_title":"","short_description":"","why_it_works":"","idea_tags":[],"source_concept_id":"exact-id-from-pool"}]}`;
@@ -679,6 +691,8 @@ Video style: ${videoStyle}
 ConceptBank style key: ${conceptStyle}
 ${normalizedSpecialFocusText ? `Special focus: ${normalizedSpecialFocusText}
 Instruction: אם יש פוקוס מיוחד, התחשב בו בבחירת הקונספטים ובהסבר ההתאמה, אבל אל תמציא קונספטים מחוץ לבנק.
+` : ""}
+${ugcPovInstruction ? `${ugcPovInstruction}
 ` : ""}
 
 CANDIDATE POOL — select 4 from these ${pool.length} only (IDs are mandatory in output):
@@ -890,6 +904,7 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
 
       const videoStyle = selectedVideoStyle || "מצחיק";
       const classifiedIndustry = businessAnalysis?.industry_name || businessAnalysis?.classified_industry || "";
+      const ugcPovInstruction = videoStyle === UGC_STYLE ? buildUGCPovInstruction() : "";
 
       const userPrompt = `Business:
 Name: ${business.business_name}
@@ -902,6 +917,9 @@ Video style: ${videoStyle}
 Selected concept:
 Title: ${selectedConcept.concept_title || selectedConcept.concept_name || ""}
 Description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
+${ugcPovInstruction ? `
+${ugcPovInstruction}
+` : ""}
 
 Generate exactly 4 opening lines for this specific concept and business.
 Each must be the very first sentence of the video — short, spoken, Israeli Hebrew.
@@ -931,6 +949,8 @@ Do NOT explain the concept. Do NOT use generic phrases. Sound like a real Israel
       }
 
       const opening = selectedOpening || selectedBody;
+      const videoStyle = selectedVideoStyle || "מצחיק";
+      const ugcPovInstruction = videoStyle === UGC_STYLE ? buildUGCPovInstruction() : "";
 
       const userPrompt = `Business:
 Name: ${business.business_name}
@@ -942,6 +962,9 @@ ${JSON.stringify(selectedConcept, null, 2)}
 
 Selected opening line:
 ${opening ? JSON.stringify(opening, null, 2) : "(not provided)"}
+${ugcPovInstruction ? `
+${ugcPovInstruction}
+` : ""}
 
 Generate 4 CTA options that are natural, specific to this video, and feel Israeli.
 Match the tone of the concept and opening line.`;
@@ -966,6 +989,8 @@ Match the tone of the concept and opening line.`;
       const opening = selectedOpening || selectedBody;
       const openingLineText = opening?.opening_line || opening?.filled_opening_line || "";
       const isLimdi = (selectedVideoStyle || "") === "לימודי";
+      const isUGC = (selectedVideoStyle || "") === UGC_STYLE;
+      const ugcPovInstruction = isUGC ? buildUGCPovInstruction() : "";
 
       const finalBriefSystemPrompt = isLimdi
         ? FINAL_BRIEF_LIMDI_SYSTEM
@@ -976,6 +1001,9 @@ Style: ${selectedVideoStyle || ""}
 Concept: ${selectedConcept.concept_title || ""} — ${selectedConcept.short_description || selectedConcept.core_situation || ""}
 Opening line (use verbatim as "hook"): "${openingLineText}"
 CTA: "${selectedCTA.cta_text || selectedCTA}"
+${ugcPovInstruction ? `
+${ugcPovInstruction}
+` : ""}
 
 Assemble the brief now. hook = opening line verbatim. 4-5 shots. 3-4 overlays. script max 80 words.`;
 
@@ -1046,6 +1074,9 @@ Concept title: ${selectedConcept.concept_title || ""}
 Concept description: ${selectedConcept.short_description || selectedConcept.core_situation || ""}
 Hook (meaning must stay the same): "${finalBrief.hook || openingLineText}"
 CTA (meaning must stay the same): "${finalBrief.cta || selectedCTA.cta_text || selectedCTA}"
+${ugcPovInstruction ? `
+${ugcPovInstruction}
+` : ""}
 
 Polish only these fields and return the same JSON keys:
 ${JSON.stringify(polishPayload, null, 2)}`;

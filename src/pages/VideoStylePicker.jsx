@@ -51,8 +51,7 @@ const VIDEO_STYLES = [
     id: "ugc",
     emoji: "📱",
     label: "UGC / המלצה",
-    desc: "סרטון שנראה כמו המלצה אמיתית, עדות אישית או חוויה טבעית עם המוצר.",
-    note: "לא לשכוח קוד קופון אם יש.",
+    desc: "רק לא לשכוח קוד קופון!",
     color: "#EC4899",
     bg: "#FCE7F3",
   },
@@ -140,9 +139,6 @@ export default function VideoStylePicker() {
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-foreground text-sm">{style.label}</p>
                   <p className="text-xs text-muted-foreground leading-snug">{style.desc}</p>
-                  {style.note && (
-                    <p className="text-[11px] text-foreground/70 leading-snug mt-1">{style.note}</p>
-                  )}
                 </div>
                 {isSelected && (
                   <div

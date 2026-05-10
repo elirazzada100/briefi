@@ -28,8 +28,9 @@ test("UGC style is visible, uses internal key ugc, and routes into Special Focus
   assert.ok(trendyIndex !== -1);
   assert.ok(ugcIndex < trendyIndex);
   assert.ok(stylePicker.includes('id: "ugc"'));
-  assert.ok(stylePicker.includes("סרטון שנראה כמו המלצה אמיתית, עדות אישית או חוויה טבעית עם המוצר."));
-  assert.ok(stylePicker.includes("לא לשכוח קוד קופון אם יש."));
+  assert.ok(stylePicker.includes("רק לא לשכוח קוד קופון!"));
+  assert.ok(!stylePicker.includes("סרטון שנראה כמו המלצה אמיתית, עדות אישית או חוויה טבעית עם המוצר."));
+  assert.ok(!stylePicker.includes("לא לשכוח קוד קופון אם יש."));
   assert.ok(stylePicker.includes("navigate(`/project/${projectId}/special-focus`, {"));
 });
 
@@ -91,4 +92,7 @@ test("special focus is passed into concept selection context only when non-empty
   assert.ok(grokFlow.includes("אם יש פוקוס מיוחד, התחשב בו בבחירת הקונספטים ובהסבר ההתאמה, אבל אל תמציא קונספטים מחוץ לבנק."));
   assert.ok(grokFlow.includes('const UGC_CONCEPT_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean_v2"'));
   assert.ok(grokFlow.includes('const UGC_STYLE = "ugc"'));
+  assert.ok(grokFlow.includes("function buildUGCPovInstruction()"));
+  assert.ok(grokFlow.includes('Forbidden business POV phrases: "אנחנו", "אצלנו", "הכנו לכם", "בואו אלינו", "המוצר שלנו", "השירות שלנו", "הצוות שלנו", "לקוחות שלנו"'));
+  assert.ok(grokFlow.includes('Preferred framing: "ניסיתי את...", "לקחתי את...", "הגעתי ל...", "לא ציפיתי ש...", "אחרי יום עם זה...", "זה הרגיש לי...", "מה שאהבתי בזה...", "אם אתם מחפשים... שווה לבדוק", "לא פרסומת, פשוט חוויה שעבדה לי".'));
 });

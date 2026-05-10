@@ -77,6 +77,37 @@ test("UGC runtime uses only the v2 batch while regular styles stay on the regula
   assert.doesNotMatch(grokFlow, /1000_UGC_Briefi_10_display_clean"/);
 });
 
+test("UGC copy uses external customer POV while regular and trendy prompts stay structurally unchanged", () => {
+  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
+  const stylePicker = read("./src/pages/VideoStylePicker.jsx");
+
+  assert.match(stylePicker, /רק לא לשכוח קוד קופון!/);
+  assert.doesNotMatch(stylePicker, /סרטון שנראה כמו המלצה אמיתית, עדות אישית או חוויה טבעית עם המוצר/);
+  assert.match(grokFlow, /function buildUGCPovInstruction\(\)/);
+  assert.match(grokFlow, /customer, user, creator, or someone outside the business who tried it/);
+  assert.match(grokFlow, /Forbidden business POV phrases: "אנחנו", "אצלנו", "הכנו לכם", "בואו אלינו", "המוצר שלנו", "השירות שלנו", "הצוות שלנו", "לקוחות שלנו"/);
+  assert.match(grokFlow, /Preferred framing: "ניסיתי את\.\.\.", "לקחתי את\.\.\.", "הגעתי ל\.\.\.", "לא ציפיתי ש\.\.\.", "אחרי יום עם זה\.\.\.", "זה הרגיש לי\.\.\.", "מה שאהבתי בזה\.\.\.", "אם אתם מחפשים\.\.\. שווה לבדוק", "לא פרסומת, פשוט חוויה שעבדה לי"\./);
+  assert.match(grokFlow, /const ugcPovInstruction = videoStyle === UGC_STYLE \? buildUGCPovInstruction\(\) : "";/);
+  assert.match(grokFlow, /const isUGC = \(selectedVideoStyle \|\| ""\) === UGC_STYLE;/);
+});
+
+test("UGC POV instruction is applied to hook CTA and final brief generation only when style is ugc", () => {
+  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
+  const ugcPromptInjectionCount = (grokFlow.match(/\$\{ugcPovInstruction\}/g) || []).length;
+
+  assert.match(grokFlow, /Generate exactly 4 opening lines for this specific concept and business\./);
+  assert.match(grokFlow, /Generate 4 CTA options that are natural, specific to this video, and feel Israeli\./);
+  assert.match(grokFlow, /Assemble the brief now\. hook = opening line verbatim\./);
+  assert.match(grokFlow, /Polish only these fields and return the same JSON keys:/);
+  assert.match(grokFlow, /const ugcPovInstruction = videoStyle === UGC_STYLE \? buildUGCPovInstruction\(\) : "";/);
+  assert.match(grokFlow, /const isUGC = \(selectedVideoStyle \|\| ""\) === UGC_STYLE;/);
+  assert.match(grokFlow, /const ugcPovInstruction = isUGC \? buildUGCPovInstruction\(\) : "";/);
+  assert.match(grokFlow, /Generate exactly 4 opening lines[\s\S]*?\$\{ugcPovInstruction\}/);
+  assert.match(grokFlow, /Generate 4 CTA options[\s\S]*?\$\{ugcPovInstruction\}/);
+  assert.match(grokFlow, /Assemble the brief now\. hook = opening line verbatim\.[\s\S]*?\$\{ugcPovInstruction\}/);
+  assert.ok(ugcPromptInjectionCount >= 5, `Expected at least 5 UGC POV prompt injections, got ${ugcPromptInjectionCount}`);
+});
+
 test("hybrid final brief preserves exported field structure while adding provider polish metadata", () => {
   const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
   const pdfExport = read("./src/pages/PDFExport.jsx");
