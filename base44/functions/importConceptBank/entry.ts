@@ -2,10 +2,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const REGULAR_CSV_URL = "https://media.base44.com/files/public/69ed0172145044ff033ecacf/2db45fb33_briefi_concept_csv.csv";
 const UGC_V2_SOURCE = "ugc_v2";
-const UGC_V2_SOURCE_FILE = "briefi_ugc_conceptbank_1000_v2_import_ready_clean.csv";
+const UGC_V2_SOURCE_FILE = "briefi_ugc_conceptbank_1000_v2_import_ready_flat.csv";
 const UGC_V2_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean_v2";
 const OLD_UGC_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean";
-const UGC_V2_REMOTE_CSV_URL = "https://raw.githubusercontent.com/elirazzada100/briefi/main/briefi_ugc_conceptbank_1000_v2_import_ready_clean.csv";
+const UGC_V2_REMOTE_CSV_URL = "https://raw.githubusercontent.com/elirazzada100/briefi/main/briefi_ugc_conceptbank_1000_v2_import_ready_flat.csv";
 const BATCH_SIZE = 50;
 
 function parseCSV(text) {
