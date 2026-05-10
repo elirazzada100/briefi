@@ -1,0 +1,66 @@
+{
+  "name": "BusinessIndustries",
+  "type": "object",
+  "properties": {
+    "industry_order": {
+      "type": "number",
+      "description": "\u05e1\u05d3\u05e8 \u05d4\u05ea\u05e2\u05e9\u05d9\u05d9\u05d4"
+    },
+    "industry_name": {
+      "type": "string",
+      "description": "\u05e9\u05dd \u05d4\u05ea\u05e2\u05e9\u05d9\u05d9\u05d4 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u05db\u05e4\u05d9 \u05e9\u05de\u05d5\u05e4\u05d9\u05e2 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05d4\u05de\u05e7\u05d5\u05e8"
+    },
+    "industry_slug": {
+      "type": "string",
+      "description": "\u05de\u05d6\u05d4\u05d4 \u05e4\u05e0\u05d9\u05de\u05d9 \u05d1\u05d0\u05e0\u05d2\u05dc\u05d9\u05ea"
+    },
+    "industry_description": {
+      "type": "string",
+      "description": "\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05ea\u05e2\u05e9\u05d9\u05d9\u05d4"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05de\u05d9\u05dc\u05d5\u05ea \u05de\u05e4\u05ea\u05d7 \u05dc\u05e1\u05d9\u05d5\u05d5\u05d2"
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u05d3\u05d5\u05d2\u05de\u05d0\u05d5\u05ea \u05dc\u05e2\u05e1\u05e7\u05d9\u05dd \u05d1\u05ea\u05e2\u05e9\u05d9\u05d9\u05d4"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "source_file": {
+      "type": "string",
+      "default": "1000_Concepts_Briefi_10.txt"
+    }
+  },
+  "required": [
+    "industry_name",
+    "industry_order"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
