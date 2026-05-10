@@ -9,9 +9,10 @@ function read(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("importConceptBank, verifyConceptBankIntegrity, and benchmarkAIProviders reject non-admin callers", () => {
+test("admin-only backend functions reject non-admin callers", () => {
   const importConceptBank = read("base44/functions/importConceptBank/entry.ts");
   const verifyConceptBankIntegrity = read("base44/functions/verifyConceptBankIntegrity/entry.ts");
+  const verifyUGCConceptBankIntegrity = read("base44/functions/verifyUGCConceptBankIntegrity/entry.ts");
   const benchmarkAIProviders = read("base44/functions/benchmarkAIProviders/entry.ts");
 
   assert.ok(importConceptBank.includes("user.role !== 'admin'"));
@@ -19,6 +20,9 @@ test("importConceptBank, verifyConceptBankIntegrity, and benchmarkAIProviders re
 
   assert.ok(verifyConceptBankIntegrity.includes("user.role !== 'admin'"));
   assert.ok(verifyConceptBankIntegrity.includes("Forbidden"));
+
+  assert.ok(verifyUGCConceptBankIntegrity.includes("user.role !== 'admin'"));
+  assert.ok(verifyUGCConceptBankIntegrity.includes("Forbidden: admin only"));
 
   assert.ok(benchmarkAIProviders.includes("user.role !== 'admin'"));
   assert.ok(benchmarkAIProviders.includes("Forbidden: admin only"));
