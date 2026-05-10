@@ -1,0 +1,66 @@
+{
+  "name": "HookDrivenSelectedConcepts",
+  "type": "object",
+  "properties": {
+    "generation_run_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "candidate_id": {
+      "type": "string"
+    },
+    "source_hook_template_id": {
+      "type": "string"
+    },
+    "concept_title": {
+      "type": "string"
+    },
+    "short_description": {
+      "type": "string"
+    },
+    "filled_hook": {
+      "type": "string"
+    },
+    "video_style": {
+      "type": "string"
+    },
+    "idea_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "why_it_works": {
+      "type": "string"
+    },
+    "full_concept_data": {
+      "type": "object",
+      "description": "\u05db\u05dc \u05e0\u05ea\u05d5\u05e0\u05d9 \u05d4\u05e7\u05d5\u05e0\u05e1\u05e4\u05d8"
+    },
+    "selected_by_user": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "generation_run_id",
+    "project_id",
+    "concept_title"
+  ],
+  "rls": {
+    "create": {
+      "data.owner_id": "{{user.id}}"
+    },
+    "read": {
+      "data.owner_id": "{{user.id}}"
+    },
+    "update": {
+      "data.owner_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.owner_id": "{{user.id}}"
+    }
+  }
+}
