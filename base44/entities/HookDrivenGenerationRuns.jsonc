@@ -1,0 +1,77 @@
+{
+  "name": "HookDrivenGenerationRuns",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "selected_video_style": {
+      "type": "string"
+    },
+    "industry": {
+      "type": "string"
+    },
+    "business_name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "running",
+        "completed",
+        "failed"
+      ],
+      "default": "running"
+    },
+    "prompt_version": {
+      "type": "string",
+      "default": "hook_driven_concepts_v1"
+    },
+    "total_templates_loaded": {
+      "type": "number",
+      "default": 0
+    },
+    "total_raw_concepts_generated": {
+      "type": "number",
+      "default": 0
+    },
+    "total_concepts_rejected": {
+      "type": "number",
+      "default": 0
+    },
+    "total_concepts_rewritten": {
+      "type": "number",
+      "default": 0
+    },
+    "total_final_concepts": {
+      "type": "number",
+      "default": 0
+    },
+    "completed_at": {
+      "type": "string",
+      "description": "\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d9\u05d5\u05dd"
+    }
+  },
+  "required": [
+    "project_id",
+    "user_id",
+    "selected_video_style"
+  ],
+  "rls": {
+    "create": {
+      "data.user_id": "{{user.id}}"
+    },
+    "read": {
+      "data.user_id": "{{user.id}}"
+    },
+    "update": {
+      "data.user_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.user_id": "{{user.id}}"
+    }
+  }
+}
