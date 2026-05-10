@@ -5,7 +5,7 @@ const UGC_V2_SOURCE = "ugc_v2";
 const UGC_V2_SOURCE_FILE = "briefi_ugc_conceptbank_1000_v2_import_ready_clean.csv";
 const UGC_V2_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean_v2";
 const OLD_UGC_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean";
-const UGC_V2_LOCAL_FILE_URL = new URL("../../../briefi_ugc_conceptbank_1000_v2_import_ready_clean.csv", import.meta.url);
+const UGC_V2_REMOTE_CSV_URL = "https://raw.githubusercontent.com/elirazzada100/briefi/main/briefi_ugc_conceptbank_1000_v2_import_ready_clean.csv";
 const BATCH_SIZE = 50;
 
 function parseCSV(text) {
@@ -114,7 +114,9 @@ async function readRequestBody(req) {
 
 async function loadRowsForSource(source) {
   if (source === UGC_V2_SOURCE) {
-    const csvText = await Deno.readTextFile(UGC_V2_LOCAL_FILE_URL);
+    const csvRes = await fetch(UGC_V2_REMOTE_CSV_URL);
+    if (!csvRes.ok) throw new Error(`Failed to fetch UGC v2 CSV: ${csvRes.status}`);
+    const csvText = await csvRes.text();
     return {
       source,
       source_batch: UGC_V2_SOURCE_BATCH,

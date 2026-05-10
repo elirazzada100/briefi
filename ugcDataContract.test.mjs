@@ -10,6 +10,7 @@ const FUTURE_UGC_BATCH = "1000_UGC_Briefi_10_display_clean_v2";
 const FUTURE_UGC_STYLE_KEY = "ugc";
 const FUTURE_UGC_LABEL = "UGC / המלצה";
 const FUTURE_UGC_SOURCE_FILE = "briefi_ugc_conceptbank_1000_v2_import_ready_clean.csv";
+const FUTURE_UGC_REMOTE_CSV_URL = "https://raw.githubusercontent.com/elirazzada100/briefi/main/briefi_ugc_conceptbank_1000_v2_import_ready_clean.csv";
 
 function read(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
@@ -72,10 +73,13 @@ test("importer supports explicit ugc_v2 source without changing regular import d
   assert.ok(importer.includes(`const UGC_V2_SOURCE_FILE = "${FUTURE_UGC_SOURCE_FILE}"`));
   assert.ok(importer.includes(`const UGC_V2_SOURCE_BATCH = "${FUTURE_UGC_BATCH}"`));
   assert.ok(importer.includes(`const OLD_UGC_SOURCE_BATCH = "${OLD_UGC_BATCH}"`));
+  assert.ok(importer.includes(`const UGC_V2_REMOTE_CSV_URL = "${FUTURE_UGC_REMOTE_CSV_URL}"`));
   assert.ok(importer.includes('if (source === UGC_V2_SOURCE)'));
   assert.ok(importer.includes('const source = body?.source;'));
   assert.ok(importer.includes('source: "regular"'));
-  assert.ok(importer.includes('Deno.readTextFile(UGC_V2_LOCAL_FILE_URL)'));
+  assert.ok(importer.includes('await fetch(UGC_V2_REMOTE_CSV_URL)'));
+  assert.ok(!importer.includes('Deno.readTextFile(UGC_V2_LOCAL_FILE_URL)'));
+  assert.ok(!importer.includes('briefi_ugc_conceptbank_1000_v2_import_ready.csv"'));
   assert.ok(importer.includes('source_batch: r[\'source_batch\'] || \'\''));
 });
 
