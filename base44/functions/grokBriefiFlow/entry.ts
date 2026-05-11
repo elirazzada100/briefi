@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// ── Constants and source batches ──────────────────────────────────────────────
 const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
 const XAI_BASE_URL = Deno.env.get("XAI_BASE_URL") || "https://api.x.ai/v1";
 const XAI_MODEL = Deno.env.get("XAI_MODEL") || "grok-3";
@@ -28,6 +29,7 @@ Forbidden phrases (NEVER use these):
 - "כשהקריאייטיב מצלם" → use "כשהצלם מצלם" or "כשמצלמים"
 `;
 
+// ── User-facing copy sanitization ─────────────────────────────────────────────
 function sanitizeUserFacingHebrewCopy(value) {
   if (typeof value !== "string") return value;
   return value
@@ -119,7 +121,8 @@ function sanitizeFinalBriefUserFacingFields(finalBrief) {
   };
 }
 
-// ── Grok caller ────────────────────────────────────────────────────────────────
+// ── Provider clients ───────────────────────────────────────────────────────────
+// Grok caller
 async function callGrok(systemPrompt, userPrompt, temperature = 0.7) {
   const apiRes = await fetch(`${XAI_BASE_URL}/chat/completions`, {
     method: "POST",
@@ -146,7 +149,7 @@ async function callGrok(systemPrompt, userPrompt, temperature = 0.7) {
   return content;
 }
 
-// ── Parse JSON with markdown stripping ────────────────────────────────────────
+// ── Shared parsing / JSON helpers ─────────────────────────────────────────────
 function parseJSON(raw) {
   const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   return JSON.parse(cleaned);
@@ -168,6 +171,7 @@ async function callWithFallback(systemPrompt, userPrompt, temperature = 0.7) {
   throw lastErr;
 }
 
+// Timeout wrapper used by bounded Grok polish
 async function callWithFallbackTimeout(systemPrompt, userPrompt, temperature = 0.7, timeoutMs = 12000) {
   return await Promise.race([
     callWithFallback(systemPrompt, userPrompt, temperature),
@@ -213,7 +217,7 @@ async function selectConceptsWithOpenAI(systemPrompt, userPrompt) {
   return callOpenAIForConcepts(systemPrompt, userPrompt, 0.7);
 }
 
-// ── OpenAI classification (concept step only) ─────────────────────────────────
+// ── Business classification ────────────────────────────────────────────────────
 const CLASSIFY_SYSTEM = `You are a business category classifier. Classify the business into exactly one of these 10 categories.
 Return ONLY valid JSON: {"industry_order": <number 1-10>, "industry_name": "<exact name below>"}
 
@@ -272,6 +276,7 @@ const REGULAR_BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות"
 const UGC_STYLE = "ugc";
 const BANK_STYLES = [...REGULAR_BANK_STYLES, UGC_STYLE];
 
+// ── Style / UGC / Trendy policy area ──────────────────────────────────────────
 function buildUGCPovInstruction() {
   return `UGC POV RULES — MANDATORY:
 - Write from the point of view of a customer, user, creator, or someone outside the business who tried it.
@@ -453,6 +458,7 @@ function mergePolishedFinalBrief(openAIBrief, polishedFields) {
   };
 }
 
+// ── Main action router / request handler ──────────────────────────────────────
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -464,6 +470,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, project_id, business, selectedConcept, selectedOpening, selectedBody, selectedCTA, selectedVideoStyle, businessAnalysis, specialFocus } = body;
 
+    // ── Creative DNA action ───────────────────────────────────────────────────
     // ── generateCreativeDNA ─────────────────────────────────────────────────────
     if (action === "generateCreativeDNA") {
       const { project_id: pid, client_name, main_goal, raw_notes } = body;
@@ -504,6 +511,7 @@ Analyze this business. Fill all 5 cards with specific, actionable insights. Prov
 
       const videoStyle = selectedVideoStyle || "מצחיק";
 
+      // ── Concept generation action ───────────────────────────────────────────
       // ── טרנדי: TrendPatterns only — never queries ConceptBank ──────────────
       if (videoStyle === "טרנדי") {
         const trendPatterns = await base44.asServiceRole.entities.TrendPattern.filter({ is_active: true });
@@ -543,6 +551,7 @@ Return ONLY valid JSON. No markdown.
         });
       }
 
+      // ── ConceptBank retrieval and candidate validation ─────────────────────
       // ── ConceptBank strict retrieval (non-trendy styles only) ──────────────
       if (!BANK_STYLES.includes(videoStyle)) {
         return Response.json({ error: `Unknown video style: ${videoStyle}` }, { status: 400 });
@@ -554,6 +563,7 @@ Return ONLY valid JSON. No markdown.
       const conceptStyle = videoStyle === UGC_STYLE ? UGC_STYLE : videoStyle;
       const ugcPovInstruction = videoStyle === UGC_STYLE ? buildUGCPovInstruction() : "";
 
+      // ── Special Focus handling ──────────────────────────────────────────────
       // ── STEP 1: Resolve industry_order ──────────────────────────────────────
       const t0 = Date.now();
       let industryOrder = businessAnalysis?.industry_order
@@ -775,6 +785,7 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
       });
     }
 
+    // ── Verification / admin-only helper actions ─────────────────────────────
     // ── verifyBriefiConceptMatchingAlgorithm ────────────────────────────────
     if (action === "verifyBriefiConceptMatchingAlgorithm" || action === "verifyStrictConceptClassificationRetrieval") {
       const STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"];
@@ -896,6 +907,7 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
       });
     }
 
+    // ── Hook / opening generation action ─────────────────────────────────────
     // ── generateOpeningOptions ──────────────────────────────────────────────────
     if (action === "generateOpeningOptions") {
       if (!business || !selectedConcept) {
@@ -942,6 +954,7 @@ Do NOT explain the concept. Do NOT use generic phrases. Sound like a real Israel
       });
     }
 
+    // ── CTA generation action ────────────────────────────────────────────────
     // ── generateCTAOptions ──────────────────────────────────────────────────────
     if (action === "generateCTAOptions") {
       if (!business || !selectedConcept) {
@@ -977,6 +990,7 @@ Match the tone of the concept and opening line.`;
       });
     }
 
+    // ── FinalBrief assembly action ───────────────────────────────────────────
     // ── assembleFinalBrief (OpenAI) ─────────────────────────────────────────────
     if (action === "assembleFinalBrief") {
       if (!business || !selectedConcept || !selectedCTA) {
@@ -1105,6 +1119,7 @@ ${JSON.stringify(polishPayload, null, 2)}`;
         }
       }
 
+      // ── Persistence / VideoBrief / Project update ─────────────────────────
       let savedBrief = null;
       if (project_id) {
         const existingBriefs = await base44.asServiceRole.entities.VideoBrief.filter({ project_id });
@@ -1151,6 +1166,7 @@ ${JSON.stringify(polishPayload, null, 2)}`;
       });
     }
 
+    // ── Grok polish / improve final brief action ─────────────────────────────
     // ── improveFinalBrief ───────────────────────────────────────────────────────
     if (action === "improveFinalBrief") {
       const { original_brief, feedback_text, client_name: cname, main_goal: cgoal } = body;
@@ -1178,6 +1194,7 @@ Improve the brief based on the feedback. Keep all fields. Adjust only what the f
     return Response.json({ error: "Unknown action" }, { status: 400 });
 
   } catch (error) {
+    // ── Error handling ───────────────────────────────────────────────────────
     console.error("grokBriefiFlow error:", error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
