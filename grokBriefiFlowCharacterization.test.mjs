@@ -145,6 +145,22 @@ test("grokBriefiFlow locks hybrid final brief flow and field contract", () => {
   assert.ok(grokFlow.includes('"cta"'));
 });
 
+test("grokBriefiFlow locks improveFinalBrief as a Grok-only sanitized path with UGC POV protection", () => {
+  const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.ok(grokFlow.includes('if (action === "improveFinalBrief") {'));
+  assert.ok(grokFlow.includes('const { original_brief, feedback_text, client_name: cname, main_goal: cgoal, selected_video_style: selectedVideoStyle } = body;'));
+  assert.ok(grokFlow.includes("const policy = resolveStylePolicy(selectedVideoStyle);"));
+  assert.ok(grokFlow.includes('const ugcPovInstruction = policy.ugcPovRequired ? buildUGCPovInstruction() : "";'));
+  assert.ok(grokFlow.includes("You are Briefi Brief Improver. You receive an existing video brief and user feedback."));
+  assert.ok(grokFlow.includes("${ugcPovInstruction ? `\\n${ugcPovInstruction}\\n` : \"\"}"));
+  assert.ok(grokFlow.includes('Forbidden business POV phrases: "אנחנו", "אצלנו", "הכנו לכם", "בואו אלינו", "המוצר שלנו", "השירות שלנו", "הצוות שלנו", "לקוחות שלנו"'));
+  assert.ok(grokFlow.includes("Preferred framing: \"ניסיתי את...\", \"לקחתי את...\", \"הגעתי ל...\", \"לא ציפיתי ש...\", \"אחרי יום עם זה...\", \"זה הרגיש לי...\", \"מה שאהבתי בזה...\", \"אם אתם מחפשים... שווה לבדוק\", \"לא פרסומת, פשוט חוויה שעבדה לי\"."));
+  assert.ok(grokFlow.includes('const { parsed } = await callWithFallback(IMPROVE_SYSTEM, improveUser, 0.65);'));
+  assert.ok(grokFlow.includes('return Response.json({ final_brief: sanitizeFinalBriefUserFacingFields(parsed), provider: "grok" });'));
+  assert.ok(!grokFlow.includes('return Response.json({ final_brief: sanitizeFinalBriefUserFacingFields(parsed), provider: "openai" });'));
+});
+
 test("characterization guard confirms import and verify files are unchanged by this test-only contract", () => {
   const importer = read("base44/functions/importConceptBank/entry.ts");
   const verifier = read("base44/functions/verifyUGCConceptBankIntegrity/entry.ts");
