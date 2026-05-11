@@ -149,7 +149,11 @@ test("grokBriefiFlow locks improveFinalBrief as a Grok-only sanitized path with 
   const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
 
   assert.ok(grokFlow.includes('if (action === "improveFinalBrief") {'));
-  assert.ok(grokFlow.includes('const { original_brief, feedback_text, client_name: cname, main_goal: cgoal, selected_video_style: selectedVideoStyle } = body;'));
+  assert.ok(grokFlow.includes("body.selected_video_style ||"));
+  assert.ok(grokFlow.includes("body.selectedVideoStyle ||"));
+  assert.ok(grokFlow.includes("body.selectedStyle ||"));
+  assert.ok(grokFlow.includes("body.style ||"));
+  assert.ok(grokFlow.includes("body.user_facing_video_style ||"));
   assert.ok(grokFlow.includes("const policy = resolveStylePolicy(selectedVideoStyle);"));
   assert.ok(grokFlow.includes('const ugcPovInstruction = policy.ugcPovRequired ? buildUGCPovInstruction() : "";'));
   assert.ok(grokFlow.includes("You are Briefi Brief Improver. You receive an existing video brief and user feedback."));

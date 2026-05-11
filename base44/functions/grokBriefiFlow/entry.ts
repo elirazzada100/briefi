@@ -1200,12 +1200,22 @@ ${JSON.stringify(polishPayload, null, 2)}`;
     // ── improveFinalBrief ───────────────────────────────────────────────────────
     if (action === "improveFinalBrief") {
       const { original_brief, feedback_text, client_name: cname, main_goal: cgoal } = body;
+      const selectedVideoStyle =
+        body.selected_video_style ||
+        body.selectedVideoStyle ||
+        body.selectedStyle ||
+        body.style ||
+        body.user_facing_video_style ||
+        "";
+      const policy = resolveStylePolicy(selectedVideoStyle);
+      const ugcPovInstruction = policy.ugcPovRequired ? buildUGCPovInstruction() : "";
       if (!original_brief || !feedback_text) {
         return Response.json({ error: "original_brief and feedback_text required" }, { status: 400 });
       }
 
       const IMPROVE_SYSTEM = `You are Briefi Brief Improver. You receive an existing video brief and user feedback.
 Improve the brief based on the feedback. Keep structure identical. Write in Israeli Hebrew.
+${ugcPovInstruction ? `\n${ugcPovInstruction}\n` : ""}
 ${FORBIDDEN_PHRASES}
 Return ONLY valid JSON with the same schema as the input brief. No markdown.`;
 
