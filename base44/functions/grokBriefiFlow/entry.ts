@@ -9,6 +9,10 @@ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const OPENAI_CONCEPT_MODEL = "gpt-4.1-mini-2025-04-14";
 const ACTIVE_CONCEPT_SOURCE_BATCH = "1000_Concepts_Briefi_10_display_clean";
 const UGC_CONCEPT_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean_v2";
+const UNAUTHORIZED_ERROR = "Unauthorized";
+const XAI_API_KEY_MISSING_ERROR = "XAI_API_KEY is not set";
+const OPENAI_API_KEY_MISSING_ERROR = "OPENAI_API_KEY is not set";
+const UNKNOWN_ACTION_ERROR = "Unknown action";
 
 const FORBIDDEN_PHRASES = `
 Forbidden phrases (NEVER use these):
@@ -184,7 +188,7 @@ async function callWithFallbackTimeout(systemPrompt, userPrompt, temperature = 0
 // ── OpenAI caller (concept step only: classification + selection) ─────────────
 async function callOpenAIForConcepts(systemPrompt, userPrompt, temperature = 0.7) {
   if (!OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not set — cannot run concept step");
+    throw new Error(`${OPENAI_API_KEY_MISSING_ERROR} — cannot run concept step`);
   }
   const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -463,9 +467,9 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user) return Response.json({ error: UNAUTHORIZED_ERROR }, { status: 401 });
 
-    if (!XAI_API_KEY) return Response.json({ error: "XAI_API_KEY is not set" }, { status: 500 });
+    if (!XAI_API_KEY) return Response.json({ error: XAI_API_KEY_MISSING_ERROR }, { status: 500 });
 
     const body = await req.json();
     const { action, project_id, business, selectedConcept, selectedOpening, selectedBody, selectedCTA, selectedVideoStyle, businessAnalysis, specialFocus } = body;
@@ -574,7 +578,7 @@ Return ONLY valid JSON. No markdown.
 
       if (!OPENAI_API_KEY) {
         return Response.json({
-          error: "OPENAI_API_KEY is not set — concept step unavailable",
+          error: `${OPENAI_API_KEY_MISSING_ERROR} — concept step unavailable`,
           message: "שגיאת הגדרה: מפתח OpenAI חסר. פנו לתמיכה.",
         }, { status: 500 });
       }
@@ -997,7 +1001,7 @@ Match the tone of the concept and opening line.`;
         return Response.json({ error: "business, selectedConcept, selectedCTA required" }, { status: 400 });
       }
       if (!OPENAI_API_KEY) {
-        return Response.json({ error: "OPENAI_API_KEY is not set — finalBrief unavailable", message: "שגיאת הגדרה. פנו לתמיכה." }, { status: 500 });
+        return Response.json({ error: `${OPENAI_API_KEY_MISSING_ERROR} — finalBrief unavailable`, message: "שגיאת הגדרה. פנו לתמיכה." }, { status: 500 });
       }
 
       const opening = selectedOpening || selectedBody;
@@ -1191,7 +1195,7 @@ Improve the brief based on the feedback. Keep all fields. Adjust only what the f
       return Response.json({ final_brief: sanitizeFinalBriefUserFacingFields(parsed), provider: "grok" });
     }
 
-    return Response.json({ error: "Unknown action" }, { status: 400 });
+    return Response.json({ error: UNKNOWN_ACTION_ERROR }, { status: 400 });
 
   } catch (error) {
     // ── Error handling ───────────────────────────────────────────────────────
