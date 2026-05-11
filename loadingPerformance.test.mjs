@@ -22,7 +22,8 @@ test("concept flow keeps strict ConceptBank retrieval while using the current Op
 
   assert.ok(source.includes("classifyWithOpenAI"));
   assert.ok(source.includes("selectConceptsWithOpenAI"));
-  assert.ok(source.includes('const conceptSourceBatch = videoStyle === UGC_STYLE'));
+  assert.ok(source.includes("function resolveStylePolicy(selectedStyle)"));
+  assert.ok(source.includes("const conceptSourceBatch = policy.sourceBatch"));
   assert.ok(source.includes('source_batch: conceptSourceBatch'));
   assert.ok(source.includes("industry_order: industryOrder"));
   assert.ok(source.includes("user_facing_video_style: conceptStyle"));

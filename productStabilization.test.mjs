@@ -68,8 +68,9 @@ test("UGC runtime uses only the v2 batch while regular styles stay on the regula
   assert.match(grokFlow, /const ACTIVE_CONCEPT_SOURCE_BATCH = "1000_Concepts_Briefi_10_display_clean"/);
   assert.match(grokFlow, /const UGC_CONCEPT_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean_v2"/);
   assert.match(grokFlow, /const UGC_STYLE = "ugc"/);
-  assert.match(grokFlow, /const conceptSourceBatch = videoStyle === UGC_STYLE/);
-  assert.match(grokFlow, /const conceptStyle = videoStyle === UGC_STYLE \? UGC_STYLE : videoStyle/);
+  assert.match(grokFlow, /function resolveStylePolicy\(selectedStyle\)/);
+  assert.match(grokFlow, /const conceptSourceBatch = policy\.sourceBatch/);
+  assert.match(grokFlow, /const conceptStyle = policy\.conceptStyle/);
   assert.match(grokFlow, /source_batch: conceptSourceBatch/);
   assert.match(grokFlow, /user_facing_video_style: conceptStyle/);
   assert.match(grokFlow, /candidateIdSet/);
@@ -87,8 +88,9 @@ test("UGC copy uses external customer POV while regular and trendy prompts stay 
   assert.match(grokFlow, /customer, user, creator, or someone outside the business who tried it/);
   assert.match(grokFlow, /Forbidden business POV phrases: "אנחנו", "אצלנו", "הכנו לכם", "בואו אלינו", "המוצר שלנו", "השירות שלנו", "הצוות שלנו", "לקוחות שלנו"/);
   assert.match(grokFlow, /Preferred framing: "ניסיתי את\.\.\.", "לקחתי את\.\.\.", "הגעתי ל\.\.\.", "לא ציפיתי ש\.\.\.", "אחרי יום עם זה\.\.\.", "זה הרגיש לי\.\.\.", "מה שאהבתי בזה\.\.\.", "אם אתם מחפשים\.\.\. שווה לבדוק", "לא פרסומת, פשוט חוויה שעבדה לי"\./);
-  assert.match(grokFlow, /const ugcPovInstruction = videoStyle === UGC_STYLE \? buildUGCPovInstruction\(\) : "";/);
-  assert.match(grokFlow, /const isUGC = \(selectedVideoStyle \|\| ""\) === UGC_STYLE;/);
+  assert.match(grokFlow, /ugcPovRequired: isUGC,/);
+  assert.match(grokFlow, /const ugcPovInstruction = policy\.ugcPovRequired \? buildUGCPovInstruction\(\) : "";/);
+  assert.match(grokFlow, /const isUGC = normalizedStyle === UGC_STYLE;/);
 });
 
 test("UGC POV instruction is applied to hook CTA and final brief generation only when style is ugc", () => {
@@ -99,9 +101,8 @@ test("UGC POV instruction is applied to hook CTA and final brief generation only
   assert.match(grokFlow, /Generate 4 CTA options that are natural, specific to this video, and feel Israeli\./);
   assert.match(grokFlow, /Assemble the brief now\. hook = opening line verbatim\./);
   assert.match(grokFlow, /Polish only these fields and return the same JSON keys:/);
-  assert.match(grokFlow, /const ugcPovInstruction = videoStyle === UGC_STYLE \? buildUGCPovInstruction\(\) : "";/);
-  assert.match(grokFlow, /const isUGC = \(selectedVideoStyle \|\| ""\) === UGC_STYLE;/);
-  assert.match(grokFlow, /const ugcPovInstruction = isUGC \? buildUGCPovInstruction\(\) : "";/);
+  assert.match(grokFlow, /const ugcPovInstruction = policy\.ugcPovRequired \? buildUGCPovInstruction\(\) : "";/);
+  assert.match(grokFlow, /const policy = resolveStylePolicy\(selectedVideoStyle\);/);
   assert.match(grokFlow, /Generate exactly 4 opening lines[\s\S]*?\$\{ugcPovInstruction\}/);
   assert.match(grokFlow, /Generate 4 CTA options[\s\S]*?\$\{ugcPovInstruction\}/);
   assert.match(grokFlow, /Assemble the brief now\. hook = opening line verbatim\.[\s\S]*?\$\{ugcPovInstruction\}/);

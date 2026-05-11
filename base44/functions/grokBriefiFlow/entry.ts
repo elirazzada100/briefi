@@ -281,6 +281,31 @@ const UGC_STYLE = "ugc";
 const BANK_STYLES = [...REGULAR_BANK_STYLES, UGC_STYLE];
 
 // ── Style / UGC / Trendy policy area ──────────────────────────────────────────
+function resolveStylePolicy(selectedStyle) {
+  const rawStyle = selectedStyle || "מצחיק";
+  const normalizedStyle = rawStyle;
+  const isUGC = normalizedStyle === UGC_STYLE;
+  const isTrendy = normalizedStyle === "טרנדי";
+  const isBankBacked = BANK_STYLES.includes(normalizedStyle);
+  const sourceBatch = isUGC
+    ? UGC_CONCEPT_SOURCE_BATCH
+    : (isBankBacked ? ACTIVE_CONCEPT_SOURCE_BATCH : null);
+  const conceptStyle = isUGC ? UGC_STYLE : normalizedStyle;
+
+  return {
+    rawStyle,
+    normalizedStyle,
+    isUGC,
+    isTrendy,
+    isBankBacked,
+    sourceBatch,
+    conceptStyle,
+    shouldSkipHook: false,
+    usesSpecialFocus: !isTrendy,
+    ugcPovRequired: isUGC,
+  };
+}
+
 function buildUGCPovInstruction() {
   return `UGC POV RULES — MANDATORY:
 - Write from the point of view of a customer, user, creator, or someone outside the business who tried it.
@@ -513,11 +538,12 @@ Analyze this business. Fill all 5 cards with specific, actionable insights. Prov
         return Response.json({ error: "business is required" }, { status: 400 });
       }
 
-      const videoStyle = selectedVideoStyle || "מצחיק";
+      const policy = resolveStylePolicy(selectedVideoStyle);
+      const videoStyle = policy.normalizedStyle;
 
       // ── Concept generation action ───────────────────────────────────────────
       // ── טרנדי: TrendPatterns only — never queries ConceptBank ──────────────
-      if (videoStyle === "טרנדי") {
+      if (policy.isTrendy) {
         const trendPatterns = await base44.asServiceRole.entities.TrendPattern.filter({ is_active: true });
         const shuffled = trendPatterns.sort(() => Math.random() - 0.5).slice(0, 4);
         let contextRows = "";
@@ -557,15 +583,13 @@ Return ONLY valid JSON. No markdown.
 
       // ── ConceptBank retrieval and candidate validation ─────────────────────
       // ── ConceptBank strict retrieval (non-trendy styles only) ──────────────
-      if (!BANK_STYLES.includes(videoStyle)) {
+      if (!policy.isBankBacked) {
         return Response.json({ error: `Unknown video style: ${videoStyle}` }, { status: 400 });
       }
 
-      const conceptSourceBatch = videoStyle === UGC_STYLE
-        ? UGC_CONCEPT_SOURCE_BATCH
-        : ACTIVE_CONCEPT_SOURCE_BATCH;
-      const conceptStyle = videoStyle === UGC_STYLE ? UGC_STYLE : videoStyle;
-      const ugcPovInstruction = videoStyle === UGC_STYLE ? buildUGCPovInstruction() : "";
+      const conceptSourceBatch = policy.sourceBatch;
+      const conceptStyle = policy.conceptStyle;
+      const ugcPovInstruction = policy.ugcPovRequired ? buildUGCPovInstruction() : "";
 
       // ── Special Focus handling ──────────────────────────────────────────────
       // ── STEP 1: Resolve industry_order ──────────────────────────────────────
@@ -918,9 +942,10 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
         return Response.json({ error: "business and selectedConcept required" }, { status: 400 });
       }
 
-      const videoStyle = selectedVideoStyle || "מצחיק";
+      const policy = resolveStylePolicy(selectedVideoStyle);
+      const videoStyle = policy.normalizedStyle;
       const classifiedIndustry = businessAnalysis?.industry_name || businessAnalysis?.classified_industry || "";
-      const ugcPovInstruction = videoStyle === UGC_STYLE ? buildUGCPovInstruction() : "";
+      const ugcPovInstruction = policy.ugcPovRequired ? buildUGCPovInstruction() : "";
 
       const userPrompt = `Business:
 Name: ${business.business_name}
@@ -966,8 +991,9 @@ Do NOT explain the concept. Do NOT use generic phrases. Sound like a real Israel
       }
 
       const opening = selectedOpening || selectedBody;
-      const videoStyle = selectedVideoStyle || "מצחיק";
-      const ugcPovInstruction = videoStyle === UGC_STYLE ? buildUGCPovInstruction() : "";
+      const policy = resolveStylePolicy(selectedVideoStyle);
+      const videoStyle = policy.normalizedStyle;
+      const ugcPovInstruction = policy.ugcPovRequired ? buildUGCPovInstruction() : "";
 
       const userPrompt = `Business:
 Name: ${business.business_name}
@@ -1006,9 +1032,9 @@ Match the tone of the concept and opening line.`;
 
       const opening = selectedOpening || selectedBody;
       const openingLineText = opening?.opening_line || opening?.filled_opening_line || "";
-      const isLimdi = (selectedVideoStyle || "") === "לימודי";
-      const isUGC = (selectedVideoStyle || "") === UGC_STYLE;
-      const ugcPovInstruction = isUGC ? buildUGCPovInstruction() : "";
+      const policy = resolveStylePolicy(selectedVideoStyle);
+      const isLimdi = policy.normalizedStyle === "לימודי";
+      const ugcPovInstruction = policy.ugcPovRequired ? buildUGCPovInstruction() : "";
 
       const finalBriefSystemPrompt = isLimdi
         ? FINAL_BRIEF_LIMDI_SYSTEM

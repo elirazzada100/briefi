@@ -18,7 +18,8 @@ test("grokBriefiFlow locks source batch constants and old UGC batch stays outsid
   assert.ok(grokFlow.includes(`const ACTIVE_CONCEPT_SOURCE_BATCH = "${REGULAR_BATCH}"`));
   assert.ok(grokFlow.includes(`const UGC_CONCEPT_SOURCE_BATCH = "${UGC_V2_BATCH}"`));
   assert.ok(!grokFlow.includes(`"${OLD_UGC_BATCH}"`));
-  assert.ok(grokFlow.includes("const conceptSourceBatch = videoStyle === UGC_STYLE"));
+  assert.ok(grokFlow.includes("function resolveStylePolicy(selectedStyle)"));
+  assert.ok(grokFlow.includes("sourceBatch,"));
   assert.ok(grokFlow.includes("source_batch: conceptSourceBatch"));
   assert.ok(grokFlow.includes("user_facing_video_style: conceptStyle"));
 });
@@ -29,10 +30,12 @@ test("grokBriefiFlow locks style branching: UGC is bank-backed and Trendy stays 
   assert.ok(grokFlow.includes('const UGC_STYLE = "ugc"'));
   assert.ok(grokFlow.includes('const REGULAR_BANK_STYLES = ["מצחיק", "תדמית", "סרטון הכרות", "מכירתי", "לימודי"]'));
   assert.ok(grokFlow.includes("const BANK_STYLES = [...REGULAR_BANK_STYLES, UGC_STYLE]"));
-  assert.ok(grokFlow.includes('if (videoStyle === "טרנדי") {'));
+  assert.ok(grokFlow.includes("const isTrendy = normalizedStyle === \"טרנדי\";"));
+  assert.ok(grokFlow.includes("if (policy.isTrendy) {"));
   assert.ok(grokFlow.includes("TrendPattern.filter({ is_active: true })"));
   assert.ok(grokFlow.includes('provider_log: { provider_used: provider, step_name: "concept_trendy", success: true }'));
-  assert.ok(grokFlow.includes("if (!BANK_STYLES.includes(videoStyle)) {"));
+  assert.ok(grokFlow.includes("const isBankBacked = BANK_STYLES.includes(normalizedStyle);"));
+  assert.ok(grokFlow.includes("if (!policy.isBankBacked) {"));
   assert.ok(!grokFlow.includes('videoStyle === "טרנדי" ? UGC_STYLE'));
 });
 
@@ -54,8 +57,26 @@ test("grokBriefiFlow locks UGC POV rules as conditional ugc-only prompt context"
   assert.ok(grokFlow.includes("customer, user, creator, or someone outside the business who tried it"));
   assert.ok(grokFlow.includes('Forbidden business POV phrases: "אנחנו", "אצלנו", "הכנו לכם", "בואו אלינו", "המוצר שלנו", "השירות שלנו", "הצוות שלנו", "לקוחות שלנו"'));
   assert.ok(grokFlow.includes('Preferred framing: "ניסיתי את...", "לקחתי את...", "הגעתי ל...", "לא ציפיתי ש...", "אחרי יום עם זה...", "זה הרגיש לי...", "מה שאהבתי בזה...", "אם אתם מחפשים... שווה לבדוק", "לא פרסומת, פשוט חוויה שעבדה לי".'));
-  assert.ok(grokFlow.includes('const ugcPovInstruction = videoStyle === UGC_STYLE ? buildUGCPovInstruction() : "";'));
-  assert.ok(grokFlow.includes('const ugcPovInstruction = isUGC ? buildUGCPovInstruction() : "";'));
+  assert.ok(grokFlow.includes("ugcPovRequired: isUGC,"));
+  assert.ok(grokFlow.includes('const ugcPovInstruction = policy.ugcPovRequired ? buildUGCPovInstruction() : "";'));
+});
+
+test("resolveStylePolicy locks UGC, regular, and trendy behavior without changing batch values", () => {
+  const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.ok(grokFlow.includes("function resolveStylePolicy(selectedStyle)"));
+  assert.ok(grokFlow.includes('const rawStyle = selectedStyle || "מצחיק";'));
+  assert.ok(grokFlow.includes("const normalizedStyle = rawStyle;"));
+  assert.ok(grokFlow.includes("const isUGC = normalizedStyle === UGC_STYLE;"));
+  assert.ok(grokFlow.includes("const isTrendy = normalizedStyle === \"טרנדי\";"));
+  assert.ok(grokFlow.includes("const isBankBacked = BANK_STYLES.includes(normalizedStyle);"));
+  assert.ok(grokFlow.includes("const sourceBatch = isUGC"));
+  assert.ok(grokFlow.includes("UGC_CONCEPT_SOURCE_BATCH"));
+  assert.ok(grokFlow.includes("ACTIVE_CONCEPT_SOURCE_BATCH"));
+  assert.ok(grokFlow.includes("const conceptStyle = isUGC ? UGC_STYLE : normalizedStyle;"));
+  assert.ok(grokFlow.includes("shouldSkipHook: false,"));
+  assert.ok(grokFlow.includes("usesSpecialFocus: !isTrendy,"));
+  assert.ok(grokFlow.includes("ugcPovRequired: isUGC,"));
 });
 
 test("grokBriefiFlow locks provider split across classification, concepts, hook, CTA, and final brief", () => {
