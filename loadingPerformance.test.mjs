@@ -54,11 +54,6 @@ test("concept, hook, CTA, and final brief add duplicate request guards without c
   assert.ok(conceptPicker.includes("frontend_generate_concepts_ms"));
   assert.ok(conceptPicker.includes("classification_skipped"));
   assert.ok(conceptPicker.includes('console.debug("[concept-timing]"'));
-  assert.ok(conceptPicker.includes('new URLSearchParams(location.search).get("debugTiming") === "1"'));
-  assert.ok(conceptPicker.includes('window.localStorage?.getItem("briefiDebugTiming") === "true"'));
-  assert.ok(conceptPicker.includes("תזמון קונספטים"));
-  assert.ok(conceptPicker.includes("העתק תזמון"));
-  assert.ok(conceptPicker.includes("navigator.clipboard.writeText"));
 
   assert.ok(openingPicker.includes("initialLoadStartedRef"));
   assert.ok(openingPicker.includes("requestInFlightRef"));
@@ -75,20 +70,6 @@ test("FinalBrief post-save timer is at most 100ms", () => {
   assert.ok(source.includes("setTimeout(() => setSaved(false), 100)"));
   assert.ok(!source.includes("setTimeout(() => setSaved(false), 2000)"));
   assert.ok(!read("src/pages/GrokConceptPicker.jsx").includes("setTimeout"));
-});
-
-test("concept timing preview panel is gated and copies safe timing fields only", () => {
-  const conceptPicker = read("src/pages/GrokConceptPicker.jsx");
-
-  assert.ok(conceptPicker.includes("debugTimingEnabled && timingDebug"));
-  assert.ok(!conceptPicker.includes("business_description: ${"));
-  assert.ok(!conceptPicker.includes("systemPrompt"));
-  assert.ok(!conceptPicker.includes("userPrompt"));
-  assert.ok(!conceptPicker.includes("OPENAI_API_KEY"));
-  assert.ok(!conceptPicker.includes("XAI_API_KEY"));
-  assert.ok(conceptPicker.includes("selected_style:"));
-  assert.ok(conceptPicker.includes("candidate_count:"));
-  assert.ok(conceptPicker.includes("source_batch:"));
 });
 
 test("FinalBrief uses OpenAI assembly plus bounded Grok polish fallback", () => {

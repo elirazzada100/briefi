@@ -18,8 +18,7 @@ function cleanConceptTitle(title) {
 
 export default function GrokConceptPicker() {
   const { projectId } = useParams();
-  const location = useLocation();
-  const { state } = location;
+  const { state } = useLocation();
   const navigate = useNavigate();
   const { project, loading: guardLoading } = useProjectGuard(projectId);
 
@@ -34,12 +33,8 @@ export default function GrokConceptPicker() {
   const [error, setError] = useState(null);
   const [selectingIdx, setSelectingIdx] = useState(null);
   const [resolvedAnalysis, setResolvedAnalysis] = useState(businessAnalysis);
-  const [timingDebug, setTimingDebug] = useState(null);
   const initialLoadStartedRef = useRef(false);
   const requestInFlightRef = useRef(false);
-  const debugTimingEnabled =
-    new URLSearchParams(location.search).get("debugTiming") === "1" ||
-    (typeof window !== "undefined" && window.localStorage?.getItem("briefiDebugTiming") === "true");
 
   useEffect(() => {
     if (!selectedVideoStyle) {
@@ -109,34 +104,25 @@ export default function GrokConceptPicker() {
         return;
       }
 
-      const nextTimingDebug = {
-        selected_style: selectedVideoStyle,
-        is_ugc: selectedVideoStyle === "ugc",
-        is_trendy: selectedVideoStyle === "טרנדי",
-        classification_used: !classificationSkipped,
-        classification_skipped: classificationSkipped,
-        frontend_concept_total_ms: Math.round(performance.now() - frontendConceptStart),
-        frontend_classification_ms: frontendClassificationMs,
-        frontend_generate_concepts_ms: frontendGenerateConceptsMs,
-        backend_total_ms: res.data?._debug?.total_ms ?? null,
-        conceptbank_retrieval_ms: res.data?._debug?.conceptbank_retrieval_ms ?? null,
-        openai_selection_ms: res.data?._debug?.openai_selection_ms ?? null,
-        candidate_count: res.data?._debug?.candidate_count ?? null,
-        source_batch: res.data?._debug?.source_batch ?? null,
-      };
-      setTimingDebug(nextTimingDebug);
-
       if (import.meta.env.DEV) {
+        const backendDebug = res.data?._debug || {};
         console.debug("[concept-timing]", {
-          ...nextTimingDebug,
+          frontend_concept_total_ms: Math.round(performance.now() - frontendConceptStart),
+          frontend_classification_ms: frontendClassificationMs,
+          frontend_generate_concepts_ms: frontendGenerateConceptsMs,
+          classification_skipped: classificationSkipped,
+          selected_style: selectedVideoStyle,
+          is_ugc: selectedVideoStyle === "ugc",
+          is_trendy: selectedVideoStyle === "טרנדי",
           backend_debug: {
-            total_ms: nextTimingDebug.backend_total_ms,
-            conceptbank_retrieval_ms: nextTimingDebug.conceptbank_retrieval_ms,
-            openai_selection_ms: nextTimingDebug.openai_selection_ms,
-            candidate_count: nextTimingDebug.candidate_count,
-            source_batch: nextTimingDebug.source_batch,
-            is_ugc: nextTimingDebug.is_ugc,
-            is_trendy: nextTimingDebug.is_trendy,
+            total_ms: backendDebug.total_ms,
+            classification_ms: backendDebug.classification_ms,
+            conceptbank_retrieval_ms: backendDebug.conceptbank_retrieval_ms,
+            openai_selection_ms: backendDebug.openai_selection_ms,
+            candidate_count: backendDebug.candidate_count,
+            source_batch: backendDebug.source_batch,
+            is_ugc: backendDebug.is_ugc,
+            is_trendy: backendDebug.is_trendy,
           },
         });
       }
@@ -171,28 +157,6 @@ export default function GrokConceptPicker() {
         specialFocus,
       },
     });
-  };
-
-  const handleCopyTiming = async () => {
-    if (!timingDebug || !navigator?.clipboard?.writeText) return;
-
-    const timingReport = [
-      `${timingDebug.is_ugc ? "UGC" : "Regular"} Timing Report`,
-      `selected_style: ${timingDebug.selected_style || ""}`,
-      `is_ugc: ${String(timingDebug.is_ugc)}`,
-      `is_trendy: ${String(timingDebug.is_trendy)}`,
-      `classification: ${timingDebug.classification_skipped ? "skipped" : "used"}`,
-      `frontend_total: ${timingDebug.frontend_concept_total_ms ?? ""}`,
-      `classification_ms: ${timingDebug.frontend_classification_ms ?? ""}`,
-      `generate_concepts_ms: ${timingDebug.frontend_generate_concepts_ms ?? ""}`,
-      `backend_total: ${timingDebug.backend_total_ms ?? ""}`,
-      `conceptbank_retrieval: ${timingDebug.conceptbank_retrieval_ms ?? ""}`,
-      `openai_selection: ${timingDebug.openai_selection_ms ?? ""}`,
-      `candidate_count: ${timingDebug.candidate_count ?? ""}`,
-      `source_batch: ${timingDebug.source_batch || ""}`,
-    ].join("\n");
-
-    await navigator.clipboard.writeText(timingReport);
   };
 
   if (guardLoading || loading) {
@@ -234,43 +198,6 @@ export default function GrokConceptPicker() {
             <div className="flex-1">
               <p className="text-sm text-red-700 font-medium">{error}</p>
               <button onClick={loadConcepts} className="text-xs text-red-600 underline mt-1">נסו שוב</button>
-            </div>
-          </div>
-        )}
-
-        {debugTimingEnabled && timingDebug && (
-          <div className="bg-muted/40 border border-border/60 rounded-2xl p-3 space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-bold text-foreground">תזמון קונספטים</h2>
-              <button onClick={handleCopyTiming} className="briefi-btn-secondary !h-8 !px-3 text-xs">
-                העתק תזמון
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-foreground/80">
-              <span>selected_style</span>
-              <span className="text-left">{timingDebug.selected_style}</span>
-              <span>is_ugc</span>
-              <span className="text-left">{String(timingDebug.is_ugc)}</span>
-              <span>is_trendy</span>
-              <span className="text-left">{String(timingDebug.is_trendy)}</span>
-              <span>classification</span>
-              <span className="text-left">{timingDebug.classification_skipped ? "skipped" : "used"}</span>
-              <span>frontend_total_ms</span>
-              <span className="text-left">{timingDebug.frontend_concept_total_ms}</span>
-              <span>frontend_classification_ms</span>
-              <span className="text-left">{timingDebug.frontend_classification_ms}</span>
-              <span>frontend_generate_concepts_ms</span>
-              <span className="text-left">{timingDebug.frontend_generate_concepts_ms}</span>
-              <span>backend_total_ms</span>
-              <span className="text-left">{timingDebug.backend_total_ms ?? ""}</span>
-              <span>conceptbank_retrieval_ms</span>
-              <span className="text-left">{timingDebug.conceptbank_retrieval_ms ?? ""}</span>
-              <span>openai_selection_ms</span>
-              <span className="text-left">{timingDebug.openai_selection_ms ?? ""}</span>
-              <span>candidate_count</span>
-              <span className="text-left">{timingDebug.candidate_count ?? ""}</span>
-              <span>source_batch</span>
-              <span className="text-left break-all">{timingDebug.source_batch || ""}</span>
             </div>
           </div>
         )}
