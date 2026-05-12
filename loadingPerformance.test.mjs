@@ -14,7 +14,30 @@ test("business analysis page blocks duplicate generation and has no artificial d
   assert.ok(source.includes("requestInFlightRef"));
   assert.ok(source.includes("generationStartedRef"));
   assert.ok(source.includes('action: "generateCreativeDNA"'));
+  assert.ok(source.includes("frontend_generate_dna_ms"));
+  assert.ok(source.includes("frontend_request_started_at"));
+  assert.ok(source.includes("frontend_request_finished_at"));
+  assert.ok(source.includes('console.debug("[creative-dna-timing]"'));
   assert.ok(!source.includes("setTimeout"));
+});
+
+test("generateCreativeDNA timing instrumentation is safe and preserves Grok retry behavior", () => {
+  const source = read("base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.ok(source.includes("async function callWithFallback(systemPrompt, userPrompt, temperature = 0.7)"));
+  assert.ok(source.includes("for (let attempt = 1; attempt <= 2; attempt++)"));
+  assert.ok(source.includes("async function callWithFallbackWithMetrics(systemPrompt, userPrompt, temperature = 0.7)"));
+  assert.ok(source.includes("generate_creative_dna_total_ms"));
+  assert.ok(source.includes("provider_roundtrip_ms"));
+  assert.ok(source.includes("parse_ms"));
+  assert.ok(source.includes("attempt_count"));
+  assert.ok(source.includes("retry_used"));
+  assert.ok(source.includes("project_update_ms"));
+  assert.ok(source.includes("model: XAI_MODEL"));
+  assert.ok(source.includes("provider,"));
+  assert.ok(!source.includes("_debug: { systemPrompt"));
+  assert.ok(!source.includes("_debug: { userPrompt"));
+  assert.ok(!source.includes("_debug: { raw"));
 });
 
 test("concept flow keeps strict ConceptBank retrieval while using the current OpenAI-backed classification and selection path", () => {

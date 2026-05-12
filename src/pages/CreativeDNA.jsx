@@ -134,6 +134,7 @@ export default function CreativeDNA() {
   const [dna, setDna] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(false);
+  const [timingDebug, setTimingDebug] = useState(null);
   const generationStartedRef = useRef(false);
   const requestInFlightRef = useRef(false);
 
@@ -155,6 +156,8 @@ export default function CreativeDNA() {
     requestInFlightRef.current = true;
     setGenerating(true);
     setError(false);
+    const requestStartedAt = new Date().toISOString();
+    const frontendRequestStart = performance.now();
 
     try {
       const response = await base44.functions.invoke("grokBriefiFlow", {
@@ -164,10 +167,33 @@ export default function CreativeDNA() {
         main_goal: project.main_goal,
         raw_notes: project.raw_notes,
       });
+      const requestFinishedAt = new Date().toISOString();
+      const frontendGenerateDnaMs = Math.round(performance.now() - frontendRequestStart);
 
       const result = response.data?.creative_dna;
       if (!result || response.data?.error) {
         throw new Error(response.data?.error || "DNA generation failed");
+      }
+
+      const nextTimingDebug = {
+        frontend_generate_dna_ms: frontendGenerateDnaMs,
+        frontend_request_started_at: requestStartedAt,
+        frontend_request_finished_at: requestFinishedAt,
+        backend_debug: {
+          generate_creative_dna_total_ms: response.data?._debug?.generate_creative_dna_total_ms ?? null,
+          provider_roundtrip_ms: response.data?._debug?.provider_roundtrip_ms ?? null,
+          parse_ms: response.data?._debug?.parse_ms ?? null,
+          attempt_count: response.data?._debug?.attempt_count ?? null,
+          retry_used: response.data?._debug?.retry_used ?? null,
+          project_update_ms: response.data?._debug?.project_update_ms ?? null,
+          model: response.data?._debug?.model ?? null,
+          provider: response.data?._debug?.provider ?? null,
+        },
+      };
+      setTimingDebug(nextTimingDebug);
+
+      if (import.meta.env.DEV) {
+        console.debug("[creative-dna-timing]", nextTimingDebug);
       }
 
       setDna(result);
