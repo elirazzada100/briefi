@@ -9,7 +9,6 @@ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const OPENAI_CONCEPT_MODEL = "gpt-4.1-mini-2025-04-14";
 const ACTIVE_CONCEPT_SOURCE_BATCH = "1000_Concepts_Briefi_10_display_clean";
 const UGC_CONCEPT_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean_v2";
-const GROK_CREATIVE_DNA_TIMEOUT_MS = 11000;
 const UNAUTHORIZED_ERROR = "Unauthorized";
 const XAI_API_KEY_MISSING_ERROR = "XAI_API_KEY is not set";
 const OPENAI_API_KEY_MISSING_ERROR = "OPENAI_API_KEY is not set";
@@ -123,26 +122,6 @@ function sanitizeFinalBriefUserFacingFields(finalBrief) {
     visual_must_haves: sanitizeStringArray(finalBrief?.visual_must_haves || []),
     production_notes: sanitizeUserFacingHebrewCopy(finalBrief?.production_notes || ""),
     why_it_works: sanitizeUserFacingHebrewCopy(finalBrief?.why_it_works || ""),
-  };
-}
-
-function sanitizeCreativeDNA(creativeDna) {
-  if (!creativeDna || typeof creativeDna !== "object") return creativeDna;
-  return {
-    ...creativeDna,
-    business_analysis_cards: Array.isArray(creativeDna?.business_analysis_cards)
-      ? creativeDna.business_analysis_cards.map((card) => ({
-          ...card,
-          title: sanitizeUserFacingHebrewCopy(card?.title || ""),
-          summary: sanitizeUserFacingHebrewCopy(card?.summary || ""),
-          tags: sanitizeStringArray(card?.tags || []),
-        }))
-      : [],
-    recommended_content_directions: sanitizeStringArray(creativeDna?.recommended_content_directions || []),
-    main_angle: sanitizeUserFacingHebrewCopy(creativeDna?.main_angle || ""),
-    audience_truth: sanitizeUserFacingHebrewCopy(creativeDna?.audience_truth || ""),
-    what_is_interesting: sanitizeUserFacingHebrewCopy(creativeDna?.what_is_interesting || ""),
-    what_to_avoid: sanitizeUserFacingHebrewCopy(creativeDna?.what_to_avoid || ""),
   };
 }
 
@@ -274,10 +253,6 @@ async function callOpenAIForConcepts(systemPrompt, userPrompt, temperature = 0.7
 
 // Alias for concept selection
 async function selectConceptsWithOpenAI(systemPrompt, userPrompt) {
-  return callOpenAIForConcepts(systemPrompt, userPrompt, 0.7);
-}
-
-async function generateBusinessAnalysisWithOpenAI(systemPrompt, userPrompt) {
   return callOpenAIForConcepts(systemPrompt, userPrompt, 0.7);
 }
 
@@ -614,39 +589,7 @@ Notes: ${raw_notes || ""}
 Analyze this business. Fill all 5 cards with specific, actionable insights. Provide 3-4 recommended_content_directions.
 Be concrete. Say something a human strategist would actually say after looking at this business, not a generic marketing summary.`;
 
-      let dna;
-      let provider = "grok";
-      let timingDebug = {
-        provider_roundtrip_ms: null,
-        parse_ms: null,
-        attempt_count: null,
-        retry_used: null,
-      };
-      let timedOut = false;
-      let fallbackUsed = false;
-      let fallbackProvider = null;
-      let fallbackModel = null;
-
-      try {
-        const grokResult = await Promise.race([
-          callWithFallbackWithMetrics(DNA_SYSTEM, dnaUser, 0.7),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error(`GROK_TIMEOUT_${GROK_CREATIVE_DNA_TIMEOUT_MS}ms`)), GROK_CREATIVE_DNA_TIMEOUT_MS)
-          ),
-        ]);
-        dna = sanitizeCreativeDNA(grokResult.parsed);
-        provider = grokResult.provider;
-        timingDebug = grokResult._debug || timingDebug;
-      } catch (err) {
-        timedOut = String(err?.message || "").startsWith(`GROK_TIMEOUT_${GROK_CREATIVE_DNA_TIMEOUT_MS}ms`);
-        fallbackUsed = true;
-        fallbackProvider = "openai";
-        fallbackModel = OPENAI_CONCEPT_MODEL;
-        const fallbackDna = await generateBusinessAnalysisWithOpenAI(DNA_SYSTEM, dnaUser);
-        dna = sanitizeCreativeDNA(fallbackDna);
-        provider = "openai";
-      }
-
+      const { parsed: dna, provider, _debug: timingDebug } = await callWithFallbackWithMetrics(DNA_SYSTEM, dnaUser, 0.7);
       let projectUpdateMs = null;
 
       if (pid) {
@@ -668,11 +611,6 @@ Be concrete. Say something a human strategist would actually say after looking a
           attempt_count: timingDebug?.attempt_count ?? null,
           retry_used: timingDebug?.retry_used ?? null,
           project_update_ms: projectUpdateMs,
-          timed_out: timedOut,
-          fallback_used: fallbackUsed,
-          fallback_provider: fallbackProvider,
-          fallback_model: fallbackModel,
-          grok_timeout_ms: GROK_CREATIVE_DNA_TIMEOUT_MS,
           model: XAI_MODEL,
           provider,
         },

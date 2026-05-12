@@ -39,13 +39,6 @@ test("generateCreativeDNA timing instrumentation is safe and preserves Grok retr
   assert.ok(source.includes("attempt_count"));
   assert.ok(source.includes("retry_used"));
   assert.ok(source.includes("project_update_ms"));
-  assert.ok(source.includes("GROK_CREATIVE_DNA_TIMEOUT_MS = 11000"));
-  assert.ok(source.includes("Promise.race(["));
-  assert.ok(source.includes("GROK_TIMEOUT_${GROK_CREATIVE_DNA_TIMEOUT_MS}ms"));
-  assert.ok(source.includes("fallback_used"));
-  assert.ok(source.includes("fallback_provider"));
-  assert.ok(source.includes("fallback_model"));
-  assert.ok(source.includes("grok_timeout_ms"));
   assert.ok(source.includes("model: XAI_MODEL"));
   assert.ok(source.includes("provider,"));
   assert.ok(!source.includes("_debug: { systemPrompt"));
