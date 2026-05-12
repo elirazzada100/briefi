@@ -137,12 +137,6 @@ export default function CreativeDNA() {
   const [timingDebug, setTimingDebug] = useState(null);
   const generationStartedRef = useRef(false);
   const requestInFlightRef = useRef(false);
-  let showTimingDebug = false;
-  try {
-    showTimingDebug = typeof window !== "undefined" && window.localStorage?.getItem("briefiDebugTiming") === "true";
-  } catch {
-    showTimingDebug = false;
-  }
 
   const { project, loading: guardLoading } = useProjectGuard(projectId);
 
@@ -288,7 +282,7 @@ export default function CreativeDNA() {
           </div>
         )}
 
-        {timingDebug && showTimingDebug && (
+        {timingDebug && (
           <div className="mb-6 bg-muted/40 border border-border/60 rounded-2xl p-3 space-y-2">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-bold text-foreground">תזמון ניתוח עסק</h2>
