@@ -21,6 +21,9 @@ test("business analysis page blocks duplicate generation and has no artificial d
   assert.ok(source.includes("תזמון ניתוח עסק"));
   assert.ok(source.includes("העתק תזמון"));
   assert.ok(source.includes("navigator.clipboard.writeText"));
+  assert.ok(source.includes('window.localStorage?.getItem("briefiDebugTiming") === "true"'));
+  assert.ok(source.includes("try {"));
+  assert.ok(source.includes("showTimingDebug = false;"));
   assert.ok(!source.includes("setTimeout"));
 });
 
@@ -46,7 +49,7 @@ test("generateCreativeDNA timing instrumentation is safe and preserves Grok retr
 test("creative DNA timing panel renders only when timingDebug exists and copies safe timing fields only", () => {
   const creativeDNA = read("src/pages/CreativeDNA.jsx");
 
-  assert.ok(creativeDNA.includes("{timingDebug && ("));
+  assert.ok(creativeDNA.includes("{timingDebug && showTimingDebug && ("));
   assert.ok(creativeDNA.includes("תזמון ניתוח עסק"));
   assert.ok(creativeDNA.includes("העתק תזמון"));
   assert.ok(creativeDNA.includes("Business Analysis timing:"));
