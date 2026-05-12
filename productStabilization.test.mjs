@@ -162,6 +162,7 @@ test("business analysis prompt uses human Israeli strategist tone and forbids ge
   assert.match(grokFlow, /"business_analysis_cards"/);
   assert.match(grokFlow, /"recommended_content_directions"/);
   assert.match(grokFlow, /"main_angle"/);
+  assert.match(grokFlow, /generateBusinessAnalysisWithOpenAI/);
 });
 
 test("generateCreativeDNA keeps provider model and response contract while exposing safe timing debug only", () => {
@@ -169,7 +170,10 @@ test("generateCreativeDNA keeps provider model and response contract while expos
   const creativeDNA = read("./src/pages/CreativeDNA.jsx");
 
   assert.match(grokFlow, /const XAI_MODEL = Deno\.env\.get\("XAI_MODEL"\) \|\| "grok-3"/);
-  assert.match(grokFlow, /const \{ parsed: dna, provider, _debug: timingDebug \} = await callWithFallbackWithMetrics\(DNA_SYSTEM, dnaUser, 0\.7\);/);
+  assert.match(grokFlow, /const GROK_CREATIVE_DNA_TIMEOUT_MS = 11000/);
+  assert.match(grokFlow, /callWithFallbackWithMetrics\(DNA_SYSTEM, dnaUser, 0\.7\)/);
+  assert.match(grokFlow, /generateBusinessAnalysisWithOpenAI\(DNA_SYSTEM, dnaUser\)/);
+  assert.match(grokFlow, /sanitizeCreativeDNA/);
   assert.match(grokFlow, /creative_dna: dna/);
   assert.match(grokFlow, /provider,/);
   assert.match(grokFlow, /generate_creative_dna_total_ms/);
@@ -178,6 +182,11 @@ test("generateCreativeDNA keeps provider model and response contract while expos
   assert.match(grokFlow, /attempt_count/);
   assert.match(grokFlow, /retry_used/);
   assert.match(grokFlow, /project_update_ms/);
+  assert.match(grokFlow, /timed_out/);
+  assert.match(grokFlow, /fallback_used/);
+  assert.match(grokFlow, /fallback_provider/);
+  assert.match(grokFlow, /fallback_model/);
+  assert.match(grokFlow, /grok_timeout_ms: GROK_CREATIVE_DNA_TIMEOUT_MS/);
   assert.doesNotMatch(grokFlow, /_debug:\s*\{[^}]*systemPrompt/);
   assert.doesNotMatch(grokFlow, /_debug:\s*\{[^}]*userPrompt/);
   assert.doesNotMatch(grokFlow, /_debug:\s*\{[^}]*OPENAI_API_KEY/);
@@ -185,6 +194,21 @@ test("generateCreativeDNA keeps provider model and response contract while expos
   assert.match(creativeDNA, /frontend_generate_dna_ms/);
   assert.match(creativeDNA, /frontend_request_started_at/);
   assert.match(creativeDNA, /frontend_request_finished_at/);
+  assert.match(creativeDNA, /window\.localStorage\?\.getItem\("briefiDebugTiming"\) === "true"/);
+});
+
+test("CreativeDNA timeout fallback is limited to business analysis and leaves hook CTA and final brief provider paths unchanged", () => {
+  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.match(grokFlow, /if \(action === "generateCreativeDNA"\) \{/);
+  assert.match(grokFlow, /generateBusinessAnalysisWithOpenAI/);
+  assert.doesNotMatch(grokFlow, /generateOpeningOptions[\s\S]*generateBusinessAnalysisWithOpenAI/);
+  assert.doesNotMatch(grokFlow, /generateCTAOptions[\s\S]*generateBusinessAnalysisWithOpenAI/);
+  assert.doesNotMatch(grokFlow, /assembleFinalBrief[\s\S]*generateBusinessAnalysisWithOpenAI/);
+  assert.match(grokFlow, /await callWithFallback\(OPENING_GEN_GROK_SYSTEM, userPrompt, 0\.85\)/);
+  assert.match(grokFlow, /await callWithFallback\(CTA_GEN_SYSTEM, userPrompt, 0\.7\)/);
+  assert.match(grokFlow, /const polishTimeoutMs = 12000/);
+  assert.match(grokFlow, /function sanitizeCreativeDNA\(creativeDna\)/);
 });
 
 test("stepper polish keeps only concept hook and CTA, and final brief does not render it", () => {
