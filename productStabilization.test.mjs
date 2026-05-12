@@ -145,6 +145,25 @@ test("openai-facing Hebrew copy prompts instruct the model to avoid dash punctua
   assert.match(grokFlow, /אין להשתמש במקפים בכלל בטקסט שמוצג למשתמש/);
 });
 
+test("business analysis prompt uses human Israeli strategist tone and forbids generic AI-corporate phrasing", () => {
+  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
+
+  assert.match(grokFlow, /Write like a sharp Israeli social media strategist who actually looked at the business and formed an opinion\./);
+  assert.match(grokFlow, /The tone must feel human, direct, practical, slightly opinionated, and useful for a social media manager\./);
+  assert.match(grokFlow, /Keep the main analysis paragraph short and confident: 2-3 sentences max\./);
+  assert.match(grokFlow, /Keep the framing positive and strategic, but practical\./);
+  assert.match(grokFlow, /Avoid these AI\/corporate phrases entirely:/);
+  assert.match(grokFlow, /"קהל יעד"/);
+  assert.match(grokFlow, /"ערך מוסף"/);
+  assert.match(grokFlow, /"באמצעות"/);
+  assert.match(grokFlow, /"שפה ויזואלית"/);
+  assert.match(grokFlow, /"מבודל מהמתחרים"/);
+  assert.match(grokFlow, /Analyze this business\. Fill all 5 cards with specific, actionable insights\. Provide 3-4 recommended_content_directions\./);
+  assert.match(grokFlow, /"business_analysis_cards"/);
+  assert.match(grokFlow, /"recommended_content_directions"/);
+  assert.match(grokFlow, /"main_angle"/);
+});
+
 test("stepper polish keeps only concept hook and CTA, and final brief does not render it", () => {
   const stepper = read("./src/components/briefi/BriefiStepper.jsx");
   const finalBrief = read("./src/pages/FinalBrief.jsx");
