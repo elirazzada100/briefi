@@ -164,29 +164,6 @@ test("business analysis prompt uses human Israeli strategist tone and forbids ge
   assert.match(grokFlow, /"main_angle"/);
 });
 
-test("generateCreativeDNA keeps provider model and response contract while exposing safe timing debug only", () => {
-  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
-  const creativeDNA = read("./src/pages/CreativeDNA.jsx");
-
-  assert.match(grokFlow, /const XAI_MODEL = Deno\.env\.get\("XAI_MODEL"\) \|\| "grok-3"/);
-  assert.match(grokFlow, /const \{ parsed: dna, provider, _debug: timingDebug \} = await callWithFallbackWithMetrics\(DNA_SYSTEM, dnaUser, 0\.7\);/);
-  assert.match(grokFlow, /creative_dna: dna/);
-  assert.match(grokFlow, /provider,/);
-  assert.match(grokFlow, /generate_creative_dna_total_ms/);
-  assert.match(grokFlow, /provider_roundtrip_ms/);
-  assert.match(grokFlow, /parse_ms/);
-  assert.match(grokFlow, /attempt_count/);
-  assert.match(grokFlow, /retry_used/);
-  assert.match(grokFlow, /project_update_ms/);
-  assert.doesNotMatch(grokFlow, /_debug:\s*\{[^}]*systemPrompt/);
-  assert.doesNotMatch(grokFlow, /_debug:\s*\{[^}]*userPrompt/);
-  assert.doesNotMatch(grokFlow, /_debug:\s*\{[^}]*OPENAI_API_KEY/);
-  assert.doesNotMatch(grokFlow, /_debug:\s*\{[^}]*XAI_API_KEY/);
-  assert.match(creativeDNA, /frontend_generate_dna_ms/);
-  assert.match(creativeDNA, /frontend_request_started_at/);
-  assert.match(creativeDNA, /frontend_request_finished_at/);
-});
-
 test("stepper polish keeps only concept hook and CTA, and final brief does not render it", () => {
   const stepper = read("./src/components/briefi/BriefiStepper.jsx");
   const finalBrief = read("./src/pages/FinalBrief.jsx");

@@ -175,41 +175,6 @@ async function callWithFallback(systemPrompt, userPrompt, temperature = 0.7) {
   throw lastErr;
 }
 
-async function callWithFallbackWithMetrics(systemPrompt, userPrompt, temperature = 0.7) {
-  let lastErr;
-  let attemptCount = 0;
-  let providerRoundtripMs = 0;
-  let parseMs = 0;
-
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    attemptCount = attempt;
-    try {
-      const providerStart = Date.now();
-      const raw = await callGrok(systemPrompt, userPrompt, temperature);
-      providerRoundtripMs += Date.now() - providerStart;
-
-      const parseStart = Date.now();
-      const parsed = parseJSON(raw);
-      parseMs += Date.now() - parseStart;
-
-      return {
-        parsed,
-        provider: "grok",
-        _debug: {
-          provider_roundtrip_ms: providerRoundtripMs,
-          parse_ms: parseMs,
-          attempt_count: attemptCount,
-          retry_used: attemptCount > 1,
-        },
-      };
-    } catch (err) {
-      lastErr = err;
-      console.error(`Grok attempt ${attempt} failed:`, err.message);
-    }
-  }
-  throw lastErr;
-}
-
 // Timeout wrapper used by bounded Grok polish
 async function callWithFallbackTimeout(systemPrompt, userPrompt, temperature = 0.7, timeoutMs = 12000) {
   return await Promise.race([
@@ -538,7 +503,6 @@ Deno.serve(async (req) => {
     // ── generateCreativeDNA ─────────────────────────────────────────────────────
     if (action === "generateCreativeDNA") {
       const { project_id: pid, client_name, main_goal, raw_notes } = body;
-      const creativeDnaStart = Date.now();
 
       const DNA_SYSTEM = `You are Briefi Business Analyst for Israeli social media.
 Analyze the business and produce a creative content strategy.
@@ -589,32 +553,16 @@ Notes: ${raw_notes || ""}
 Analyze this business. Fill all 5 cards with specific, actionable insights. Provide 3-4 recommended_content_directions.
 Be concrete. Say something a human strategist would actually say after looking at this business, not a generic marketing summary.`;
 
-      const { parsed: dna, provider, _debug: timingDebug } = await callWithFallbackWithMetrics(DNA_SYSTEM, dnaUser, 0.7);
-      let projectUpdateMs = null;
+      const { parsed: dna } = await callWithFallback(DNA_SYSTEM, dnaUser, 0.7);
 
       if (pid) {
-        const projectUpdateStart = Date.now();
         await base44.asServiceRole.entities.Project.update(pid, {
           creative_dna: dna,
           status: "in_progress",
         });
-        projectUpdateMs = Date.now() - projectUpdateStart;
       }
 
-      return Response.json({
-        creative_dna: dna,
-        provider,
-        _debug: {
-          generate_creative_dna_total_ms: Date.now() - creativeDnaStart,
-          provider_roundtrip_ms: timingDebug?.provider_roundtrip_ms ?? null,
-          parse_ms: timingDebug?.parse_ms ?? null,
-          attempt_count: timingDebug?.attempt_count ?? null,
-          retry_used: timingDebug?.retry_used ?? null,
-          project_update_ms: projectUpdateMs,
-          model: XAI_MODEL,
-          provider,
-        },
-      });
+      return Response.json({ creative_dna: dna, provider: "grok" });
     }
 
     // ── generateConcepts ────────────────────────────────────────────────────────
