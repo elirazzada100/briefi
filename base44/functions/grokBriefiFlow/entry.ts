@@ -647,6 +647,7 @@ Return ONLY valid JSON. No markdown.
       }
 
       let candidates;
+      let conceptbankRetrievalMs = 0;
 
       if (industryOrder && industryOrder >= 1 && industryOrder <= 10) {
         // industry_order already known — query ConceptBank directly, no classification needed
@@ -656,8 +657,9 @@ Return ONLY valid JSON. No markdown.
           "concept_number_in_section",
           20
         );
+        conceptbankRetrievalMs = Date.now() - t1;
         classificationMs = 0;
-        console.log(`[concepts] skipped classification (industry_order=${industryOrder}), db_query=${Date.now()-t1}ms`);
+        console.log(`[concepts] skipped classification (industry_order=${industryOrder}), db_query=${conceptbankRetrievalMs}ms`);
       } else {
         // Classify with OpenAI
         const t1 = Date.now();
@@ -682,7 +684,8 @@ Return ONLY valid JSON. No markdown.
           "concept_number_in_section",
           20
         );
-        console.log(`[concepts] openai_classify=${classificationMs}ms, db_query=${Date.now()-t2}ms`);
+        conceptbankRetrievalMs = Date.now() - t2;
+        console.log(`[concepts] openai_classify=${classificationMs}ms, db_query=${conceptbankRetrievalMs}ms`);
       }
 
       if (!industryOrder || industryOrder < 1 || industryOrder > 10) {
@@ -697,12 +700,17 @@ Return ONLY valid JSON. No markdown.
       const debugData = {
         classifiedIndustry: { industry_order: industryOrder, industry_name: industryName },
         selected_video_style: videoStyle,
+        selected_style: videoStyle,
+        source_batch: conceptSourceBatch,
+        is_ugc: policy.isUGC,
+        is_trendy: policy.isTrendy,
         retrieval_query: { source_batch: conceptSourceBatch, industry_order: industryOrder, user_facing_video_style: conceptStyle },
         candidate_count: candidates.length,
         candidate_concept_ids: candidates.map(c => c.id),
         grok_selected_concept_ids: [],
         validation_passed: false,
         classification_ms: classificationMs,
+        conceptbank_retrieval_ms: conceptbankRetrievalMs,
       };
 
       // Fail loudly — do NOT mix or fallback
@@ -833,7 +841,7 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
       debugData.validation_passed = true;
       debugData.openai_selection_ms = selectionMs;
       debugData.total_ms = totalMs;
-      console.log(`[concepts] classification=${classificationMs}ms, openai_selection=${selectionMs}ms, total=${totalMs}ms`);
+      console.log(`[concepts] classification=${classificationMs}ms, conceptbank_retrieval=${conceptbankRetrievalMs}ms, openai_selection=${selectionMs}ms, total=${totalMs}ms`);
 
       return Response.json({
         concepts,

@@ -54,6 +54,9 @@ export default function GrokConceptPicker() {
     requestInFlightRef.current = true;
     setLoading(true);
     setError(null);
+    const frontendConceptStart = performance.now();
+    let frontendClassificationMs = 0;
+    let frontendGenerateConceptsMs = 0;
     try {
       const proj = project;
       const business = businessFromState || {
@@ -65,10 +68,15 @@ export default function GrokConceptPicker() {
       // Ensure industry classification is available (required for strict ConceptBank retrieval)
       // classifyBusinessCategory now returns industry_order + industry_name directly
       let resolvedAnalysis = businessAnalysis;
-      if (selectedVideoStyle !== "טרנדי" && (!resolvedAnalysis?.industry_order || !resolvedAnalysis?.industry_name)) {
+      const classificationSkipped =
+        selectedVideoStyle === "טרנדי" || (resolvedAnalysis?.industry_order && resolvedAnalysis?.industry_name);
+
+      if (!classificationSkipped) {
+        const frontendClassificationStart = performance.now();
         const classifyRes = await base44.functions.invoke("classifyBusinessCategory", {
           businessDescription: `${business.business_name}. ${business.business_description}. ${business.main_goal}`,
         });
+        frontendClassificationMs = Math.round(performance.now() - frontendClassificationStart);
         const clf = classifyRes.data;
         resolvedAnalysis = {
           ...(resolvedAnalysis || {}),
@@ -80,6 +88,7 @@ export default function GrokConceptPicker() {
         setResolvedAnalysis(resolvedAnalysis);
       }
 
+      const frontendGenerateConceptsStart = performance.now();
       const res = await base44.functions.invoke("grokBriefiFlow", {
         action: "generateConcepts",
         business,
@@ -88,10 +97,34 @@ export default function GrokConceptPicker() {
         businessAnalysis: resolvedAnalysis,
         specialFocus,
       });
+      frontendGenerateConceptsMs = Math.round(performance.now() - frontendGenerateConceptsStart);
 
       if (res.data?.error) {
         setError(res.data.error);
         return;
+      }
+
+      if (import.meta.env.DEV) {
+        const backendDebug = res.data?._debug || {};
+        console.debug("[concept-timing]", {
+          frontend_concept_total_ms: Math.round(performance.now() - frontendConceptStart),
+          frontend_classification_ms: frontendClassificationMs,
+          frontend_generate_concepts_ms: frontendGenerateConceptsMs,
+          classification_skipped: classificationSkipped,
+          selected_style: selectedVideoStyle,
+          is_ugc: selectedVideoStyle === "ugc",
+          is_trendy: selectedVideoStyle === "טרנדי",
+          backend_debug: {
+            total_ms: backendDebug.total_ms,
+            classification_ms: backendDebug.classification_ms,
+            conceptbank_retrieval_ms: backendDebug.conceptbank_retrieval_ms,
+            openai_selection_ms: backendDebug.openai_selection_ms,
+            candidate_count: backendDebug.candidate_count,
+            source_batch: backendDebug.source_batch,
+            is_ugc: backendDebug.is_ugc,
+            is_trendy: backendDebug.is_trendy,
+          },
+        });
       }
 
       setConcepts(res.data?.concepts || []);
