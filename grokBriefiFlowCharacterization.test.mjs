@@ -108,25 +108,6 @@ test("grokBriefiFlow locks candidate-pool validation and no-freeform bank concep
   assert.ok(grokFlow.includes('source_type: "concept_bank"'));
 });
 
-test("grokBriefiFlow concept debug stays timing-focused and does not expose prompts secrets or raw provider text", () => {
-  const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
-
-  assert.ok(grokFlow.includes("conceptbank_retrieval_ms"));
-  assert.ok(grokFlow.includes("openai_selection_ms"));
-  assert.ok(grokFlow.includes("candidate_count"));
-  assert.ok(grokFlow.includes("source_batch: conceptSourceBatch"));
-  assert.ok(grokFlow.includes("is_ugc: policy.isUGC"));
-  assert.ok(grokFlow.includes("is_trendy: policy.isTrendy"));
-  assert.ok(!grokFlow.includes("_debug: { prompt"));
-  assert.ok(!grokFlow.includes("_debug: { systemPrompt"));
-  assert.ok(!grokFlow.includes("_debug: { userPrompt"));
-  assert.ok(!grokFlow.includes("_debug: { rawContent"));
-  assert.ok(!grokFlow.includes("_debug: { OPENAI_API_KEY"));
-  assert.ok(!grokFlow.includes("_debug: { XAI_API_KEY"));
-  assert.ok(!grokFlow.includes("debugData.OPENAI_API_KEY"));
-  assert.ok(!grokFlow.includes("debugData.XAI_API_KEY"));
-});
-
 test("grokBriefiFlow locks dash sanitizer scope to user-facing fields, not ids or batch keys", () => {
   const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
 

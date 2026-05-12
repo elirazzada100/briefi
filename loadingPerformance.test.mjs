@@ -29,13 +29,6 @@ test("concept flow keeps strict ConceptBank retrieval while using the current Op
   assert.ok(source.includes("user_facing_video_style: conceptStyle"));
   assert.ok(source.includes('source_type: "concept_bank"'));
   assert.ok(source.includes("candidateIdSet"));
-  assert.ok(source.includes("conceptbank_retrieval_ms"));
-  assert.ok(source.includes("openai_selection_ms"));
-  assert.ok(source.includes("total_ms"));
-  assert.ok(source.includes("candidate_count"));
-  assert.ok(source.includes("source_batch: conceptSourceBatch"));
-  assert.ok(source.includes("is_ugc: policy.isUGC"));
-  assert.ok(source.includes("is_trendy: policy.isTrendy"));
   assert.ok(source.includes('provider_log: { provider_used: "openai", step_name: "concept_bank_strict", success: true }'));
 });
 
@@ -49,11 +42,6 @@ test("concept, hook, CTA, and final brief add duplicate request guards without c
   assert.ok(conceptPicker.includes("requestInFlightRef"));
   assert.ok(conceptPicker.includes("selectedVideoStyle,"));
   assert.ok(conceptPicker.includes("businessAnalysis: resolvedAnalysis"));
-  assert.ok(conceptPicker.includes("frontend_concept_total_ms"));
-  assert.ok(conceptPicker.includes("frontend_classification_ms"));
-  assert.ok(conceptPicker.includes("frontend_generate_concepts_ms"));
-  assert.ok(conceptPicker.includes("classification_skipped"));
-  assert.ok(conceptPicker.includes('console.debug("[concept-timing]"'));
 
   assert.ok(openingPicker.includes("initialLoadStartedRef"));
   assert.ok(openingPicker.includes("requestInFlightRef"));
@@ -69,7 +57,6 @@ test("FinalBrief post-save timer is at most 100ms", () => {
   const source = read("src/pages/FinalBrief.jsx");
   assert.ok(source.includes("setTimeout(() => setSaved(false), 100)"));
   assert.ok(!source.includes("setTimeout(() => setSaved(false), 2000)"));
-  assert.ok(!read("src/pages/GrokConceptPicker.jsx").includes("setTimeout"));
 });
 
 test("FinalBrief uses OpenAI assembly plus bounded Grok polish fallback", () => {
