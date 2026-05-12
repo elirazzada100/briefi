@@ -213,25 +213,6 @@ export default function CreativeDNA() {
     await base44.entities.Project.update(project.id, { creative_dna: updated });
   };
 
-  const handleCopyTiming = async () => {
-    if (!timingDebug || !navigator?.clipboard?.writeText) return;
-
-    const timingReport = [
-      "Business Analysis timing:",
-      `frontend_total: ${timingDebug.frontend_generate_dna_ms ?? ""}`,
-      `generate_creative_dna_total: ${timingDebug.backend_debug?.generate_creative_dna_total_ms ?? ""}`,
-      `provider_roundtrip: ${timingDebug.backend_debug?.provider_roundtrip_ms ?? ""}`,
-      `parse: ${timingDebug.backend_debug?.parse_ms ?? ""}`,
-      `attempt_count: ${timingDebug.backend_debug?.attempt_count ?? ""}`,
-      `retry_used: ${timingDebug.backend_debug?.retry_used ?? ""}`,
-      `project_update: ${timingDebug.backend_debug?.project_update_ms ?? ""}`,
-      `provider: ${timingDebug.backend_debug?.provider ?? ""}`,
-      `model: ${timingDebug.backend_debug?.model ?? ""}`,
-    ].join("\n");
-
-    await navigator.clipboard.writeText(timingReport);
-  };
-
   if (guardLoading || !project) return <LoadingState message="עוד רגע זה מוכן." />;
   if (generating) return <LoadingState message={["קוראים את העסק.", "מחפשים את הזווית שתעצור גלילה."]} />;
   if (error) return <ErrorState onRetry={generateDNA} />;
@@ -279,37 +260,6 @@ export default function CreativeDNA() {
         {directions.length > 0 && (
           <div className="mb-6">
             <EditableDirections directions={directions} onSave={updateDirections} />
-          </div>
-        )}
-
-        {timingDebug && (
-          <div className="mb-6 bg-muted/40 border border-border/60 rounded-2xl p-3 space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-bold text-foreground">תזמון ניתוח עסק</h2>
-              <button onClick={handleCopyTiming} className="briefi-btn-secondary !h-8 !px-3 text-xs">
-                העתק תזמון
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-foreground/80">
-              <span>frontend_generate_dna_ms</span>
-              <span className="text-left">{timingDebug.frontend_generate_dna_ms ?? ""}</span>
-              <span>generate_creative_dna_total_ms</span>
-              <span className="text-left">{timingDebug.backend_debug?.generate_creative_dna_total_ms ?? ""}</span>
-              <span>provider_roundtrip_ms</span>
-              <span className="text-left">{timingDebug.backend_debug?.provider_roundtrip_ms ?? ""}</span>
-              <span>parse_ms</span>
-              <span className="text-left">{timingDebug.backend_debug?.parse_ms ?? ""}</span>
-              <span>attempt_count</span>
-              <span className="text-left">{timingDebug.backend_debug?.attempt_count ?? ""}</span>
-              <span>retry_used</span>
-              <span className="text-left">{String(timingDebug.backend_debug?.retry_used ?? "")}</span>
-              <span>project_update_ms</span>
-              <span className="text-left">{timingDebug.backend_debug?.project_update_ms ?? ""}</span>
-              <span>provider</span>
-              <span className="text-left">{timingDebug.backend_debug?.provider ?? ""}</span>
-              <span>model</span>
-              <span className="text-left">{timingDebug.backend_debug?.model ?? ""}</span>
-            </div>
           </div>
         )}
 

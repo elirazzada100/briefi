@@ -18,9 +18,6 @@ test("business analysis page blocks duplicate generation and has no artificial d
   assert.ok(source.includes("frontend_request_started_at"));
   assert.ok(source.includes("frontend_request_finished_at"));
   assert.ok(source.includes('console.debug("[creative-dna-timing]"'));
-  assert.ok(source.includes("תזמון ניתוח עסק"));
-  assert.ok(source.includes("העתק תזמון"));
-  assert.ok(source.includes("navigator.clipboard.writeText"));
   assert.ok(!source.includes("setTimeout"));
 });
 
@@ -41,29 +38,6 @@ test("generateCreativeDNA timing instrumentation is safe and preserves Grok retr
   assert.ok(!source.includes("_debug: { systemPrompt"));
   assert.ok(!source.includes("_debug: { userPrompt"));
   assert.ok(!source.includes("_debug: { raw"));
-});
-
-test("creative DNA timing panel renders only when timingDebug exists and copies safe timing fields only", () => {
-  const creativeDNA = read("src/pages/CreativeDNA.jsx");
-
-  assert.ok(creativeDNA.includes("{timingDebug && ("));
-  assert.ok(creativeDNA.includes("תזמון ניתוח עסק"));
-  assert.ok(creativeDNA.includes("העתק תזמון"));
-  assert.ok(creativeDNA.includes("Business Analysis timing:"));
-  assert.ok(creativeDNA.includes("frontend_generate_dna_ms"));
-  assert.ok(creativeDNA.includes("generate_creative_dna_total_ms"));
-  assert.ok(creativeDNA.includes("provider_roundtrip_ms"));
-  assert.ok(creativeDNA.includes("parse_ms"));
-  assert.ok(creativeDNA.includes("attempt_count"));
-  assert.ok(creativeDNA.includes("retry_used"));
-  assert.ok(creativeDNA.includes("project_update_ms"));
-  assert.ok(creativeDNA.includes("provider"));
-  assert.ok(creativeDNA.includes("model"));
-  assert.ok(!creativeDNA.includes("systemPrompt"));
-  assert.ok(!creativeDNA.includes("userPrompt"));
-  assert.ok(!creativeDNA.includes("OPENAI_API_KEY"));
-  assert.ok(!creativeDNA.includes("XAI_API_KEY"));
-  assert.ok(!creativeDNA.includes("raw provider response"));
 });
 
 test("concept flow keeps strict ConceptBank retrieval while using the current OpenAI-backed classification and selection path", () => {
