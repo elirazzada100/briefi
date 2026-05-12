@@ -10,7 +10,6 @@ const OPENAI_CONCEPT_MODEL = "gpt-4.1-mini-2025-04-14";
 const ACTIVE_CONCEPT_SOURCE_BATCH = "1000_Concepts_Briefi_10_display_clean";
 const UGC_CONCEPT_SOURCE_BATCH = "1000_UGC_Briefi_10_display_clean_v2";
 const GROK_CREATIVE_DNA_TIMEOUT_MS = 11000;
-const OPENAI_CREATIVE_DNA_TIMEOUT_MS = 12000;
 const UNAUTHORIZED_ERROR = "Unauthorized";
 const XAI_API_KEY_MISSING_ERROR = "XAI_API_KEY is not set";
 const OPENAI_API_KEY_MISSING_ERROR = "OPENAI_API_KEY is not set";
@@ -147,57 +146,11 @@ function sanitizeCreativeDNA(creativeDna) {
   };
 }
 
-function buildSafeMinimalCreativeDNA(clientName = "", mainGoal = "") {
-  const safeName = sanitizeUserFacingHebrewCopy(clientName || "העסק הזה");
-  const safeGoal = sanitizeUserFacingHebrewCopy(mainGoal || "");
-  return sanitizeCreativeDNA({
-    business_analysis_cards: [
-      {
-        title: "הכיוון הכי חזק",
-        summary: `${safeName} צריך להרגיש בסושיאל כמו משהו שקל להבין מהר ושווה לעצור עליו. פחות הסברים, יותר רגעים שממחישים למה זה רלוונטי עכשיו.`,
-        tags: ["חד", "ברור"],
-      },
-      {
-        title: "מה מוכרים פה באמת",
-        summary: safeGoal
-          ? `לא מוכרים פה רק שירות או מוצר. מוכרים סיבה טובה לבחור בזה עכשיו, במיוחד למי שכבר מחפש ${safeGoal}.`
-          : "לא מוכרים פה רק שירות או מוצר. מוכרים סיבה טובה לבחור בזה עכשיו למי שכבר מתלבט.",
-        tags: ["פרקטי", "ישיר"],
-      },
-      {
-        title: "למה זה יכול לעבוד",
-        summary: "הכוח כאן הוא בפרטים הקטנים שאנשים מזהים מהר ומבינים מהם אם זה בשבילם. זה צריך להרגיש חד, פשוט ואמין.",
-        tags: ["אמין", "פשוט"],
-      },
-      {
-        title: "איך נגרום לאנשים לעצור",
-        summary: "צריך לפתוח עם רגע ברור, שאלה טובה או פרט קטן שמרגיש מוכר. אם זה נראה אמיתי מהשנייה הראשונה, יש סיכוי טוב שיישארו.",
-        tags: ["עצירה", "עניין"],
-      },
-      {
-        title: "הזווית של בריפי",
-        summary: "הסושיאל צריך לגרום לאנשים לדמיין את עצמם בפנים, לא רק להבין מה העסק עושה. כשזה מרגיש קרוב לחיים, זה עובד יותר טוב.",
-        tags: ["דמיון", "חיבור"],
-      },
-    ],
-    recommended_content_directions: [
-      "להראות רגע קטן שממחיש מהר למה זה שווה תשומת לב",
-      "לתפוס התלבטות אמיתית של לקוח ולענות עליה בלי לחפור",
-      "להבליט פרט יומיומי שגורם לזה להרגיש אמין ולא מתאמץ",
-    ],
-    main_angle: "הכיוון צריך להיות פשוט, חד וקל לדמיין בתוך החיים האמיתיים.",
-    audience_truth: "אנשים לא מחפשים הסבר ארוך. הם מחפשים סימן מהיר שזה רלוונטי להם.",
-    what_is_interesting: "הדברים הקטנים שמרגישים אמיתיים שווים יותר מהצהרות גדולות.",
-    what_to_avoid: "לא לדבר בסיסמאות ולא להסביר יותר מדי לפני שמראים למה זה מעניין.",
-  });
-}
-
 // ── Provider clients ───────────────────────────────────────────────────────────
 // Grok caller
-async function callGrok(systemPrompt, userPrompt, temperature = 0.7, signal) {
+async function callGrok(systemPrompt, userPrompt, temperature = 0.7) {
   const apiRes = await fetch(`${XAI_BASE_URL}/chat/completions`, {
     method: "POST",
-    signal,
     headers: {
       "Authorization": `Bearer ${XAI_API_KEY}`,
       "Content-Type": "application/json",
@@ -278,45 +231,6 @@ async function callWithFallbackWithMetrics(systemPrompt, userPrompt, temperature
   throw lastErr;
 }
 
-async function callGrokWithTimeoutAndMetrics(systemPrompt, userPrompt, temperature = 0.7, timeoutMs = GROK_CREATIVE_DNA_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  const providerStart = Date.now();
-  try {
-    const raw = await callGrok(systemPrompt, userPrompt, temperature, controller.signal);
-    const providerRoundtripMs = Date.now() - providerStart;
-    const parseStart = Date.now();
-    const parsed = parseJSON(raw);
-    const parseMs = Date.now() - parseStart;
-    return {
-      parsed,
-      provider: "grok",
-      _debug: {
-        provider_roundtrip_ms: providerRoundtripMs,
-        parse_ms: parseMs,
-        attempt_count: 1,
-        retry_used: false,
-        grok_timed_out: false,
-      },
-    };
-  } catch (err) {
-    const providerRoundtripMs = Date.now() - providerStart;
-    const timedOut = err?.name === "AbortError";
-    if (timedOut) {
-      throw Object.assign(new Error(`GROK_TIMEOUT_${timeoutMs}ms`), {
-        provider_roundtrip_ms: providerRoundtripMs,
-        grok_timed_out: true,
-      });
-    }
-    throw Object.assign(err, {
-      provider_roundtrip_ms: providerRoundtripMs,
-      grok_timed_out: false,
-    });
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
 // Timeout wrapper used by bounded Grok polish
 async function callWithFallbackTimeout(systemPrompt, userPrompt, temperature = 0.7, timeoutMs = 12000) {
   return await Promise.race([
@@ -365,65 +279,6 @@ async function selectConceptsWithOpenAI(systemPrompt, userPrompt) {
 
 async function generateBusinessAnalysisWithOpenAI(systemPrompt, userPrompt) {
   return callOpenAIForConcepts(systemPrompt, userPrompt, 0.7);
-}
-
-async function generateBusinessAnalysisWithOpenAITimeout(systemPrompt, userPrompt, timeoutMs = OPENAI_CREATIVE_DNA_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  const providerStart = Date.now();
-  try {
-    if (!OPENAI_API_KEY) {
-      throw new Error(`${OPENAI_API_KEY_MISSING_ERROR} — cannot run creative DNA fallback`);
-    }
-    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: OPENAI_CONCEPT_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-        response_format: { type: "json_object" },
-      }),
-    });
-    if (!apiRes.ok) {
-      const errText = await apiRes.text();
-      throw new Error(`OpenAI API error: ${apiRes.status} — ${errText}`);
-    }
-    const data = await apiRes.json();
-    const content = data?.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Empty response from OpenAI");
-    const providerRoundtripMs = Date.now() - providerStart;
-    const parseStart = Date.now();
-    const parsed = parseJSON(content);
-    const parseMs = Date.now() - parseStart;
-    return {
-      parsed,
-      provider: "openai",
-      _debug: {
-        provider_roundtrip_ms: providerRoundtripMs,
-        parse_ms: parseMs,
-        fallback_timed_out: false,
-      },
-    };
-  } catch (err) {
-    if (err?.name === "AbortError") {
-      throw Object.assign(new Error(`OPENAI_TIMEOUT_${timeoutMs}ms`), {
-        fallback_timed_out: true,
-      });
-    }
-    throw Object.assign(err, {
-      fallback_timed_out: false,
-    });
-  } finally {
-    clearTimeout(timeoutId);
-  }
 }
 
 // ── Business classification ────────────────────────────────────────────────────
@@ -764,39 +619,32 @@ Be concrete. Say something a human strategist would actually say after looking a
       let timingDebug = {
         provider_roundtrip_ms: null,
         parse_ms: null,
-        attempt_count: 1,
-        retry_used: false,
+        attempt_count: null,
+        retry_used: null,
       };
       let timedOut = false;
       let fallbackUsed = false;
       let fallbackProvider = null;
       let fallbackModel = null;
-      let fallbackTimedOut = false;
-      let returnedSafeMinimalResponse = false;
 
       try {
-        const grokResult = await callGrokWithTimeoutAndMetrics(DNA_SYSTEM, dnaUser, 0.7, GROK_CREATIVE_DNA_TIMEOUT_MS);
+        const grokResult = await Promise.race([
+          callWithFallbackWithMetrics(DNA_SYSTEM, dnaUser, 0.7),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`GROK_TIMEOUT_${GROK_CREATIVE_DNA_TIMEOUT_MS}ms`)), GROK_CREATIVE_DNA_TIMEOUT_MS)
+          ),
+        ]);
         dna = sanitizeCreativeDNA(grokResult.parsed);
         provider = grokResult.provider;
         timingDebug = grokResult._debug || timingDebug;
-      } catch (grokErr) {
-        timedOut = String(grokErr?.message || "").startsWith(`GROK_TIMEOUT_${GROK_CREATIVE_DNA_TIMEOUT_MS}ms`) || Boolean(grokErr?.grok_timed_out);
-        timingDebug.provider_roundtrip_ms = grokErr?.provider_roundtrip_ms ?? timingDebug.provider_roundtrip_ms;
+      } catch (err) {
+        timedOut = String(err?.message || "").startsWith(`GROK_TIMEOUT_${GROK_CREATIVE_DNA_TIMEOUT_MS}ms`);
         fallbackUsed = true;
         fallbackProvider = "openai";
         fallbackModel = OPENAI_CONCEPT_MODEL;
-        try {
-          const fallbackResult = await generateBusinessAnalysisWithOpenAITimeout(DNA_SYSTEM, dnaUser, OPENAI_CREATIVE_DNA_TIMEOUT_MS);
-          dna = sanitizeCreativeDNA(fallbackResult.parsed);
-          provider = fallbackResult.provider;
-          timingDebug.parse_ms = fallbackResult._debug?.parse_ms ?? timingDebug.parse_ms;
-          fallbackTimedOut = fallbackResult._debug?.fallback_timed_out ?? false;
-        } catch (fallbackErr) {
-          fallbackTimedOut = String(fallbackErr?.message || "").startsWith(`OPENAI_TIMEOUT_${OPENAI_CREATIVE_DNA_TIMEOUT_MS}ms`) || Boolean(fallbackErr?.fallback_timed_out);
-          dna = buildSafeMinimalCreativeDNA(client_name, main_goal);
-          provider = "safe_minimal";
-          returnedSafeMinimalResponse = true;
-        }
+        const fallbackDna = await generateBusinessAnalysisWithOpenAI(DNA_SYSTEM, dnaUser);
+        dna = sanitizeCreativeDNA(fallbackDna);
+        provider = "openai";
       }
 
       let projectUpdateMs = null;
@@ -821,14 +669,10 @@ Be concrete. Say something a human strategist would actually say after looking a
           retry_used: timingDebug?.retry_used ?? null,
           project_update_ms: projectUpdateMs,
           timed_out: timedOut,
-          grok_timed_out: timedOut,
           fallback_used: fallbackUsed,
           fallback_provider: fallbackProvider,
           fallback_model: fallbackModel,
-          fallback_timeout_ms: OPENAI_CREATIVE_DNA_TIMEOUT_MS,
-          fallback_timed_out: fallbackTimedOut,
           grok_timeout_ms: GROK_CREATIVE_DNA_TIMEOUT_MS,
-          returned_safe_minimal_response: returnedSafeMinimalResponse,
           model: XAI_MODEL,
           provider,
         },

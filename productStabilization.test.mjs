@@ -171,11 +171,9 @@ test("generateCreativeDNA keeps provider model and response contract while expos
 
   assert.match(grokFlow, /const XAI_MODEL = Deno\.env\.get\("XAI_MODEL"\) \|\| "grok-3"/);
   assert.match(grokFlow, /const GROK_CREATIVE_DNA_TIMEOUT_MS = 11000/);
-  assert.match(grokFlow, /const OPENAI_CREATIVE_DNA_TIMEOUT_MS = 12000/);
-  assert.match(grokFlow, /callGrokWithTimeoutAndMetrics\(DNA_SYSTEM, dnaUser, 0\.7, GROK_CREATIVE_DNA_TIMEOUT_MS\)/);
-  assert.match(grokFlow, /generateBusinessAnalysisWithOpenAITimeout\(DNA_SYSTEM, dnaUser, OPENAI_CREATIVE_DNA_TIMEOUT_MS\)/);
+  assert.match(grokFlow, /callWithFallbackWithMetrics\(DNA_SYSTEM, dnaUser, 0\.7\)/);
+  assert.match(grokFlow, /generateBusinessAnalysisWithOpenAI\(DNA_SYSTEM, dnaUser\)/);
   assert.match(grokFlow, /sanitizeCreativeDNA/);
-  assert.match(grokFlow, /buildSafeMinimalCreativeDNA/);
   assert.match(grokFlow, /creative_dna: dna/);
   assert.match(grokFlow, /provider,/);
   assert.match(grokFlow, /generate_creative_dna_total_ms/);
@@ -185,13 +183,9 @@ test("generateCreativeDNA keeps provider model and response contract while expos
   assert.match(grokFlow, /retry_used/);
   assert.match(grokFlow, /project_update_ms/);
   assert.match(grokFlow, /timed_out/);
-  assert.match(grokFlow, /grok_timed_out/);
   assert.match(grokFlow, /fallback_used/);
   assert.match(grokFlow, /fallback_provider/);
   assert.match(grokFlow, /fallback_model/);
-  assert.match(grokFlow, /fallback_timeout_ms: OPENAI_CREATIVE_DNA_TIMEOUT_MS/);
-  assert.match(grokFlow, /fallback_timed_out/);
-  assert.match(grokFlow, /returned_safe_minimal_response/);
   assert.match(grokFlow, /grok_timeout_ms: GROK_CREATIVE_DNA_TIMEOUT_MS/);
   assert.doesNotMatch(grokFlow, /_debug:\s*\{[^}]*systemPrompt/);
   assert.doesNotMatch(grokFlow, /_debug:\s*\{[^}]*userPrompt/);
@@ -207,28 +201,14 @@ test("CreativeDNA timeout fallback is limited to business analysis and leaves ho
   const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
 
   assert.match(grokFlow, /if \(action === "generateCreativeDNA"\) \{/);
-  assert.match(grokFlow, /generateBusinessAnalysisWithOpenAITimeout/);
-  assert.doesNotMatch(grokFlow, /generateOpeningOptions[\s\S]*generateBusinessAnalysisWithOpenAITimeout/);
-  assert.doesNotMatch(grokFlow, /generateCTAOptions[\s\S]*generateBusinessAnalysisWithOpenAITimeout/);
-  assert.doesNotMatch(grokFlow, /assembleFinalBrief[\s\S]*generateBusinessAnalysisWithOpenAITimeout/);
+  assert.match(grokFlow, /generateBusinessAnalysisWithOpenAI/);
+  assert.doesNotMatch(grokFlow, /generateOpeningOptions[\s\S]*generateBusinessAnalysisWithOpenAI/);
+  assert.doesNotMatch(grokFlow, /generateCTAOptions[\s\S]*generateBusinessAnalysisWithOpenAI/);
+  assert.doesNotMatch(grokFlow, /assembleFinalBrief[\s\S]*generateBusinessAnalysisWithOpenAI/);
   assert.match(grokFlow, /await callWithFallback\(OPENING_GEN_GROK_SYSTEM, userPrompt, 0\.85\)/);
   assert.match(grokFlow, /await callWithFallback\(CTA_GEN_SYSTEM, userPrompt, 0\.7\)/);
   assert.match(grokFlow, /const polishTimeoutMs = 12000/);
   assert.match(grokFlow, /function sanitizeCreativeDNA\(creativeDna\)/);
-  assert.match(grokFlow, /function buildSafeMinimalCreativeDNA\(clientName = "", mainGoal = ""\)/);
-});
-
-test("generateCreativeDNA fallback path guarantees a valid safe response shape even if both providers fail", () => {
-  const grokFlow = read("./base44/functions/grokBriefiFlow/entry.ts");
-
-  assert.match(grokFlow, /provider = "safe_minimal"/);
-  assert.match(grokFlow, /returnedSafeMinimalResponse = true/);
-  assert.match(grokFlow, /business_analysis_cards:/);
-  assert.match(grokFlow, /recommended_content_directions:/);
-  assert.match(grokFlow, /main_angle:/);
-  assert.match(grokFlow, /audience_truth:/);
-  assert.match(grokFlow, /what_is_interesting:/);
-  assert.match(grokFlow, /what_to_avoid:/);
 });
 
 test("stepper polish keeps only concept hook and CTA, and final brief does not render it", () => {

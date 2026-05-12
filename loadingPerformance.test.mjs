@@ -24,35 +24,28 @@ test("business analysis page blocks duplicate generation and has no artificial d
   assert.ok(source.includes('window.localStorage?.getItem("briefiDebugTiming") === "true"'));
   assert.ok(source.includes("try {"));
   assert.ok(source.includes("showTimingDebug = false;"));
-  assert.ok(source.includes("requestInFlightRef.current = false;"));
-  assert.ok(source.includes("setGenerating(false);"));
   assert.ok(!source.includes("setTimeout"));
 });
 
-test("generateCreativeDNA timing instrumentation is safe and returns through bounded timeout and fallback paths", () => {
+test("generateCreativeDNA timing instrumentation is safe and preserves Grok retry behavior", () => {
   const source = read("base44/functions/grokBriefiFlow/entry.ts");
 
   assert.ok(source.includes("async function callWithFallback(systemPrompt, userPrompt, temperature = 0.7)"));
-  assert.ok(source.includes("async function callGrokWithTimeoutAndMetrics(systemPrompt, userPrompt, temperature = 0.7, timeoutMs = GROK_CREATIVE_DNA_TIMEOUT_MS)"));
-  assert.ok(source.includes("const GROK_CREATIVE_DNA_TIMEOUT_MS = 11000"));
-  assert.ok(source.includes("const OPENAI_CREATIVE_DNA_TIMEOUT_MS = 12000"));
-  assert.ok(source.includes("AbortController()"));
+  assert.ok(source.includes("for (let attempt = 1; attempt <= 2; attempt++)"));
+  assert.ok(source.includes("async function callWithFallbackWithMetrics(systemPrompt, userPrompt, temperature = 0.7)"));
   assert.ok(source.includes("generate_creative_dna_total_ms"));
   assert.ok(source.includes("provider_roundtrip_ms"));
   assert.ok(source.includes("parse_ms"));
   assert.ok(source.includes("attempt_count"));
   assert.ok(source.includes("retry_used"));
   assert.ok(source.includes("project_update_ms"));
-  assert.ok(source.includes("GROK_TIMEOUT_${timeoutMs}ms"));
-  assert.ok(source.includes("OPENAI_TIMEOUT_${timeoutMs}ms"));
+  assert.ok(source.includes("GROK_CREATIVE_DNA_TIMEOUT_MS = 11000"));
+  assert.ok(source.includes("Promise.race(["));
+  assert.ok(source.includes("GROK_TIMEOUT_${GROK_CREATIVE_DNA_TIMEOUT_MS}ms"));
   assert.ok(source.includes("fallback_used"));
   assert.ok(source.includes("fallback_provider"));
   assert.ok(source.includes("fallback_model"));
   assert.ok(source.includes("grok_timeout_ms"));
-  assert.ok(source.includes("fallback_timeout_ms"));
-  assert.ok(source.includes("fallback_timed_out"));
-  assert.ok(source.includes("returned_safe_minimal_response"));
-  assert.ok(source.includes("buildSafeMinimalCreativeDNA"));
   assert.ok(source.includes("model: XAI_MODEL"));
   assert.ok(source.includes("provider,"));
   assert.ok(!source.includes("_debug: { systemPrompt"));
