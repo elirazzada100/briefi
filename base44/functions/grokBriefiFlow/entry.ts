@@ -831,7 +831,6 @@ You MUST use only IDs from the candidate pool above. Return EXACTLY 4 concepts w
       const totalMs = Date.now() - t0;
       debugData.grok_selected_concept_ids = concepts.map(c => c.concept_bank_id);
       debugData.validation_passed = true;
-      debugData.openai_selection_ms = selectionMs;
       debugData.total_ms = totalMs;
       console.log(`[concepts] classification=${classificationMs}ms, openai_selection=${selectionMs}ms, total=${totalMs}ms`);
 
