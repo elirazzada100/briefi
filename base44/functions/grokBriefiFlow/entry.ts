@@ -1,4 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import {
+  getMockCreativeDNAResponse,
+  getMockConceptsResponse,
+  getMockOpeningOptionsResponse,
+  getMockCTAOptionsResponse,
+  getMockFinalBriefResponse,
+  getMockImprovedFinalBriefResponse,
+} from "./mockResponses.js";
 
 // ── Constants and source batches ──────────────────────────────────────────────
 const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
@@ -13,6 +21,10 @@ const UNAUTHORIZED_ERROR = "Unauthorized";
 const XAI_API_KEY_MISSING_ERROR = "XAI_API_KEY is not set";
 const OPENAI_API_KEY_MISSING_ERROR = "OPENAI_API_KEY is not set";
 const UNKNOWN_ACTION_ERROR = "Unknown action";
+
+function isMockAIEnabled() {
+  return globalThis.process?.env?.BRIEFI_MOCK_AI === "true";
+}
 
 const FORBIDDEN_PHRASES = `
 Forbidden phrases (NEVER use these):
@@ -494,10 +506,63 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: UNAUTHORIZED_ERROR }, { status: 401 });
 
-    if (!XAI_API_KEY) return Response.json({ error: XAI_API_KEY_MISSING_ERROR }, { status: 500 });
-
     const body = await req.json();
     const { action, project_id, business, selectedConcept, selectedOpening, selectedBody, selectedCTA, selectedVideoStyle, businessAnalysis, specialFocus } = body;
+    const mockAIEnabled = isMockAIEnabled();
+
+    if (mockAIEnabled && action === "generateCreativeDNA") {
+      return Response.json(getMockCreativeDNAResponse());
+    }
+
+    if (mockAIEnabled && action === "generateConcepts") {
+      const policy = resolveStylePolicy(selectedVideoStyle);
+      return Response.json(getMockConceptsResponse({
+        selectedStyle: policy.normalizedStyle,
+        isUGC: policy.isUGC,
+        isTrendy: policy.isTrendy,
+      }));
+    }
+
+    if (mockAIEnabled && action === "generateOpeningOptions") {
+      const policy = resolveStylePolicy(selectedVideoStyle);
+      return Response.json(getMockOpeningOptionsResponse({
+        selectedStyle: policy.normalizedStyle,
+        isUGC: policy.isUGC,
+      }));
+    }
+
+    if (mockAIEnabled && action === "generateCTAOptions") {
+      const policy = resolveStylePolicy(selectedVideoStyle);
+      return Response.json(getMockCTAOptionsResponse({
+        selectedStyle: policy.normalizedStyle,
+        isUGC: policy.isUGC,
+      }));
+    }
+
+    if (mockAIEnabled && action === "assembleFinalBrief") {
+      const policy = resolveStylePolicy(selectedVideoStyle);
+      return Response.json(getMockFinalBriefResponse({
+        selectedStyle: policy.normalizedStyle,
+        isUGC: policy.isUGC,
+      }));
+    }
+
+    if (mockAIEnabled && action === "improveFinalBrief") {
+      const improveStyle =
+        body.selected_video_style ||
+        body.selectedVideoStyle ||
+        body.selectedStyle ||
+        body.style ||
+        body.user_facing_video_style ||
+        "";
+      const policy = resolveStylePolicy(improveStyle);
+      return Response.json(getMockImprovedFinalBriefResponse({
+        selectedStyle: policy.normalizedStyle,
+        isUGC: policy.isUGC,
+      }));
+    }
+
+    if (!XAI_API_KEY) return Response.json({ error: XAI_API_KEY_MISSING_ERROR }, { status: 500 });
 
     // ── Creative DNA action ───────────────────────────────────────────────────
     // ── generateCreativeDNA ─────────────────────────────────────────────────────

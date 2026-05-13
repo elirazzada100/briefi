@@ -1,8 +1,13 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { getMockClassifyBusinessCategoryResponse } from "./mockResponses.js";
 
 const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
 const XAI_BASE_URL = Deno.env.get("XAI_BASE_URL") || "https://api.x.ai/v1";
 const XAI_MODEL = Deno.env.get("XAI_MODEL") || "grok-3";
+
+function isMockAIEnabled() {
+  return globalThis.process?.env?.BRIEFI_MOCK_AI === "true";
+}
 
 // CANONICAL industry map — order must match ConceptBank industry_order 1-10
 const CATEGORIES = [
@@ -90,12 +95,16 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!XAI_API_KEY) return Response.json({ error: "XAI_API_KEY is not set" }, { status: 500 });
-
     const { businessDescription } = await req.json();
     if (!businessDescription) {
       return Response.json({ error: "businessDescription is required" }, { status: 400 });
     }
+
+    if (isMockAIEnabled()) {
+      return Response.json(getMockClassifyBusinessCategoryResponse());
+    }
+
+    if (!XAI_API_KEY) return Response.json({ error: "XAI_API_KEY is not set" }, { status: 500 });
 
     const raw = await callGrokDirect(
       SYSTEM_PROMPT,

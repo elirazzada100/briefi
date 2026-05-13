@@ -86,6 +86,7 @@ test("mock AI mode contract disallows frontend localStorage query param or reque
     assert.ok(!source.includes("URLSearchParams"));
     assert.ok(!source.includes("body.mock"));
     assert.ok(!source.includes("query.mock"));
+    assert.ok(!source.includes("request.mock"));
   });
 });
 
@@ -310,15 +311,65 @@ test("mock AI response helpers keep UGC POV, avoid dash chars, and expose no pro
   assert.doesNotMatch(ugcCtaJoined, /אנחנו|אצלנו|בואו אלינו|הכנו לכם|המוצר שלנו|השירות שלנו|הצוות שלנו/);
 });
 
-test("mock AI final brief helpers stay non-persistent and runtime remains unconnected", () => {
-  const finalBrief = getMockFinalBriefResponse({ selectedStyle: "ugc", isUGC: true });
-  assert.equal(finalBrief.brief_id, "mock-brief-id");
-
+test("mock AI runtime stays server-side env gated and bypasses user-controlled enablement", () => {
   const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
   const classifier = read("base44/functions/classifyBusinessCategory/entry.ts");
 
-  assert.ok(!grokFlow.includes("mockResponses"));
-  assert.ok(!classifier.includes("mockResponses"));
-  assert.ok(!grokFlow.includes("BRIEFI_MOCK_AI"));
-  assert.ok(!classifier.includes("BRIEFI_MOCK_AI"));
+  assert.ok(grokFlow.includes('function isMockAIEnabled()'));
+  assert.ok(classifier.includes('function isMockAIEnabled()'));
+  assert.ok(grokFlow.includes('globalThis.process?.env?.BRIEFI_MOCK_AI === "true"'));
+  assert.ok(classifier.includes('globalThis.process?.env?.BRIEFI_MOCK_AI === "true"'));
+  assert.ok(!grokFlow.includes("localStorage"));
+  assert.ok(!classifier.includes("localStorage"));
+  assert.ok(!grokFlow.includes("URLSearchParams"));
+  assert.ok(!classifier.includes("URLSearchParams"));
+  assert.ok(!grokFlow.includes("body.mock"));
+  assert.ok(!classifier.includes("body.mock"));
+  assert.ok(!grokFlow.includes("query.mock"));
+  assert.ok(!classifier.includes("query.mock"));
+});
+
+test("mock AI runtime routes supported actions through mock helpers only when env-gated", () => {
+  const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
+  const classifier = read("base44/functions/classifyBusinessCategory/entry.ts");
+
+  assert.ok(grokFlow.includes('import {'));
+  assert.ok(grokFlow.includes('} from "./mockResponses.js";'));
+  assert.ok(grokFlow.includes('const mockAIEnabled = isMockAIEnabled();'));
+  assert.ok(grokFlow.includes('if (mockAIEnabled && action === "generateCreativeDNA") {'));
+  assert.ok(grokFlow.includes('return Response.json(getMockCreativeDNAResponse());'));
+  assert.ok(grokFlow.includes('if (mockAIEnabled && action === "generateConcepts") {'));
+  assert.ok(grokFlow.includes('return Response.json(getMockConceptsResponse({'));
+  assert.ok(grokFlow.includes('if (mockAIEnabled && action === "generateOpeningOptions") {'));
+  assert.ok(grokFlow.includes('return Response.json(getMockOpeningOptionsResponse({'));
+  assert.ok(grokFlow.includes('if (mockAIEnabled && action === "generateCTAOptions") {'));
+  assert.ok(grokFlow.includes('return Response.json(getMockCTAOptionsResponse({'));
+  assert.ok(grokFlow.includes('if (mockAIEnabled && action === "assembleFinalBrief") {'));
+  assert.ok(grokFlow.includes('return Response.json(getMockFinalBriefResponse({'));
+  assert.ok(grokFlow.includes('if (mockAIEnabled && action === "improveFinalBrief") {'));
+  assert.ok(grokFlow.includes('return Response.json(getMockImprovedFinalBriefResponse({'));
+
+  assert.ok(classifier.includes('import { getMockClassifyBusinessCategoryResponse } from "./mockResponses.js";'));
+  assert.ok(classifier.includes('if (isMockAIEnabled()) {'));
+  assert.ok(classifier.includes('return Response.json(getMockClassifyBusinessCategoryResponse());'));
+});
+
+test("mock AI runtime skips provider calls and persistence in mock branches while preserving production paths", () => {
+  const grokFlow = read("base44/functions/grokBriefiFlow/entry.ts");
+  const classifier = read("base44/functions/classifyBusinessCategory/entry.ts");
+
+  assert.ok(grokFlow.includes('if (!XAI_API_KEY) return Response.json({ error: XAI_API_KEY_MISSING_ERROR }, { status: 500 });'));
+  assert.ok(classifier.includes('if (!XAI_API_KEY) return Response.json({ error: "XAI_API_KEY is not set" }, { status: 500 });'));
+  assert.ok(grokFlow.includes('if (pid) {'));
+  assert.ok(grokFlow.includes('await base44.asServiceRole.entities.Project.update(pid, {'));
+  assert.ok(grokFlow.includes('savedBrief = await base44.asServiceRole.entities.VideoBrief.create({'));
+  assert.ok(grokFlow.includes('await base44.asServiceRole.entities.Project.update(project_id, {'));
+  assert.ok(grokFlow.includes('const policy = resolveStylePolicy(selectedVideoStyle);'));
+  assert.ok(grokFlow.includes('const improveStyle ='));
+  assert.ok(classifier.includes('const raw = await callGrokDirect('));
+
+  const finalBrief = getMockFinalBriefResponse({ selectedStyle: "ugc", isUGC: true });
+  assert.equal(finalBrief.brief_id, "mock-brief-id");
+  assert.equal(finalBrief.openai_assemble_used, false);
+  assert.equal(finalBrief.grok_polish_attempted, false);
 });
